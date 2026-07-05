@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Response;
 
 use BackedEnum;
+use BYanelli\Roma\Response\Attributes\Optional;
 use DateTimeInterface;
 use Illuminate\Contracts\Support\Arrayable;
 use ReflectionObject;
@@ -28,11 +29,10 @@ trait IsArrayable
                 continue;
             }
 
-            // An unset property is null when nullable, otherwise accessing it
-            // throws — a required response field was never populated.
-            if (! $property->isInitialized($this) && $property->getType()?->allowsNull()) {
-                $result[$property->getName()] = null;
-
+            // An unset #[Optional] property is omitted. Any other unset property
+            // has no implicit default, so accessing it below throws — surfacing
+            // a response field that was never populated.
+            if (! $property->isInitialized($this) && $property->getAttributes(Optional::class) !== []) {
                 continue;
             }
 

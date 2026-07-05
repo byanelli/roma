@@ -2,6 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\IsArrayable;
 use BYanelli\Roma\Response\Response;
 use Illuminate\Contracts\Support\Arrayable;
@@ -112,28 +113,57 @@ it('recurses through arrays of response objects and enums', function () {
     ]);
 });
 
-class TestNullableResponse extends Response
+class TestOptionalResponse extends Response
 {
     public string $name;
 
+    #[Optional]
     public ?string $nickname;
+
+    #[Optional]
+    public string $phone;
 }
 
-it('nulls an uninitialized nullable property', function () {
-    $response = new TestNullableResponse;
+it('omits unset #[Optional] properties (nullable or not)', function () {
+    $response = new TestOptionalResponse;
     $response->name = 'Bill';
-    // nickname left unset
+    // nickname and phone left unset
 
-    expect($response->toArray())->toBe(['name' => 'Bill', 'nickname' => null]);
+    expect($response->toArray())->toBe(['name' => 'Bill']);
+});
+
+it('includes an #[Optional] property once it is set', function () {
+    $response = new TestOptionalResponse;
+    $response->name = 'Bill';
+    $response->nickname = 'B';
+    $response->phone = '555';
+
+    expect($response->toArray())->toBe([
+        'name' => 'Bill',
+        'nickname' => 'B',
+        'phone' => '555',
+    ]);
 });
 
 class TestRequiredResponse extends Response
 {
-    public string $name;
+    // Nullable but NOT optional: an implicit default is not assumed.
+    public ?string $email;
 }
 
-it('throws for an uninitialized non-nullable property', function () {
+it('throws for an unset non-optional property even when nullable', function () {
     $response = new TestRequiredResponse;
 
     expect(fn () => $response->toArray())->toThrow(Error::class);
+});
+
+class TestDefaultResponse extends Response
+{
+    public ?string $note = null;
+}
+
+it('serializes an explicit default', function () {
+    $response = new TestDefaultResponse;
+
+    expect($response->toArray())->toBe(['note' => null]);
 });
