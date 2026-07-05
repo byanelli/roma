@@ -30,6 +30,9 @@ abstract readonly class Accessor implements AccessorAttribute, KeyAttribute, Rul
         return fn (Request $request) => $this->getFromRequest($request);
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getRules(AttributeTarget $target): array
     {
         return [];

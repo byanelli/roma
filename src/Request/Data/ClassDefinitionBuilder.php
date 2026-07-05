@@ -32,6 +32,9 @@ readonly class ClassDefinitionBuilder
         private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser,
     ) {}
 
+    /**
+     * @param  array<int, object>  $attributes
+     */
     private function getSourceFromAttributes(array $attributes): Source
     {
         return collect($attributes)
@@ -40,6 +43,9 @@ readonly class ClassDefinitionBuilder
             ->first() ?: new Input;
     }
 
+    /**
+     * @param  array<int, object>  $attributes
+     */
     private function getKeyFromAttributes(array $attributes): ?string
     {
         return collect($attributes)
@@ -48,6 +54,9 @@ readonly class ClassDefinitionBuilder
             ->first();
     }
 
+    /**
+     * @param  array<int, object>  $attributes
+     */
     private function getAccessorFromAttributes(array $attributes): ?Closure
     {
         return collect($attributes)
@@ -63,6 +72,10 @@ readonly class ClassDefinitionBuilder
             : ($obj->hasDefaultValue() ? $obj->getDefaultValue() : new MissingValue);
     }
 
+    /**
+     * @param  array<int, object>  $attributes
+     * @return array<int, mixed>
+     */
     private function getRulesForParameterOrProperty(array $attributes): array
     {
         return collect($attributes)
@@ -74,7 +87,8 @@ readonly class ClassDefinitionBuilder
     }
 
     /**
-     * @param  list<ReflectionAttribute>  $attributes
+     * @param  array<int, ReflectionAttribute<object>>  $attributes
+     * @return array<int, object>
      */
     private function getAttributeInstances(array $attributes): array
     {
@@ -87,7 +101,10 @@ readonly class ClassDefinitionBuilder
     {
         $attributes = $this->getAttributeInstances($obj->getAttributes());
 
-        $parent = in_array($obj->getType()?->getName(), [UploadedFile::class, SymfonyUploadedFile::class])
+        $type = $obj->getType();
+        $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
+
+        $parent = in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class])
             ? new File
             : ($this->parentSource ?: $this->getSourceFromAttributes($attributes));
 
@@ -106,7 +123,8 @@ readonly class ClassDefinitionBuilder
     }
 
     /**
-     * @return Property[]
+     * @param  ReflectionClass<object>  $class
+     * @return list<Property>
      */
     private function getPropertiesFromConstructorParameters(ReflectionClass $class): array
     {
@@ -124,13 +142,14 @@ readonly class ClassDefinitionBuilder
     }
 
     /**
-     * @return Property[]
+     * @param  ReflectionClass<object>  $class
+     * @return list<Property>
      */
     private function getPropertiesFromClassProperties(ReflectionClass $class): array
     {
         $result = [];
 
-        $classProperties = $class->getProperties(\ReflectionProperty::IS_PUBLIC);
+        $classProperties = $class->getProperties(ReflectionProperty::IS_PUBLIC);
 
         foreach ($classProperties as $classProperty) {
             if ($classProperty->isStatic() || $classProperty->isPromoted()) {
@@ -145,14 +164,13 @@ readonly class ClassDefinitionBuilder
 
     private function getRole(ReflectionParameter|ReflectionProperty $obj): Role
     {
-        return match (true) {
-            ($obj instanceof ReflectionParameter) => Role::Constructor,
-            ($obj instanceof ReflectionProperty) => Role::Property,
-            default => throw new RuntimeException('Unexpected object_type: '.get_class($obj)),
-        };
+        return ($obj instanceof ReflectionParameter)
+            ? Role::Constructor
+            : Role::Property;
     }
 
     /**
+     * @param  ReflectionClass<object>  $class
      * @return list<Property>
      */
     private function getConstructorParameterAndClassProperties(ReflectionClass $class): array
@@ -195,13 +213,16 @@ readonly class ClassDefinitionBuilder
             : new Mixed_;
     }
 
+    /**
+     * @param  class-string|ReflectionClass<object>  $class
+     */
     public function buildClassDefinition(string|ReflectionClass $class): Class_
     {
         if (is_string($class)) {
             $class = new ReflectionClass($class);
         }
 
-        return new Types\Class_(
+        return new Class_(
             class: $class->getName(),
             properties: [
                 ...$this->getConstructorParameterAndClassProperties($class),
@@ -210,30 +231,37 @@ readonly class ClassDefinitionBuilder
         );
     }
 
+    /**
+     * @param  ReflectionClass<object>  $class
+     * @return list<Property>
+     */
     private function getValidationOnlyProperties(ReflectionClass $class): array
     {
         $attributes = $this->getAttributeInstances($class->getAttributes());
 
-        return collect($attributes)
-            ->whereInstanceOf([
-                KeyAttribute::class,
-                RulesAttribute::class,
-                SourceAttribute::class,
-            ])
-            ->map(function (KeyAttribute&RulesAttribute&SourceAttribute $attr) {
-                return new Property(
-                    name: $attr->getKey(),
-                    key: $attr->getKey(),
-                    type: $attr->getType(),
-                    role: Role::ValidationOnly,
-                    default: new MissingValue,
-                    parent: $attr->getSource(),
-                    accessor: ($attr instanceof AccessorAttribute)
-                        ? $attr->getAccessor()
-                        : fn () => null,
-                    rules: $attr->getRules(AttributeTarget::Class_),
-                );
-            })
-            ->all();
+        $result = [];
+
+        foreach ($attributes as $attr) {
+            if (! ($attr instanceof KeyAttribute
+                && $attr instanceof RulesAttribute
+                && $attr instanceof SourceAttribute)) {
+                continue;
+            }
+
+            $result[] = new Property(
+                name: $attr->getKey(),
+                key: $attr->getKey(),
+                type: $attr->getType(),
+                role: Role::ValidationOnly,
+                default: new MissingValue,
+                parent: $attr->getSource(),
+                accessor: ($attr instanceof AccessorAttribute)
+                    ? $attr->getAccessor()
+                    : fn () => null,
+                rules: $attr->getRules(AttributeTarget::Class_),
+            );
+        }
+
+        return $result;
     }
 }

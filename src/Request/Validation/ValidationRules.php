@@ -11,6 +11,9 @@ use Illuminate\Validation\Rule;
 
 readonly class ValidationRules
 {
+    /**
+     * @var array<string, mixed>
+     */
     private array $rules;
 
     public function __construct(Class_ $class)
@@ -18,6 +21,9 @@ readonly class ValidationRules
         $this->rules = $this->getValidationRulesFromProperties($class->properties);
     }
 
+    /**
+     * @return list<mixed>
+     */
     private function getTypeValidationRules(Type $type): array
     {
         return match (true) {
@@ -32,6 +38,9 @@ readonly class ValidationRules
         };
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function getValidationRulesFromProperty(Property $property): array
     {
         $result = [];
@@ -62,7 +71,8 @@ readonly class ValidationRules
     }
 
     /**
-     * @param  Property[]  $properties
+     * @param  list<Property>  $properties
+     * @return array<string, mixed>
      */
     private function getValidationRulesFromProperties(array $properties): array
     {
@@ -71,6 +81,9 @@ readonly class ValidationRules
             ->all();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return $this->rules;

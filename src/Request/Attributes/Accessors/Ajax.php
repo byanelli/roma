@@ -17,6 +17,9 @@ readonly class Ajax extends Accessor
 {
     public function __construct(private ?bool $mustBe = null) {}
 
+    /**
+     * @return list<mixed>
+     */
     public function getRules(AttributeTarget $target): array
     {
         if ($target == AttributeTarget::Class_ && is_null($this->mustBe)) {

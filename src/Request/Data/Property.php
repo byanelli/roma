@@ -14,6 +14,9 @@ readonly class Property
 
     public Source $source;
 
+    /**
+     * @param  array<int, mixed>  $rules
+     */
     public function __construct(
         public string $name,
         public string $key,

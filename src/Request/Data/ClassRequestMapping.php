@@ -20,8 +20,14 @@ use UnitEnum;
 
 class ClassRequestMapping
 {
+    /**
+     * @var array<string, mixed>
+     */
     private array $data;
 
+    /**
+     * @param  array<string, mixed>|null  $data
+     */
     public function __construct(
         private readonly Class_ $class,
         private readonly Request $request,
@@ -40,6 +46,9 @@ class ClassRequestMapping
         $this->castData();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function flattenRequest(): array
     {
         return [
@@ -60,9 +69,11 @@ class ClassRequestMapping
      */
     private function getConstructorProperties(): array
     {
-        return collect($this->class->properties)
-            ->filter(fn (Property $p) => $p->role == Role::Constructor)
-            ->all();
+        return array_values(
+            collect($this->class->properties)
+                ->filter(fn (Property $p) => $p->role == Role::Constructor)
+                ->all()
+        );
     }
 
     /**
@@ -70,9 +81,11 @@ class ClassRequestMapping
      */
     private function getClassProperties(): array
     {
-        return collect($this->class->properties)
-            ->filter(fn (Property $p) => $p->role == Role::Property)
-            ->all();
+        return array_values(
+            collect($this->class->properties)
+                ->filter(fn (Property $p) => $p->role == Role::Property)
+                ->all()
+        );
     }
 
     /**
@@ -80,9 +93,11 @@ class ClassRequestMapping
      */
     private function getValidationOnlyProperties(): array
     {
-        return collect($this->class->properties)
-            ->filter(fn (Property $p) => $p->role == Role::ValidationOnly)
-            ->all();
+        return array_values(
+            collect($this->class->properties)
+                ->filter(fn (Property $p) => $p->role == Role::ValidationOnly)
+                ->all()
+        );
     }
 
     /**
@@ -90,7 +105,7 @@ class ClassRequestMapping
      */
     public function getConstructorValuesArray(): array
     {
-        return Arr::map($this->getConstructorProperties(), $this->getValue(...));
+        return array_values(Arr::map($this->getConstructorProperties(), $this->getValue(...)));
     }
 
     /**
@@ -137,7 +152,6 @@ class ClassRequestMapping
     }
 
     /**
-     * @param  array<mixed>  $rawValue
      * @return array<mixed>
      */
     private function toArrayOfType(Property $property, Types\Array_ $type, mixed $rawValue): array
@@ -151,18 +165,17 @@ class ClassRequestMapping
 
     private function toEnum(Types\Enum $type, string $val): mixed
     {
-        /** @var class-string<BackedEnum|UnitEnum> $class */
         $class = $type->class;
 
-        $reflectionClass = new \ReflectionEnum($class);
-        $backed = $reflectionClass->isBacked();
-        $backingType = $reflectionClass->getBackingType()?->getName();
+        if (is_a($class, BackedEnum::class, true)) {
+            $backingType = new \ReflectionEnum($class)->getBackingType()?->getName();
 
-        return match (true) {
-            $backed && $backingType == 'int' => $class::from(intval($val)),
-            $backed && $backingType == 'string' => $class::from($val),
-            default => collect($class::cases())->firstOrFail(fn (UnitEnum $enum) => $enum->name == $val),
-        };
+            return $backingType == 'int'
+                ? $class::from(intval($val))
+                : $class::from($val);
+        }
+
+        return collect($class::cases())->firstOrFail(fn (UnitEnum $enum) => $enum->name == $val);
     }
 
     private function castData(): void
@@ -204,7 +217,7 @@ class ClassRequestMapping
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
-            $type instanceof Types\Class_ => $this->toNestedClass($property, $type, $rawValue),
+            $type instanceof Class_ => $this->toNestedClass($property, $type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),
@@ -214,7 +227,9 @@ class ClassRequestMapping
     private function addRequestObjectValuesToData(): void
     {
         foreach ($this->class->properties as $property) {
-            if (get_class($property->source->parent) != RequestObject_::class) {
+            $parent = $property->source->parent;
+
+            if ($parent === null || get_class($parent) != RequestObject_::class) {
                 continue;
             }
 
@@ -247,11 +262,14 @@ class ClassRequestMapping
             : $property->getFullKey();
     }
 
-    public function getValue(Property $property)
+    public function getValue(Property $property): mixed
     {
         return Arr::get($this->data, $this->getKey($property), $property->default);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(): array
     {
         return collect($this->data)
@@ -261,6 +279,9 @@ class ClassRequestMapping
             ->all();
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     */
     private function toNestedClass(
         Property $property,
         Class_ $class_,
@@ -275,16 +296,25 @@ class ClassRequestMapping
         );
     }
 
+    /**
+     * @return class-string
+     */
     public function getClassName(): string
     {
         return $this->class->class;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return new ValidationRules($this->class)->toArray();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function data(): array
     {
         return $this->toArray();

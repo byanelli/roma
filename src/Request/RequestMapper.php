@@ -16,6 +16,10 @@ readonly class RequestMapper implements Contracts\RequestMapper
         private ClassDefinitionBuilder $classDefinitionBuilder = new ClassDefinitionBuilder,
     ) {}
 
+    /**
+     * @param  array<array-key, mixed>  $values
+     * @return array<array-key, mixed>
+     */
     private function mapValuesToNestedClasses(array $values): array
     {
         return collect($values)

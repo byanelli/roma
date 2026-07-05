@@ -25,6 +25,9 @@ readonly class Header implements KeyAttribute, RulesAttribute, SourceAttribute
         return new Sources\Header;
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getRules(AttributeTarget $target): array
     {
         return [];

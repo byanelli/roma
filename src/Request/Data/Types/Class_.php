@@ -8,6 +8,7 @@ use BYanelli\Roma\Request\Data\Type;
 final readonly class Class_ extends Type
 {
     /**
+     * @param  class-string  $class
      * @param  list<Property>  $properties
      */
     public function __construct(

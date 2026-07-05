@@ -14,7 +14,7 @@ readonly class ContentType extends Header
     // todo: more
 
     /**
-     * @var array<int, string>
+     * @var array<array-key, string>
      */
     protected array $mustBe;
 
@@ -25,6 +25,9 @@ readonly class ContentType extends Header
         $this->mustBe = $mustBe;
     }
 
+    /**
+     * @return list<mixed>
+     */
     public function getRules(AttributeTarget $target): array
     {
         return ! empty($this->mustBe)
