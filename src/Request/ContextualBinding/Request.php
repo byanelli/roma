@@ -21,35 +21,45 @@ class Request implements ContextualAttribute
      * @throws BindingResolutionException
      * @throws ValidationException
      */
-    public static function resolve(self $attribute, Container $container)
+    public static function resolve(self $attribute, Container $container, ?ReflectionParameter $parameter = null)
+    {
+        // Laravel 13+ passes the ReflectionParameter being resolved directly.
+        // On Laravel 10/11 it is not supplied, so we recover it from the
+        // container's call stack.
+        $parameter ??= self::findParameterInBacktrace();
+
+        $type = $parameter->getType();
+
+        ($type instanceof ReflectionNamedType) ||
+            throw new ContextualBindingException("the parameter \${$parameter->getName()} must be type-hinted with a class");
+
+        class_exists($className = $type->getName()) ||
+            throw new ContextualBindingException("$className does not exist");
+
+        /** @var RequestMapper $mapper */
+        $mapper = $container->make(RequestMapper::class);
+
+        return $mapper->mapRequest($className);
+    }
+
+    /**
+     * @throws ContextualBindingException
+     */
+    private static function findParameterInBacktrace(): ReflectionParameter
     {
         foreach (debug_backtrace() as $frame) {
             /** @see BoundMethod::addDependencyForCallParameter() */
-            if (! (
-                ($frame['class'] == BoundMethod::class)
-                && ($frame['function'] == 'addDependencyForCallParameter')
-            )) {
+            if (($frame['class'] ?? null) !== BoundMethod::class
+                || ($frame['function'] ?? null) !== 'addDependencyForCallParameter') {
                 continue;
             }
 
-            (count($frame['args']) >= 2) ||
+            $parameter = $frame['args'][1] ?? null;
+
+            ($parameter instanceof ReflectionParameter) ||
                 throw new ContextualBindingException('could not introspect container call stack');
 
-            /** @var ReflectionParameter $parameter */
-            (get_class($parameter = $frame['args'][1]) == ReflectionParameter::class) ||
-                throw new ContextualBindingException('could not introspect container call stack');
-
-            /** @var ReflectionNamedType $type */
-            (get_class($type = $parameter->getType()) == ReflectionNamedType::class) ||
-                throw new ContextualBindingException("the parameter $parameter->name must be type-hinted with a class");
-
-            class_exists($className = $type->getName()) ||
-                throw new ContextualBindingException("$className does not exist");
-
-            /** @var RequestMapper $mapper */
-            $mapper = $container->make(RequestMapper::class);
-
-            return $mapper->mapRequest($className);
+            return $parameter;
         }
 
         throw new ContextualBindingException('could not find request parameter');

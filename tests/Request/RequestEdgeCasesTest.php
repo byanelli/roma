@@ -45,6 +45,22 @@ it('throws when the #[Request] parameter type-hints a non-existent class', funct
         ->toThrow(ContextualBindingException::class, 'does not exist');
 });
 
+it('throws when the #[Request] parameter has no type hint', function () {
+    /** @var TestCase $this */
+    $this->setRequest();
+
+    $func = fn (#[RequestAttribute] $request) => null;
+
+    expect(fn () => $this->app->call($func))
+        ->toThrow(ContextualBindingException::class, 'must be type-hinted with a class');
+});
+
+it('throws a ContextualBindingException when resolved outside a container call', function () {
+    /** @var TestCase $this */
+    expect(fn () => RequestAttribute::resolve(new RequestAttribute, $this->app))
+        ->toThrow(ContextualBindingException::class, 'could not find request parameter');
+});
+
 it('prefixes ContextualBindingException messages', function () {
     $e = new ContextualBindingException('boom');
 
