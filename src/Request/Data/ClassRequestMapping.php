@@ -223,11 +223,7 @@ class ClassRequestMapping
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
-            // An empty object for a nullable property is treated as null rather
-            // than a partially-constructed instance.
-            $type instanceof Class_ => ($property->nullable && $rawValue === [])
-                ? null
-                : $this->toNestedClass($property, $type, $rawValue),
+            $type instanceof Class_ => $this->toNestedClass($property, $type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),

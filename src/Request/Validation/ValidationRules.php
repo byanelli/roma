@@ -7,6 +7,7 @@ use BYanelli\Roma\Request\Data\Role;
 use BYanelli\Roma\Request\Data\Type;
 use BYanelli\Roma\Request\Data\Types;
 use BYanelli\Roma\Request\Data\Types\Class_;
+use BYanelli\Roma\Request\Validation\Rules\RequiredWithinObject;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -41,14 +42,14 @@ readonly class ValidationRules
 
     /**
      * The presence rules that lead every property's rule list: "nullable"
-     * (allow an explicit null) and the requiredness rule. A required property
-     * nested under a nullable object becomes "required_with:<object key>", so
-     * it is only required when that object is actually present — an absent or
-     * null object doesn't trip its children.
+     * (allow an explicit null) and the requiredness rule. A required member of
+     * a nested object becomes a RequiredWithinObject rule keyed on that object,
+     * so it is only required when the object is actually present — an absent or
+     * null object doesn't trip its members.
      *
-     * @return list<string>
+     * @return list<mixed>
      */
-    private function leadingRules(Property $property, ?string $requiredWith): array
+    private function leadingRules(Property $property, ?string $objectKey): array
     {
         $rules = [];
 
@@ -57,7 +58,9 @@ readonly class ValidationRules
         }
 
         if ($property->isRequired) {
-            $rules[] = $requiredWith !== null ? "required_with:$requiredWith" : 'required';
+            $rules[] = $objectKey !== null
+                ? new RequiredWithinObject($objectKey)
+                : 'required';
         }
 
         return $rules;
@@ -66,7 +69,7 @@ readonly class ValidationRules
     /**
      * @return array<string, mixed>
      */
-    private function getValidationRulesFromProperty(Property $property, ?string $requiredWith = null): array
+    private function getValidationRulesFromProperty(Property $property, ?string $objectKey = null): array
     {
         $result = [];
 
@@ -82,21 +85,19 @@ readonly class ValidationRules
 
         // Nested object: validate the object's presence/shape, then recurse
         // into its properties. Those already carry absolute dotted keys
-        // (e.g. "input.address.city"), so their rules slot straight in. If the
-        // object is nullable, its descendants are gated on its presence via
-        // required_with, so an absent/null object doesn't require its children.
+        // (e.g. "input.address.city"), so their rules slot straight in. Their
+        // required members are gated on this object's presence, so an absent or
+        // null object doesn't require them.
         if ($type instanceof Class_) {
-            $result[$key] = array_merge($this->leadingRules($property, $requiredWith), $rules, ['array']);
+            $result[$key] = array_merge($this->leadingRules($property, $objectKey), $rules, ['array']);
 
-            $childRequiredWith = $property->nullable ? $key : $requiredWith;
-
-            return array_merge($result, $this->getValidationRulesFromProperties($type->properties, $childRequiredWith));
+            return array_merge($result, $this->getValidationRulesFromProperties($type->properties, $key));
         }
 
-        $result[$key] = array_merge($this->leadingRules($property, $requiredWith), $rules, $this->getTypeValidationRules($type));
+        $result[$key] = array_merge($this->leadingRules($property, $objectKey), $rules, $this->getTypeValidationRules($type));
 
         if ($type instanceof Types\Array_) {
-            $result = array_merge($result, $this->getArrayMemberRules($key, $type, $requiredWith));
+            $result = array_merge($result, $this->getArrayMemberRules($key, $type));
         }
 
         return $result;
@@ -105,7 +106,7 @@ readonly class ValidationRules
     /**
      * @return array<string, mixed>
      */
-    private function getArrayMemberRules(string $key, Types\Array_ $type, ?string $requiredWith): array
+    private function getArrayMemberRules(string $key, Types\Array_ $type): array
     {
         $memberType = $type->memberType;
 
@@ -115,10 +116,11 @@ readonly class ValidationRules
         }
 
         // Array of nested objects: re-key each object property under "key.*".
-        // e.g. "input.items.label" => "input.items.*.label".
+        // e.g. "input.items.label" => "input.items.*.label". Members keep plain
+        // required rules; Laravel's "*" only applies them to present elements.
         $result = [];
 
-        foreach ($this->getValidationRulesFromProperties($memberType->properties, $requiredWith) as $memberKey => $memberRules) {
+        foreach ($this->getValidationRulesFromProperties($memberType->properties) as $memberKey => $memberRules) {
             $result[$key.'.*.'.Str::after($memberKey, $key.'.')] = $memberRules;
         }
 
@@ -129,10 +131,10 @@ readonly class ValidationRules
      * @param  list<Property>  $properties
      * @return array<string, mixed>
      */
-    private function getValidationRulesFromProperties(array $properties, ?string $requiredWith = null): array
+    private function getValidationRulesFromProperties(array $properties, ?string $objectKey = null): array
     {
         return collect($properties)
-            ->flatMap(fn (Property $property) => $this->getValidationRulesFromProperty($property, $requiredWith))
+            ->flatMap(fn (Property $property) => $this->getValidationRulesFromProperty($property, $objectKey))
             ->all();
     }
 

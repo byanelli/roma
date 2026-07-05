@@ -512,6 +512,23 @@ it('validates required children of a present nullable object', function () {
     }
 });
 
+it('treats a present empty object as present, not null', function () {
+    /** @var TestCase $this */
+    // An empty object is a provided object missing its required fields, so it
+    // must error rather than resolve to null the way absent/null does.
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'address' => []],
+    );
+
+    try {
+        $this->mapRequest(EdgeNullableObjectRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.address.city');
+    }
+});
+
 class EdgeUndocumentedArrayRequest
 {
     public array $items;
