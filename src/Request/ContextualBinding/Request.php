@@ -4,7 +4,6 @@ namespace BYanelli\Roma\Request\ContextualBinding;
 
 use Attribute;
 use BYanelli\Roma\Request\RequestMapper;
-use Illuminate\Container\BoundMethod;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Container\ContextualAttribute;
@@ -21,13 +20,8 @@ class Request implements ContextualAttribute
      * @throws BindingResolutionException
      * @throws ValidationException
      */
-    public static function resolve(self $attribute, Container $container, ?ReflectionParameter $parameter = null)
+    public static function resolve(self $attribute, Container $container, ReflectionParameter $parameter): mixed
     {
-        // Laravel 13+ passes the ReflectionParameter being resolved directly.
-        // On Laravel 10/11 it is not supplied, so we recover it from the
-        // container's call stack.
-        $parameter ??= self::findParameterInBacktrace();
-
         $type = $parameter->getType();
 
         ($type instanceof ReflectionNamedType) ||
@@ -40,28 +34,5 @@ class Request implements ContextualAttribute
         $mapper = $container->make(RequestMapper::class);
 
         return $mapper->mapRequest($className);
-    }
-
-    /**
-     * @throws ContextualBindingException
-     */
-    private static function findParameterInBacktrace(): ReflectionParameter
-    {
-        foreach (debug_backtrace() as $frame) {
-            /** @see BoundMethod::addDependencyForCallParameter() */
-            if (($frame['class'] ?? null) !== BoundMethod::class
-                || ($frame['function'] ?? null) !== 'addDependencyForCallParameter') {
-                continue;
-            }
-
-            $parameter = $frame['args'][1] ?? null;
-
-            ($parameter instanceof ReflectionParameter) ||
-                throw new ContextualBindingException('could not introspect container call stack');
-
-            return $parameter;
-        }
-
-        throw new ContextualBindingException('could not find request parameter');
     }
 }
