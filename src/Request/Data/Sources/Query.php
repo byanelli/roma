@@ -13,6 +13,6 @@ final readonly class Query extends Source
 
     public function getOwnKey(): string
     {
-        return 'header';
+        return 'query';
     }
 }

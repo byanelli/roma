@@ -3,6 +3,8 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
+use BYanelli\Roma\Request\Attributes\Body;
+use BYanelli\Roma\Request\Attributes\Query;
 use BYanelli\Roma\Request\ContextualBinding\ContextualBindingException;
 use BYanelli\Roma\Request\ContextualBinding\Request as RequestAttribute;
 use BYanelli\Roma\Tests\TestCase;
@@ -48,6 +50,53 @@ it('prefixes ContextualBindingException messages', function () {
 
     expect($e->getMessage())
         ->toBe('Error binding the request using the #[Request] attribute: boom');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Query / Body source selection
+|--------------------------------------------------------------------------
+|
+| Regression guard: Sources\Query::getOwnKey() previously returned 'header'
+| (copy-paste bug), colliding with the Header bucket in flattenRequest.
+*/
+
+readonly class EdgeQuerySourceRequest
+{
+    #[Query]
+    public string $value;
+}
+
+readonly class EdgeBodySourceRequest
+{
+    #[Body]
+    public string $value;
+}
+
+it('reads a #[Query] property from the query string, not the body', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        query: ['value' => 'fromQuery'],
+        headers: ['Content-Type' => 'application/json'],
+        json: ['value' => 'fromBody'],
+    );
+
+    $request = $this->mapRequest(EdgeQuerySourceRequest::class);
+
+    expect($request->value)->toBe('fromQuery');
+});
+
+it('reads a #[Body] property from the request body, not the query string', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        query: ['value' => 'fromQuery'],
+        headers: ['Content-Type' => 'application/json'],
+        json: ['value' => 'fromBody'],
+    );
+
+    $request = $this->mapRequest(EdgeBodySourceRequest::class);
+
+    expect($request->value)->toBe('fromBody');
 });
 
 /*
