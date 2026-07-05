@@ -119,6 +119,7 @@ readonly class ClassDefinitionBuilder
             parent: $parent,
             accessor: $this->getAccessorFromAttributes($attributes) ?: fn () => null,
             rules: $this->getRulesForParameterOrProperty($attributes),
+            nullable: $obj->getType()?->allowsNull() ?? true,
         );
     }
 

@@ -4,6 +4,7 @@
 
 use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
 use BYanelli\Roma\Request\Attributes\Body;
+use BYanelli\Roma\Request\Attributes\Present;
 use BYanelli\Roma\Request\Attributes\Query;
 use BYanelli\Roma\Request\Attributes\Rule;
 use BYanelli\Roma\Request\ContextualBinding\ContextualBindingException;
@@ -381,6 +382,133 @@ it('validates fields of objects inside an array', function () {
         // Only the second element is too short.
         expect($e->errors())->toHaveKey('input.items.1.code')
             ->and($e->errors())->not->toHaveKey('input.items.0.code');
+    }
+});
+
+/*
+|--------------------------------------------------------------------------
+| Nullable semantics: ?T resolves to null when absent or null
+|--------------------------------------------------------------------------
+*/
+
+readonly class EdgeNullableScalarRequest
+{
+    public string $name;
+
+    public ?string $search;
+}
+
+it('resolves an absent nullable property to null', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['name' => 'Bill']);
+
+    $request = $this->mapRequest(EdgeNullableScalarRequest::class);
+
+    expect($request->search)->toBeNull();
+});
+
+it('resolves an explicit null nullable property to null', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'search' => null],
+    );
+
+    $request = $this->mapRequest(EdgeNullableScalarRequest::class);
+
+    expect($request->search)->toBeNull();
+});
+
+it('maps a present nullable property to its value', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['name' => 'Bill', 'search' => 'hats']);
+
+    $request = $this->mapRequest(EdgeNullableScalarRequest::class);
+
+    expect($request->search)->toBe('hats');
+});
+
+readonly class EdgePresentNullableRequest
+{
+    public string $name;
+
+    #[Present]
+    public ?string $note;
+}
+
+it('requires a #[Present] nullable key to exist', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['name' => 'Bill']); // note omitted
+
+    try {
+        $this->mapRequest(EdgePresentNullableRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.note');
+    }
+});
+
+it('allows a #[Present] nullable key to be null', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'note' => null],
+    );
+
+    $request = $this->mapRequest(EdgePresentNullableRequest::class);
+
+    expect($request->note)->toBeNull();
+});
+
+readonly class EdgeNullableAddress
+{
+    public string $city;
+}
+
+readonly class EdgeNullableObjectRequest
+{
+    public string $name;
+
+    public ?EdgeNullableAddress $address;
+}
+
+it('resolves an absent nullable object to null without requiring its children', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill'],
+    );
+
+    $request = $this->mapRequest(EdgeNullableObjectRequest::class);
+
+    expect($request->address)->toBeNull();
+});
+
+it('maps a present nullable object and validates its children', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'address' => ['city' => 'NYC']],
+    );
+
+    $request = $this->mapRequest(EdgeNullableObjectRequest::class);
+
+    expect($request->address)->toBeInstanceOf(EdgeNullableAddress::class)
+        ->and($request->address->city)->toBe('NYC');
+});
+
+it('validates required children of a present nullable object', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'address' => ['zip' => '10001']],
+    );
+
+    try {
+        $this->mapRequest(EdgeNullableObjectRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.address.city');
     }
 });
 

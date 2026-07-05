@@ -40,9 +40,33 @@ readonly class ValidationRules
     }
 
     /**
+     * The presence rules that lead every property's rule list: "nullable"
+     * (allow an explicit null) and the requiredness rule. A required property
+     * nested under a nullable object becomes "required_with:<object key>", so
+     * it is only required when that object is actually present — an absent or
+     * null object doesn't trip its children.
+     *
+     * @return list<string>
+     */
+    private function leadingRules(Property $property, ?string $requiredWith): array
+    {
+        $rules = [];
+
+        if ($property->nullable) {
+            $rules[] = 'nullable';
+        }
+
+        if ($property->isRequired) {
+            $rules[] = $requiredWith !== null ? "required_with:$requiredWith" : 'required';
+        }
+
+        return $rules;
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    private function getValidationRulesFromProperty(Property $property): array
+    private function getValidationRulesFromProperty(Property $property, ?string $requiredWith = null): array
     {
         $result = [];
 
@@ -58,29 +82,21 @@ readonly class ValidationRules
 
         // Nested object: validate the object's presence/shape, then recurse
         // into its properties. Those already carry absolute dotted keys
-        // (e.g. "input.address.city"), so their rules slot straight in.
+        // (e.g. "input.address.city"), so their rules slot straight in. If the
+        // object is nullable, its descendants are gated on its presence via
+        // required_with, so an absent/null object doesn't require its children.
         if ($type instanceof Class_) {
-            $objectRules = ['array'];
+            $result[$key] = array_merge($this->leadingRules($property, $requiredWith), $rules, ['array']);
 
-            if ($property->isRequired) {
-                $objectRules[] = 'required';
-            }
+            $childRequiredWith = $property->nullable ? $key : $requiredWith;
 
-            $result[$key] = $objectRules;
-
-            return array_merge($result, $this->getValidationRulesFromProperties($type->properties));
+            return array_merge($result, $this->getValidationRulesFromProperties($type->properties, $childRequiredWith));
         }
 
-        $rules = array_merge($rules, $this->getTypeValidationRules($type));
-
-        if ($property->isRequired) {
-            $rules[] = 'required';
-        }
-
-        $result[$key] = $rules;
+        $result[$key] = array_merge($this->leadingRules($property, $requiredWith), $rules, $this->getTypeValidationRules($type));
 
         if ($type instanceof Types\Array_) {
-            $result = array_merge($result, $this->getArrayMemberRules($key, $type));
+            $result = array_merge($result, $this->getArrayMemberRules($key, $type, $requiredWith));
         }
 
         return $result;
@@ -89,7 +105,7 @@ readonly class ValidationRules
     /**
      * @return array<string, mixed>
      */
-    private function getArrayMemberRules(string $key, Types\Array_ $type): array
+    private function getArrayMemberRules(string $key, Types\Array_ $type, ?string $requiredWith): array
     {
         $memberType = $type->memberType;
 
@@ -102,7 +118,7 @@ readonly class ValidationRules
         // e.g. "input.items.label" => "input.items.*.label".
         $result = [];
 
-        foreach ($this->getValidationRulesFromProperties($memberType->properties) as $memberKey => $memberRules) {
+        foreach ($this->getValidationRulesFromProperties($memberType->properties, $requiredWith) as $memberKey => $memberRules) {
             $result[$key.'.*.'.Str::after($memberKey, $key.'.')] = $memberRules;
         }
 
@@ -113,10 +129,10 @@ readonly class ValidationRules
      * @param  list<Property>  $properties
      * @return array<string, mixed>
      */
-    private function getValidationRulesFromProperties(array $properties): array
+    private function getValidationRulesFromProperties(array $properties, ?string $requiredWith = null): array
     {
         return collect($properties)
-            ->flatMap(fn (Property $property) => $this->getValidationRulesFromProperty($property))
+            ->flatMap(fn (Property $property) => $this->getValidationRulesFromProperty($property, $requiredWith))
             ->all();
     }
 

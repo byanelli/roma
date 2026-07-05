@@ -12,6 +12,8 @@ readonly class Property
 {
     public bool $isRequired;
 
+    public mixed $default;
+
     public Source $source;
 
     /**
@@ -22,12 +24,16 @@ readonly class Property
         public string $key,
         public Type $type,
         public Role $role,
-        public mixed $default,
+        mixed $default,
         Source $parent,
         public Closure $accessor,
         public array $rules,
+        public bool $nullable = false,
     ) {
-        $this->isRequired = $default instanceof MissingValue;
+        // A nullable property with no explicit default resolves to null when
+        // its key is absent, which in turn makes it optional (not required).
+        $this->default = ($nullable && $default instanceof MissingValue) ? null : $default;
+        $this->isRequired = $this->default instanceof MissingValue;
         $this->source = new PropertySource($parent, $this->normalizeKey($parent, $key));
     }
 
