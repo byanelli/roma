@@ -69,7 +69,6 @@ readonly class RequestMapper implements Contracts\RequestMapper
 
         $mapping = new ClassRequestMapping($class, $request);
 
-        // todo validate nested objects
         $this->validatorFactory
             ->make($mapping->data(), $mapping->rules())
             ->validate();

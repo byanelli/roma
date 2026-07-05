@@ -5,6 +5,7 @@
 use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
 use BYanelli\Roma\Request\Attributes\Body;
 use BYanelli\Roma\Request\Attributes\Query;
+use BYanelli\Roma\Request\Attributes\Rule;
 use BYanelli\Roma\Request\ContextualBinding\ContextualBindingException;
 use BYanelli\Roma\Request\ContextualBinding\Request as RequestAttribute;
 use BYanelli\Roma\Tests\TestCase;
@@ -291,6 +292,96 @@ it('maps an array of nested objects', function () {
         ->and($request->items[0])->toBeInstanceOf(EdgeArrayItem::class)
         ->and($request->items[0]->label)->toBe('a')
         ->and($request->items[1]->label)->toBe('b');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Nested object validation
+|--------------------------------------------------------------------------
+*/
+
+readonly class EdgeNestedChild
+{
+    #[Rule('email')]
+    public string $email;
+}
+
+readonly class EdgeNestedParent
+{
+    public string $name;
+
+    public EdgeNestedChild $child;
+}
+
+it('validates fields of a nested object', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'child' => ['email' => 'not-an-email']],
+    );
+
+    try {
+        $this->mapRequest(EdgeNestedParent::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.child.email');
+    }
+});
+
+it('passes a valid nested object', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'child' => ['email' => 'bill@example.com']],
+    );
+
+    $request = $this->mapRequest(EdgeNestedParent::class);
+
+    expect($request->child->email)->toBe('bill@example.com');
+});
+
+it('requires a missing required field on a nested object', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'child' => []],
+    );
+
+    try {
+        $this->mapRequest(EdgeNestedParent::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.child.email');
+    }
+});
+
+readonly class EdgeValidatedItem
+{
+    #[Rule('min:3')]
+    public string $code;
+}
+
+readonly class EdgeValidatedItemsRequest
+{
+    /** @var array<EdgeValidatedItem> */
+    public array $items;
+}
+
+it('validates fields of objects inside an array', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['items' => [['code' => 'okay'], ['code' => 'x']]],
+    );
+
+    try {
+        $this->mapRequest(EdgeValidatedItemsRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        // Only the second element is too short.
+        expect($e->errors())->toHaveKey('input.items.1.code')
+            ->and($e->errors())->not->toHaveKey('input.items.0.code');
+    }
 });
 
 class EdgeUndocumentedArrayRequest

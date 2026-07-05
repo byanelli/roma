@@ -272,11 +272,31 @@ class ClassRequestMapping
      */
     public function toArray(): array
     {
-        return collect($this->data)
-            ->mapWithKeys(fn ($val, $key) => [
-                $key => $val instanceof ClassRequestMapping ? $val->toArray() : $val,
-            ])
+        return $this->normalizeData($this->data);
+    }
+
+    /**
+     * Recursively convert nested ClassRequestMapping instances (including
+     * those nested inside arrays) back to plain arrays, so the validator can
+     * traverse the whole structure with dotted / "key.*" rules.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array<array-key, mixed>
+     */
+    private function normalizeData(array $data): array
+    {
+        return collect($data)
+            ->map(fn ($val) => $this->normalizeValue($val))
             ->all();
+    }
+
+    private function normalizeValue(mixed $val): mixed
+    {
+        return match (true) {
+            $val instanceof ClassRequestMapping => $val->toArray(),
+            is_array($val) => $this->normalizeData($val),
+            default => $val,
+        };
     }
 
     /**
