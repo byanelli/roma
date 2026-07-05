@@ -66,6 +66,66 @@ readonly class ApiRequest {
 }
 ``` 
 
+## Nullable and optional properties
+
+A non-nullable property with no default is required. Give it a default value to make it optional. Making the type nullable (`?T`) also makes it optional: an absent _or_ explicitly-`null` key resolves to `null` (Roma applies Laravel's `nullable` rather than `required`).
+
+```php
+class ProductSearchRequest {
+    public string $name;       // required
+
+    public int $perPage = 15;  // optional (has a default)
+
+    public ?string $search;    // optional; null when absent or null
+}
+```
+
+The same holds for nested objects: an absent or null nullable object stays `null` and its children are _not_ required. But a *present* object — even an empty `{}` — is validated, so its required children must be supplied.
+
+```php
+readonly class Address {
+    public string $city;
+}
+
+readonly class OrderRequest {
+    public string $name;
+
+    public ?Address $shipTo; // null when absent; when present, `city` is required
+}
+```
+
+## Require a key to be present but nullable
+
+Use `#[Present]` on a nullable property when the key _must_ appear in the request but is allowed to be `null` — "present but may be null". It adds Laravel's `present` rule, so an omitted key fails validation while an explicit `null` passes.
+
+```php
+use BYanelli\Roma\Request\Attributes\Present;
+
+readonly class UpdateNoteRequest {
+    public string $id;
+
+    #[Present]
+    public ?string $note; // must be sent, but may be null
+}
+```
+
+## Choose the query string or body
+
+By default a property reads from the merged input bag (query string + body). Use `#[Query]` or `#[Body]` to bind to one specifically — handy when the same key can appear in both.
+
+```php
+use BYanelli\Roma\Request\Attributes\Body;
+use BYanelli\Roma\Request\Attributes\Query;
+
+readonly class SearchRequest {
+    #[Query]
+    public int $page;   // always from the query string
+
+    #[Body]
+    public string $token; // always from the request body
+}
+```
+
 ## Map request metadata
 
 Access (and optionally validate) request metadata:
@@ -81,7 +141,37 @@ readonly class MetadataRequest {
     #[Method]
     public string $method;  // GET, POST, etc.
 }
-``` 
+```
+
+Roma wraps most of the Laravel request surface with accessor attributes. Group them by what they return:
+
+```php
+use BYanelli\Roma\Request\Attributes\Accessors\Ip;
+use BYanelli\Roma\Request\Attributes\Accessors\Secure;
+use BYanelli\Roma\Request\Attributes\Accessors\Segments;
+use BYanelli\Roma\Request\Attributes\Accessors\UserAgent;
+
+readonly class RequestInfo {
+    #[Secure]
+    public bool $isSecure;
+
+    #[Ip]
+    public string $ip;
+
+    #[UserAgent]
+    public string $userAgent;
+
+    /** @var array<string> */
+    #[Segments]
+    public array $segments;
+}
+```
+
+* **Booleans:** `#[Ajax]`, `#[Secure]`, `#[Pjax]`, `#[Prefetch]`, `#[IsJson]`, `#[ExpectsJson]`, `#[WantsJson]`
+* **Strings:** `#[Method]`, `#[Ip]`, `#[UserAgent]`, `#[Url]`, `#[FullUrl]`, `#[Path]`, `#[DecodedPath]`, `#[Root]`, `#[Host]`, `#[SchemeAndHttpHost]`, `#[BearerToken]`, `#[Format]`
+* **Arrays:** `#[Ips]`, `#[Segments]`
+
+Every boolean accessor accepts `mustBe` to turn it into a constraint: `#[Secure(mustBe: true)]` requires HTTPS, `#[Ajax(mustBe: false)]` requires a non-AJAX request. Applied bare at the class level, a boolean accessor requires the truthy case (see [Class-Level Constraints](#class-level-constraints)).
 
 ## Map to enums
 
@@ -199,7 +289,28 @@ class ApiOnlyRequest {
 }
 ```
 
+## Validation error keys
+
+When validation fails, Roma throws Laravel's `ValidationException`. Errors are keyed by a source-prefixed, request-relative name so the caller always knows where the offending value belongs:
+
+* `input.price` — merged input (query + body)
+* `query.page` / `body.token` — a `#[Query]` / `#[Body]` property
+* `header.X-Flag` — a header, by its real (un-normalized) name
+* `request.ajax` — request metadata from an accessor
+
+Nested fields keep their full path, and array elements are indexed:
+
+```php
+$e->errors(); // returns:
+
+[
+    'input.name'         => ['The input.name field is required.'],
+    'input.address.city' => ['The input.address.city field is required.'],
+    'input.items.1.code' => ['The input.items.* field must be at least 3 characters.'],
+    'request.ajax'       => ['The request.ajax field must be accepted.'],
+];
+```
+
 ## More to come
 
-* Wrap remaining metadata from Illuminate Request class
 * Type-safe responses! We want this to be a Request/Response Object MApper
