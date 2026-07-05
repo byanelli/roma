@@ -348,6 +348,23 @@ it('validates fields of a nested object', function () {
     }
 });
 
+it('rejects a non-array value for a nested object', function () {
+    /** @var TestCase $this */
+    // A scalar where an object is expected must be a validation error, not a
+    // TypeError bubbling out of construction.
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'Bill', 'child' => 'notanobject'],
+    );
+
+    try {
+        $this->mapRequest(EdgeNestedParent::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.child');
+    }
+});
+
 it('passes a valid nested object', function () {
     /** @var TestCase $this */
     $this->setRequest(

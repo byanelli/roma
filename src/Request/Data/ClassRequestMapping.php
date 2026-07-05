@@ -11,9 +11,11 @@ use BYanelli\Roma\Request\Data\Sources\Query;
 use BYanelli\Roma\Request\Data\Sources\RequestObject_;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Validation\ValidationRules;
+use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\DateFactory;
+use Illuminate\Support\ItemNotFoundException;
 use Illuminate\Support\Str;
 use RuntimeException;
 use UnitEnum;
@@ -125,7 +127,7 @@ class ClassRequestMapping
         return match ($val) {
             'true' => true,
             'false' => false,
-            default => throw new RuntimeException("Invalid boolean: $val"),
+            default => throw new CoercionException("Invalid boolean: $val"),
         };
     }
 
@@ -137,7 +139,7 @@ class ClassRequestMapping
 
         return (is_numeric($val) && ! str_contains($val, '.'))
             ? intval($val)
-            : throw new RuntimeException("Invalid integer: $val");
+            : throw new CoercionException("Invalid integer: $val");
     }
 
     private function toFloat(string|int|float $val): float
@@ -148,7 +150,17 @@ class ClassRequestMapping
 
         return is_numeric($val)
             ? floatval($val)
-            : throw new RuntimeException("Invalid float: $val");
+            : throw new CoercionException("Invalid float: $val");
+    }
+
+    private function toDate(mixed $val): DateTimeInterface
+    {
+        try {
+            return $this->dateFactory->parse($val);
+        } catch (\Throwable $e) {
+            // Any failure to parse a date is bad input, not a bug.
+            throw new CoercionException('Invalid date: '.get_debug_type($val), previous: $e);
+        }
     }
 
     /**
@@ -157,7 +169,7 @@ class ClassRequestMapping
     private function toArrayOfType(Property $property, Types\Array_ $type, mixed $rawValue): array
     {
         if (! is_array($rawValue)) {
-            throw new RuntimeException('Expected array, got '.get_debug_type($rawValue));
+            throw new CoercionException('Expected array, got '.get_debug_type($rawValue));
         }
 
         return Arr::map($rawValue, fn ($value) => $this->castValue($property, $type->memberType, $value));
@@ -167,15 +179,19 @@ class ClassRequestMapping
     {
         $class = $type->class;
 
-        if (is_a($class, BackedEnum::class, true)) {
-            $backingType = new \ReflectionEnum($class)->getBackingType()?->getName();
+        try {
+            if (is_a($class, BackedEnum::class, true)) {
+                $backingType = new \ReflectionEnum($class)->getBackingType()?->getName();
 
-            return $backingType == 'int'
-                ? $class::from(intval($val))
-                : $class::from($val);
+                return $backingType == 'int'
+                    ? $class::from(intval($val))
+                    : $class::from($val);
+            }
+
+            return collect($class::cases())->firstOrFail(fn (UnitEnum $enum) => $enum->name == $val);
+        } catch (\ValueError|ItemNotFoundException $e) {
+            throw new CoercionException("Invalid enum value for $class: $val", previous: $e);
         }
-
-        return collect($class::cases())->firstOrFail(fn (UnitEnum $enum) => $enum->name == $val);
     }
 
     private function castData(): void
@@ -205,7 +221,10 @@ class ClassRequestMapping
 
             try {
                 $typedValue = $this->castValue($property, $type, $rawValue);
-            } catch (\Exception|\ValueError $e) {
+            } catch (CoercionException $e) {
+                // Invalid input for the declared type: keep the raw value so
+                // validation rejects it with a proper message. Any other
+                // exception is a genuine error and propagates.
                 $typedValue = $rawValue;
             }
 
@@ -219,11 +238,13 @@ class ClassRequestMapping
             $type instanceof Types\Boolean => $this->toBoolean($rawValue),
             $type instanceof Types\Integer => $this->toInteger($rawValue),
             $type instanceof Types\Float_ => $this->toFloat($rawValue),
-            $type instanceof Types\Date => $this->dateFactory->parse($rawValue),
+            $type instanceof Types\Date => $this->toDate($rawValue),
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
-            $type instanceof Class_ => $this->toNestedClass($property, $type, $rawValue),
+            $type instanceof Class_ => is_array($rawValue)
+                ? $this->toNestedClass($property, $type, $rawValue)
+                : throw new CoercionException('Expected object, got '.get_debug_type($rawValue)),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),
