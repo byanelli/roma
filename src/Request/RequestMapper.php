@@ -19,8 +19,17 @@ readonly class RequestMapper implements Contracts\RequestMapper
     private function mapValuesToNestedClasses(array $values): array
     {
         return collect($values)
-            ->map(fn ($v) => $v instanceof ClassRequestMapping ? $this->mapClass($v) : $v)
+            ->map(fn ($v) => $this->mapValue($v))
             ->all();
+    }
+
+    private function mapValue(mixed $v): mixed
+    {
+        return match (true) {
+            $v instanceof ClassRequestMapping => $this->mapClass($v),
+            is_array($v) => $this->mapValuesToNestedClasses($v),
+            default => $v,
+        };
     }
 
     /**

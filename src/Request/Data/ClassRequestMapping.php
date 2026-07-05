@@ -101,27 +101,52 @@ class ClassRequestMapping
         return Arr::mapWithKeys($this->getClassProperties(), fn (Property $p) => [$p->name => $this->getValue($p)]);
     }
 
-    private function toBoolean(string $val): bool
+    private function toBoolean(string|bool $val): bool
     {
-        return ($val == 'true')
-            ? true
-            : (($val == 'false')
-                ? false
-                : throw new RuntimeException("Invalid boolean: $val"));
+        if (is_bool($val)) {
+            return $val;
+        }
+
+        return match ($val) {
+            'true' => true,
+            'false' => false,
+            default => throw new RuntimeException("Invalid boolean: $val"),
+        };
     }
 
-    private function toInteger(string $val): int
+    private function toInteger(string|int $val): int
     {
+        if (is_int($val)) {
+            return $val;
+        }
+
         return (is_numeric($val) && ! str_contains($val, '.'))
             ? intval($val)
             : throw new RuntimeException("Invalid integer: $val");
     }
 
-    private function toFloat(string $val): float
+    private function toFloat(string|int|float $val): float
     {
+        if (is_int($val) || is_float($val)) {
+            return (float) $val;
+        }
+
         return is_numeric($val)
             ? floatval($val)
-            : throw new RuntimeException("Invalid integer: $val");
+            : throw new RuntimeException("Invalid float: $val");
+    }
+
+    /**
+     * @param  array<mixed>  $rawValue
+     * @return array<mixed>
+     */
+    private function toArrayOfType(Property $property, Types\Array_ $type, mixed $rawValue): array
+    {
+        if (! is_array($rawValue)) {
+            throw new RuntimeException('Expected array, got '.get_debug_type($rawValue));
+        }
+
+        return Arr::map($rawValue, fn ($value) => $this->castValue($property, $type->memberType, $value));
     }
 
     private function toEnum(Types\Enum $type, string $val): mixed
@@ -160,22 +185,30 @@ class ClassRequestMapping
             $rawValue = Arr::get($this->data, $key);
 
             try {
-                $typedValue = match (true) {
-                    $type instanceof Types\Boolean => $this->toBoolean($rawValue),
-                    $type instanceof Types\Integer => $this->toInteger($rawValue),
-                    $type instanceof Types\Float_ => $this->toFloat($rawValue),
-                    $type instanceof Types\Date => $this->dateFactory->parse($rawValue),
-                    $type instanceof Types\String_ => $rawValue,
-                    $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
-                    $type instanceof Types\Class_ => $this->toNestedClass($property, $type, $rawValue),
-                    default => throw new RuntimeException('Unsupported type: '.$type::class),
-                };
+                $typedValue = $this->castValue($property, $type, $rawValue);
             } catch (\Exception|\ValueError $e) {
                 $typedValue = $rawValue;
             }
 
             Arr::set($this->data, $key, $typedValue);
         }
+    }
+
+    private function castValue(Property $property, Type $type, mixed $rawValue): mixed
+    {
+        return match (true) {
+            $type instanceof Types\Boolean => $this->toBoolean($rawValue),
+            $type instanceof Types\Integer => $this->toInteger($rawValue),
+            $type instanceof Types\Float_ => $this->toFloat($rawValue),
+            $type instanceof Types\Date => $this->dateFactory->parse($rawValue),
+            $type instanceof Types\String_ => $rawValue,
+            $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
+            $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
+            $type instanceof Types\Class_ => $this->toNestedClass($property, $type, $rawValue),
+            $type instanceof Types\File => $rawValue,
+            $type instanceof Types\Mixed_ => $rawValue,
+            default => throw new RuntimeException('Unsupported type: '.$type::class),
+        };
     }
 
     private function addRequestObjectValuesToData(): void

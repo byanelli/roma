@@ -237,6 +237,51 @@ it('maps an array constructor parameter documented with @param', function () {
     expect($request->ids)->toBe([1, 2, 3]);
 });
 
+readonly class EdgeIntArrayRequest
+{
+    /** @var array<int> */
+    public array $ids;
+}
+
+it('coerces string array elements to their documented int type', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['ids' => ['1', '2', '3']],
+    );
+
+    $request = $this->mapRequest(EdgeIntArrayRequest::class);
+
+    // toBe is strict: proves the strings became ints, not just == equal.
+    expect($request->ids)->toBe([1, 2, 3]);
+});
+
+readonly class EdgeArrayItem
+{
+    public string $label;
+}
+
+readonly class EdgeObjectArrayRequest
+{
+    /** @var array<EdgeArrayItem> */
+    public array $items;
+}
+
+it('maps an array of nested objects', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['items' => [['label' => 'a'], ['label' => 'b']]],
+    );
+
+    $request = $this->mapRequest(EdgeObjectArrayRequest::class);
+
+    expect($request->items)->toHaveCount(2)
+        ->and($request->items[0])->toBeInstanceOf(EdgeArrayItem::class)
+        ->and($request->items[0]->label)->toBe('a')
+        ->and($request->items[1]->label)->toBe('b');
+});
+
 class EdgeUndocumentedArrayRequest
 {
     public array $items;
