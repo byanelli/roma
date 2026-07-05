@@ -69,10 +69,35 @@ readonly class RequestMapper implements Contracts\RequestMapper
 
         $mapping = new ClassRequestMapping($class, $request);
 
-        $this->validatorFactory
-            ->make($mapping->data(), $mapping->rules())
-            ->validate();
+        $attributeNames = $mapping->attributeNames();
+
+        try {
+            $this->validatorFactory
+                ->make($mapping->data(), $mapping->rules(), [], $attributeNames)
+                ->validate();
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages($this->rekeyErrors($e, $attributeNames));
+        }
 
         return $this->mapClass($mapping);
+    }
+
+    /**
+     * Re-key the error bag from internal source-prefixed keys to the
+     * client-facing names (e.g. "header.x_flag" => "header.X-Flag"). Keys
+     * without a mapping (plain and array-indexed paths) are already correct.
+     *
+     * @param  array<string, string>  $attributeNames
+     * @return array<string, list<string>>
+     */
+    private function rekeyErrors(ValidationException $e, array $attributeNames): array
+    {
+        $errors = [];
+
+        foreach ($e->errors() as $key => $messages) {
+            $errors[$attributeNames[$key] ?? $key] = $messages;
+        }
+
+        return $errors;
     }
 }

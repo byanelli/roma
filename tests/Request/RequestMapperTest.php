@@ -160,8 +160,8 @@ it('fails to map invalid requests', function () {
             'input.flag' => [
                 'The input.flag field must be true or false.',
             ],
-            'header.x_flag' => [
-                'The header.x flag field must be true or false.',
+            'header.X-Flag' => [
+                'The header.X-Flag field must be true or false.',
             ],
             'input.color' => [
                 // todo: better error messages for enums
@@ -174,13 +174,13 @@ it('fails to map invalid requests', function () {
                 'The input.name field is required.',
             ],
             'input.arr.0' => [
-                'The input.arr.0 field must be an integer.',
+                'The input.arr.* field must be an integer.',
             ],
             'input.arr.1' => [
-                'The input.arr.1 field must be an integer.',
+                'The input.arr.* field must be an integer.',
             ],
             'input.arr.2' => [
-                'The input.arr.2 field must be an integer.',
+                'The input.arr.* field must be an integer.',
             ],
         ], $e->errors());
 
@@ -272,8 +272,7 @@ it('requires accessor values to be true via class attributes', function () {
         $this->mapRequest(TestItRequiresAjax::class);
     } catch (ValidationException $e) {
         $this->assertEquals(
-            // todo: better error message
-            ['__request.request.ajax' => ['The   request.request.ajax field must be accepted.']],
+            ['request.ajax' => ['The request.ajax field must be accepted.']],
             $e->errors()
         );
 
@@ -302,8 +301,7 @@ it('requires header values to be valid via class attributes', function () {
         $thrown = true;
 
         $this->assertEquals(
-            // todo: better error message
-            ['__request.header.content_type' => ['The selected   request.header.content type is invalid.']],
+            ['header.Content-Type' => ['The selected header.Content-Type is invalid.']],
             $e->errors()
         );
     }

@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Request\Data;
 
 use BYanelli\Roma\Request\Attributes\AccessorAttribute;
 use BYanelli\Roma\Request\Attributes\AttributeTarget;
+use BYanelli\Roma\Request\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Request\Attributes\KeyAttribute;
 use BYanelli\Roma\Request\Attributes\RulesAttribute;
 use BYanelli\Roma\Request\Attributes\SourceAttribute;
@@ -65,6 +66,17 @@ readonly class ClassDefinitionBuilder
             ->first();
     }
 
+    /**
+     * @param  array<int, object>  $attributes
+     */
+    private function getErrorKeyFromAttributes(array $attributes): ?string
+    {
+        return collect($attributes)
+            ->whereInstanceOf(ErrorKeyAttribute::class)
+            ->map(fn (ErrorKeyAttribute $attr) => $attr->getErrorKey())
+            ->first();
+    }
+
     private function getDefault(ReflectionParameter|ReflectionProperty $obj): mixed
     {
         return $obj instanceof ReflectionParameter
@@ -120,6 +132,7 @@ readonly class ClassDefinitionBuilder
             accessor: $this->getAccessorFromAttributes($attributes) ?: fn () => null,
             rules: $this->getRulesForParameterOrProperty($attributes),
             nullable: $obj->getType()?->allowsNull() ?? true,
+            errorKey: $this->getErrorKeyFromAttributes($attributes),
         );
     }
 
@@ -260,6 +273,7 @@ readonly class ClassDefinitionBuilder
                     ? $attr->getAccessor()
                     : fn () => null,
                 rules: $attr->getRules(AttributeTarget::Class_),
+                errorKey: ($attr instanceof ErrorKeyAttribute) ? $attr->getErrorKey() : null,
             );
         }
 

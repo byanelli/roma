@@ -335,7 +335,22 @@ class ClassRequestMapping
      */
     public function rules(): array
     {
-        return new ValidationRules($this->class)->toArray();
+        return $this->validationRules()->toArray();
+    }
+
+    /**
+     * Client-facing :attribute names, keyed by internal rule key.
+     *
+     * @return array<string, string>
+     */
+    public function attributeNames(): array
+    {
+        return $this->validationRules()->attributeNames();
+    }
+
+    private function validationRules(): ValidationRules
+    {
+        return new ValidationRules($this->class);
     }
 
     /**

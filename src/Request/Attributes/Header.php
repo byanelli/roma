@@ -10,7 +10,7 @@ use BYanelli\Roma\Request\Data\Types\String_;
 use Illuminate\Support\Str;
 
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
-readonly class Header implements KeyAttribute, RulesAttribute, SourceAttribute
+readonly class Header implements ErrorKeyAttribute, KeyAttribute, RulesAttribute, SourceAttribute
 {
     public function __construct(public string $name) {}
 
@@ -18,6 +18,12 @@ readonly class Header implements KeyAttribute, RulesAttribute, SourceAttribute
     {
         // We need to combine both to turn e.g. "Content-Type" into "content_type"
         return Str::snake(Str::camel($this->name));
+    }
+
+    public function getErrorKey(): string
+    {
+        // Errors reference the header by its real, un-normalized name.
+        return "{$this->getSource()->getKey()}.{$this->name}";
     }
 
     public function getSource(): Source

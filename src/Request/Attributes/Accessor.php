@@ -8,7 +8,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-abstract readonly class Accessor implements AccessorAttribute, KeyAttribute, RulesAttribute, SourceAttribute
+abstract readonly class Accessor implements AccessorAttribute, ErrorKeyAttribute, KeyAttribute, RulesAttribute, SourceAttribute
 {
     public function getKey(): string
     {
@@ -18,6 +18,13 @@ abstract readonly class Accessor implements AccessorAttribute, KeyAttribute, Rul
     public function getFullKey(): string
     {
         return $this->getKey();
+    }
+
+    public function getErrorKey(): string
+    {
+        // Request-metadata accessors report under the "request." namespace,
+        // e.g. "request.ajax". Override for a more specific origin.
+        return "{$this->getSource()->getKey()}.{$this->getKey()}";
     }
 
     public function getSource(): Source

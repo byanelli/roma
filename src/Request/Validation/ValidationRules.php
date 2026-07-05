@@ -18,9 +18,27 @@ readonly class ValidationRules
      */
     private array $rules;
 
+    /**
+     * Client-facing :attribute names, keyed by internal rule key.
+     *
+     * @var array<string, string>
+     */
+    private array $attributeNames;
+
     public function __construct(Class_ $class)
     {
-        $this->rules = $this->getValidationRulesFromProperties($class->properties);
+        $entries = $this->entriesFromProperties($class->properties);
+
+        $rules = [];
+        $names = [];
+
+        foreach ($entries as $key => $entry) {
+            $rules[$key] = $entry['rules'];
+            $names[$key] = $entry['name'];
+        }
+
+        $this->rules = $rules;
+        $this->attributeNames = $names;
     }
 
     /**
@@ -67,16 +85,15 @@ readonly class ValidationRules
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, array{rules: list<mixed>, name: string}>
      */
-    private function getValidationRulesFromProperty(Property $property, ?string $objectKey = null): array
+    private function entryFromProperty(Property $property, ?string $objectKey = null): array
     {
-        $result = [];
-
-        [$type, $rules, $key] = [
+        [$type, $rules, $key, $name] = [
             $property->type,
             $property->rules,
             $property->getFullKey(),
+            $property->errorKey,
         ];
 
         if ($property->role == Role::ValidationOnly) {
@@ -89,30 +106,39 @@ readonly class ValidationRules
         // required members are gated on this object's presence, so an absent or
         // null object doesn't require them.
         if ($type instanceof Class_) {
-            $result[$key] = array_merge($this->leadingRules($property, $objectKey), $rules, ['array']);
+            $entries = [$key => [
+                'rules' => array_merge($this->leadingRules($property, $objectKey), $rules, ['array']),
+                'name' => $name,
+            ]];
 
-            return array_merge($result, $this->getValidationRulesFromProperties($type->properties, $key));
+            return array_merge($entries, $this->entriesFromProperties($type->properties, $key));
         }
 
-        $result[$key] = array_merge($this->leadingRules($property, $objectKey), $rules, $this->getTypeValidationRules($type));
+        $entries = [$key => [
+            'rules' => array_merge($this->leadingRules($property, $objectKey), $rules, $this->getTypeValidationRules($type)),
+            'name' => $name,
+        ]];
 
         if ($type instanceof Types\Array_) {
-            $result = array_merge($result, $this->getArrayMemberRules($key, $type));
+            $entries = array_merge($entries, $this->arrayMemberEntries($key, $name, $type));
         }
 
-        return $result;
+        return $entries;
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, array{rules: list<mixed>, name: string}>
      */
-    private function getArrayMemberRules(string $key, Types\Array_ $type): array
+    private function arrayMemberEntries(string $key, string $name, Types\Array_ $type): array
     {
         $memberType = $type->memberType;
 
         // Array of scalars/enums: a single "key.*" rule for every element.
         if (! $memberType instanceof Class_) {
-            return [$key.'.*' => $this->getTypeValidationRules($memberType)];
+            return [$key.'.*' => [
+                'rules' => $this->getTypeValidationRules($memberType),
+                'name' => $name.'.*',
+            ]];
         }
 
         // Array of nested objects: re-key each object property under "key.*".
@@ -120,8 +146,11 @@ readonly class ValidationRules
         // required rules; Laravel's "*" only applies them to present elements.
         $result = [];
 
-        foreach ($this->getValidationRulesFromProperties($memberType->properties) as $memberKey => $memberRules) {
-            $result[$key.'.*.'.Str::after($memberKey, $key.'.')] = $memberRules;
+        foreach ($this->entriesFromProperties($memberType->properties) as $memberKey => $entry) {
+            $result[$key.'.*.'.Str::after($memberKey, $key.'.')] = [
+                'rules' => $entry['rules'],
+                'name' => $name.'.*.'.Str::after($entry['name'], $name.'.'),
+            ];
         }
 
         return $result;
@@ -129,12 +158,12 @@ readonly class ValidationRules
 
     /**
      * @param  list<Property>  $properties
-     * @return array<string, mixed>
+     * @return array<string, array{rules: list<mixed>, name: string}>
      */
-    private function getValidationRulesFromProperties(array $properties, ?string $objectKey = null): array
+    private function entriesFromProperties(array $properties, ?string $objectKey = null): array
     {
         return collect($properties)
-            ->flatMap(fn (Property $property) => $this->getValidationRulesFromProperty($property, $objectKey))
+            ->flatMap(fn (Property $property) => $this->entryFromProperty($property, $objectKey))
             ->all();
     }
 
@@ -144,5 +173,13 @@ readonly class ValidationRules
     public function toArray(): array
     {
         return $this->rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function attributeNames(): array
+    {
+        return $this->attributeNames;
     }
 }

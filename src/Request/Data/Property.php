@@ -16,6 +16,8 @@ readonly class Property
 
     public Source $source;
 
+    public string $errorKey;
+
     /**
      * @param  array<int, mixed>  $rules
      */
@@ -29,12 +31,18 @@ readonly class Property
         public Closure $accessor,
         public array $rules,
         public bool $nullable = false,
+        ?string $errorKey = null,
     ) {
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).
         $this->default = ($nullable && $default instanceof MissingValue) ? null : $default;
         $this->isRequired = $this->default instanceof MissingValue;
         $this->source = new PropertySource($parent, $this->normalizeKey($parent, $key));
+
+        // The client-facing name shown in validation errors. Plain fields reuse
+        // their source-prefixed path; attributes (headers, accessors) can supply
+        // a friendlier one via ErrorKeyAttribute.
+        $this->errorKey = $errorKey ?? $this->getFullKey();
     }
 
     private function normalizeKey(Source $parent, string $key): string

@@ -112,6 +112,25 @@ it('reads a #[Body] property from the request body, not the query string', funct
     expect($request->value)->toBe('fromBody');
 });
 
+readonly class EdgeQueryIntRequest
+{
+    #[Query]
+    public int $page;
+}
+
+it('keeps the source prefix in error keys', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['page' => 'notanint']);
+
+    try {
+        $this->mapRequest(EdgeQueryIntRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        // The origin is preserved so the caller knows where the value goes.
+        expect($e->errors())->toHaveKey('query.page');
+    }
+});
+
 /*
 |--------------------------------------------------------------------------
 | Coercion failure paths
