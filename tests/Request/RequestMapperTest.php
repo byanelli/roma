@@ -46,7 +46,7 @@ readonly class TestRequest
         public string $default = 'foo',
     ) {}
 
-    public \DateTimeInterface $date;
+    public DateTimeInterface $date;
 
     public bool $flag;
 
