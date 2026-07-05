@@ -4,22 +4,12 @@ namespace BYanelli\Roma\Tests;
 
 use BYanelli\Roma\Request\Contracts\RequestMapper;
 use BYanelli\Roma\Request\RomaServiceProvider;
-use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
 {
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'VendorName\\Skeleton\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        );
-    }
-
     protected function getPackageProviders($app)
     {
         return [

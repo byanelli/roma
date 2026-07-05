@@ -36,14 +36,12 @@
     },
     "autoload": {
         "psr-4": {
-            "BYanelli\\Roma\\": "src/",
-            "BYanelli\\Roma\\Database\\Factories\\": "database/factories/"
+            "BYanelli\\Roma\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "BYanelli\\Roma\\Tests\\": "tests/",
-            "Workbench\\App\\": "workbench/app/"
+            "BYanelli\\Roma\\Tests\\": "tests/"
         }
     },
     "scripts": {
@@ -64,13 +62,10 @@
     "extra": {
         "laravel": {
             "providers": [
-                "RomaServiceProvider"
-            ],
-            "aliases": {
-                "Skeleton": "BYanelli\\Roma\\Facades\\Skeleton"
-            }
+                "BYanelli\\Roma\\Request\\RomaServiceProvider"
+            ]
         }
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true
 }

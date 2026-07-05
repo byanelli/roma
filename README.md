@@ -19,8 +19,8 @@ readonly class CreateContactRequest {
         public string $name,
 
         #[Rule(['email', 'unique:contacts', 'max:255'])]
-        public string $email;    
-    ) {
+        public string $email,
+    ) {}
 
     // Constructor promoted properties and class properties can be used interchangeably.
     #[Rule('phone')]
