@@ -119,10 +119,14 @@ class ClassRequestMapping
         return Arr::mapWithKeys($this->getClassProperties(), fn (Property $p) => [$p->name => $this->getValue($p)]);
     }
 
-    private function toBoolean(string|bool $val): bool
+    private function toBoolean(mixed $val): bool
     {
         if (is_bool($val)) {
             return $val;
+        }
+
+        if (! is_string($val)) {
+            throw new CoercionException('Expected boolean, got '.get_debug_type($val));
         }
 
         return match ($val) {
@@ -132,10 +136,14 @@ class ClassRequestMapping
         };
     }
 
-    private function toInteger(string|int $val): int
+    private function toInteger(mixed $val): int
     {
         if (is_int($val)) {
             return $val;
+        }
+
+        if (! is_string($val)) {
+            throw new CoercionException('Expected integer, got '.get_debug_type($val));
         }
 
         return (is_numeric($val) && ! str_contains($val, '.'))
@@ -143,10 +151,14 @@ class ClassRequestMapping
             : throw new CoercionException("Invalid integer: $val");
     }
 
-    private function toFloat(string|int|float $val): float
+    private function toFloat(mixed $val): float
     {
         if (is_int($val) || is_float($val)) {
             return (float) $val;
+        }
+
+        if (! is_string($val)) {
+            throw new CoercionException('Expected float, got '.get_debug_type($val));
         }
 
         return is_numeric($val)
@@ -176,11 +188,17 @@ class ClassRequestMapping
         return Arr::map($rawValue, fn ($value) => $this->castValue($property, $type->memberType, $value));
     }
 
-    private function toEnum(Types\Enum $type, string $val): mixed
+    private function toEnum(Types\Enum $type, mixed $val): mixed
     {
+        // Backed enums accept their scalar backing directly (e.g. a JSON int for
+        // an int-backed enum); anything else is bad input, not a bug.
+        if (! is_string($val) && ! is_int($val)) {
+            throw new CoercionException('Expected enum value, got '.get_debug_type($val));
+        }
+
         $class = $type->class;
 
-        if (is_a($class, NormalizesRawValue::class, true)) {
+        if (is_string($val) && is_a($class, NormalizesRawValue::class, true)) {
             $val = $class::normalizeRawValue($val);
         }
 
