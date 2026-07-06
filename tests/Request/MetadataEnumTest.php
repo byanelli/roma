@@ -6,6 +6,7 @@ use BYanelli\Roma\Request\Attributes\Accessors\Method as MethodAccessor;
 use BYanelli\Roma\Request\Attributes\Query;
 use BYanelli\Roma\Request\Enums\ContentType;
 use BYanelli\Roma\Request\Enums\Method;
+use BYanelli\Roma\Request\Enums\Scheme;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 
@@ -64,6 +65,24 @@ it('maps newer media types like text/markdown and text/toon', function () {
     $this->setRequest(headers: ['Content-Type' => 'text/toon']);
     expect($this->mapRequest(TestItInfersContentTypeEnumSource::class)->contentType)
         ->toBe(ContentType::Toon);
+});
+
+readonly class TestItInfersSchemeEnumSource
+{
+    public Scheme $scheme;
+}
+
+it('infers the URI scheme for a Scheme enum property', function () {
+    /** @var TestCase $this */
+    $this->app->bind('request', fn () => Request::create('https://example.com/'));
+
+    expect($this->mapRequest(TestItInfersSchemeEnumSource::class)->scheme)
+        ->toBe(Scheme::Https);
+
+    $this->app->bind('request', fn () => Request::create('http://example.com/'));
+
+    expect($this->mapRequest(TestItInfersSchemeEnumSource::class)->scheme)
+        ->toBe(Scheme::Http);
 });
 
 readonly class TestExplicitSourceOverridesEnumInference
