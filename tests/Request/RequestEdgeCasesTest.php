@@ -9,6 +9,8 @@ use BYanelli\Roma\Request\Attributes\Query;
 use BYanelli\Roma\Request\Attributes\Rule;
 use BYanelli\Roma\Request\ContextualBinding\ContextualBindingException;
 use BYanelli\Roma\Request\ContextualBinding\Request as RequestAttribute;
+use BYanelli\Roma\Tests\Support\NamespacedArrayRequest;
+use BYanelli\Roma\Tests\Support\NamespacedItem;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 use This\Class\Does\Not\Exist;
@@ -312,6 +314,44 @@ it('maps an array of nested objects', function () {
         ->and($request->items[0])->toBeInstanceOf(EdgeArrayItem::class)
         ->and($request->items[0]->label)->toBe('a')
         ->and($request->items[1]->label)->toBe('b');
+});
+
+readonly class EdgeFqcnArrayRequest
+{
+    /** @var array<BYanelli\Roma\Tests\Support\NamespacedItem> */
+    public array $items;
+}
+
+it('maps an array of namespaced objects declared by FQCN', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['items' => [['name' => 'a'], ['name' => 'b']]],
+    );
+
+    $request = $this->mapRequest(EdgeFqcnArrayRequest::class);
+
+    expect($request->items)->toHaveCount(2)
+        ->and($request->items[0])->toBeInstanceOf(NamespacedItem::class)
+        ->and($request->items[0]->name)->toBe('a')
+        ->and($request->items[1]->name)->toBe('b');
+});
+
+it('resolves a bare array element name against the declaring class namespace', function () {
+    /** @var TestCase $this */
+    // NamespacedArrayRequest lives in BYanelli\Roma\Tests\Support and documents
+    // its items as `array<NamespacedItem>` (a short name), which only resolves
+    // when the declaring class's namespace is applied.
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['items' => [['name' => 'a'], ['name' => 'b']]],
+    );
+
+    $request = $this->mapRequest(NamespacedArrayRequest::class);
+
+    expect($request->items)->toHaveCount(2)
+        ->and($request->items[0])->toBeInstanceOf(NamespacedItem::class)
+        ->and($request->items[0]->name)->toBe('a');
 });
 
 /*

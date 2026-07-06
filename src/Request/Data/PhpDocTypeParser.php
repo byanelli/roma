@@ -74,18 +74,41 @@ class PhpDocTypeParser
 
     private function parseArrayElementTypeNameFromPhpDocNode(TypeNode $node): string
     {
+        // Allow FQCNs (backslashes), tolerating a leading backslash which we
+        // strip below; a bare scalar/short name matches too.
         preg_match(
-            pattern: '/array<(\w+)>/',
+            pattern: '/array<\\\\?([\w\\\\]+)>/',
             subject: $node->__toString(),
             matches: $matches,
             flags: PREG_OFFSET_CAPTURE
         );
 
-        return $matches[1][0] ?? throw new RuntimeException("Error parsing array element type from type declaration: $node");
+        return ltrim($matches[1][0] ?? throw new RuntimeException("Error parsing array element type from type declaration: $node"), '\\');
     }
 
     public function getArrayElementTypeName(ReflectionParameter|ReflectionProperty $obj): string
     {
-        return $this->parseArrayElementTypeNameFromPhpDocNode($this->getArrayTypePhpDocNode($obj));
+        $name = $this->parseArrayElementTypeNameFromPhpDocNode($this->getArrayTypePhpDocNode($obj));
+
+        return $this->resolveTypeName($name, $obj);
+    }
+
+    /**
+     * Resolve a parsed element type name to something loadable. Scalars and
+     * names that already resolve (FQCNs) are used as-is; a bare short name is
+     * resolved against the declaring class's namespace. Full use-statement
+     * resolution is out of scope — FQCN or same-namespace is the story.
+     */
+    private function resolveTypeName(string $name, ReflectionParameter|ReflectionProperty $obj): string
+    {
+        if (in_array($name, ['int', 'string', 'bool', 'float'], true)
+            || class_exists($name)
+            || enum_exists($name)) {
+            return $name;
+        }
+
+        $namespace = $obj->getDeclaringClass()?->getNamespaceName() ?? '';
+
+        return $namespace === '' ? $name : $namespace.'\\'.$name;
     }
 }
