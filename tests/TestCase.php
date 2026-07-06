@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Tests;
 use BYanelli\Roma\Request\Contracts\RequestMapper;
 use BYanelli\Roma\Request\RomaServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Illuminate\Validation\ValidationException;
 use Orchestra\Testbench\TestCase as Orchestra;
 
@@ -27,6 +28,8 @@ class TestCase extends Orchestra
         array $headers = [],
         array $files = [],
         ?array $json = null,
+        array $routeParams = [],
+        array $cookies = [],
     ): void {
         $server = collect($headers)->mapWithKeys(function ($value, $key) {
             $key = (($key != 'Content-Type') ? 'HTTP_' : '')
@@ -36,8 +39,19 @@ class TestCase extends Orchestra
         })->toArray();
 
         $request = ($json != null)
-            ? new Request(query: $query, files: $files, server: $server, content: json_encode($json))
-            : new Request(query: $query, files: $files, server: $server);
+            ? new Request(query: $query, cookies: $cookies, files: $files, server: $server, content: json_encode($json))
+            : new Request(query: $query, cookies: $cookies, files: $files, server: $server);
+
+        if (! empty($routeParams)) {
+            $route = new Route(['GET'], '/', []);
+            $route->bind($request);
+
+            foreach ($routeParams as $name => $value) {
+                $route->setParameter($name, $value);
+            }
+
+            $request->setRouteResolver(fn () => $route);
+        }
 
         $this->app->bind('request', fn () => $request);
     }

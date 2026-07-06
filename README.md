@@ -126,6 +126,25 @@ readonly class SearchRequest {
 }
 ```
 
+## Map route parameters
+
+Bind a property to a route parameter with `#[RouteParameter]`. The property name is the parameter name unless you pass an explicit one. Route parameters arrive as strings, so scalar and enum coercion applies as usual:
+
+```php
+use BYanelli\Roma\Request\Attributes\RouteParameter;
+
+// Route: /users/{id}/posts/{post_slug}
+readonly class ShowPostRequest {
+    #[RouteParameter]
+    public int $id;              // from {id}, coerced "42" -> 42
+
+    #[RouteParameter('post_slug')]
+    public string $slug;         // from {post_slug}
+}
+```
+
+If the request has no bound route, a required route parameter simply fails validation with a `route.` error — it never crashes.
+
 ## Map request metadata
 
 Access (and optionally validate) request metadata:
@@ -321,6 +340,7 @@ When validation fails, Roma throws Laravel's `ValidationException`. Errors are k
 * `input.price` — merged input (query + body)
 * `query.page` / `body.token` — a `#[Query]` / `#[Body]` property
 * `header.X-Flag` — a header, by its real (un-normalized) name
+* `route.id` — a `#[RouteParameter]` property
 * `request.ajax` — request metadata from an accessor
 
 Nested fields keep their full path, and array elements are indexed:

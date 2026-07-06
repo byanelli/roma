@@ -9,12 +9,14 @@ use BYanelli\Roma\Request\Data\Sources\Header;
 use BYanelli\Roma\Request\Data\Sources\Input;
 use BYanelli\Roma\Request\Data\Sources\Query;
 use BYanelli\Roma\Request\Data\Sources\RequestObject_;
+use BYanelli\Roma\Request\Data\Sources\RouteParameter;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Enums\NormalizesRawValue;
 use BYanelli\Roma\Request\Validation\ValidationRules;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 use Illuminate\Support\Arr;
 use Illuminate\Support\DateFactory;
 use Illuminate\Support\ItemNotFoundException;
@@ -67,7 +69,32 @@ class ClassRequestMapping
                 ? $this->request->json()->all()
                 : $this->request->request->all(),
             (new File)->getKey() => $this->request->files->all(),
+            (new RouteParameter)->getKey() => $this->routeParameters(),
         ];
+    }
+
+    /**
+     * The bound route's parameters, or an empty bucket when no route is bound.
+     * A request may have no route resolver (route() returns null) or a route
+     * that has not yet been bound (parameters() throws); either way a missing
+     * route param should surface as a clean "required" validation error rather
+     * than crash the mapping.
+     *
+     * @return array<string, mixed>
+     */
+    private function routeParameters(): array
+    {
+        $route = $this->request->route();
+
+        if (! $route instanceof Route) {
+            return [];
+        }
+
+        try {
+            return $route->parameters();
+        } catch (\LogicException) {
+            return [];
+        }
     }
 
     /**
