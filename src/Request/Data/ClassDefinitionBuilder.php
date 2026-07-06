@@ -287,13 +287,35 @@ readonly class ClassDefinitionBuilder
             $class = new ReflectionClass($class);
         }
 
-        return new Class_(
-            class: $class->getName(),
+        $className = $class->getName();
+
+        // Tier-1 cache: a top-level definition is reflected and PHPDoc-parsed
+        // once per class per process. Only top-level builds are cached — a
+        // nested definition bakes its parent's key path into every property
+        // source, so it is only valid inside that parent tree (and is cached as
+        // part of it). Class_ definitions are immutable, so reuse is safe.
+        // (A method-static, not a static property, because a readonly class may
+        // not declare one.)
+        /** @var array<class-string, Class_> $cache */
+        static $cache = [];
+
+        if ($this->parentSource === null && isset($cache[$className])) {
+            return $cache[$className];
+        }
+
+        $definition = new Class_(
+            class: $className,
             properties: [
                 ...$this->getConstructorParameterAndClassProperties($class),
                 ...$this->getValidationOnlyProperties($class),
             ],
         );
+
+        if ($this->parentSource === null) {
+            $cache[$className] = $definition;
+        }
+
+        return $definition;
     }
 
     /**
