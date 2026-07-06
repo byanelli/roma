@@ -202,7 +202,7 @@ class ClassRequestMapping
     private function castData(): void
     {
         foreach ($this->class->properties as $property) {
-            [$role, $type, $key] = [$property->role, $property->type, $this->getKey($property)];
+            [$role, $type, $keySegments] = [$property->role, $property->type, $this->relativeKeySegments($property)];
 
             if ($role == Role::ValidationOnly) {
                 continue;
@@ -212,11 +212,11 @@ class ClassRequestMapping
                 continue;
             }
 
-            if (! Arr::has($this->data, $key)) {
+            if (! $this->dataHas($this->data, $keySegments)) {
                 continue;
             }
 
-            $rawValue = Arr::get($this->data, $key);
+            $rawValue = $this->dataGet($this->data, $keySegments);
 
             // Leave nulls alone; a nullable property keeps its null value and
             // coercion has nothing to do.
@@ -233,7 +233,7 @@ class ClassRequestMapping
                 $typedValue = $rawValue;
             }
 
-            Arr::set($this->data, $key, $typedValue);
+            $this->dataSet($this->data, $keySegments, $typedValue);
         }
     }
 
@@ -267,36 +267,117 @@ class ClassRequestMapping
 
             $value = call_user_func($property->accessor, $this->request);
 
-            Arr::set(
-                $this->data,
-                $property->getFullKey() /* todo: get own key, always go back to first level? */,
-                $value
-            );
+            $this->dataSet($this->data, $property->getKeySegments(), $value);
         }
     }
 
     private function addValidationOnlyValuesToData(): void
     {
         foreach ($this->getValidationOnlyProperties() as $property) {
-            Arr::set(
+            $keySegments = $property->getKeySegments();
+
+            $this->dataSet(
                 $this->data,
-                '__request.'.$property->getFullKey(),
-                Arr::get($this->data, $property->getFullKey()),
+                ['__request', ...$keySegments],
+                $this->dataGet($this->data, $keySegments),
             );
         }
-
     }
 
-    private function getKey(Property $property): string
+    /**
+     * This mapping's key keySegments relative to its own source. At the top level
+     * (no source) these are the property's absolute keySegments; inside a nested
+     * object the parent source's keySegments are dropped so lookups land in the
+     * object's own data slice.
+     *
+     * @return list<string>
+     */
+    private function relativeKeySegments(Property $property): array
     {
-        return ($this->source != null)
-            ? Str::after($property->getFullKey(), $this->source->getKey().'.')
-            : $property->getFullKey();
+        $keySegments = $property->getKeySegments();
+
+        if ($this->source !== null) {
+            $keySegments = array_slice($keySegments, count($this->source->getKeySegments()));
+        }
+
+        return $keySegments;
+    }
+
+    /**
+     * Exact-key existence check for an ordered key-segment list. Unlike Arr::has,
+     * a key segment such as "a.b" is looked up as one literal key, never walked as
+     * nested "a" -> "b".
+     *
+     * @param  array<array-key, mixed>  $data
+     * @param  list<string>  $keySegments
+     */
+    private function dataHas(array $data, array $keySegments): bool
+    {
+        $sub = $data;
+
+        foreach ($keySegments as $keySegment) {
+            if (! is_array($sub) || ! array_key_exists($keySegment, $sub)) {
+                return false;
+            }
+
+            $sub = $sub[$keySegment];
+        }
+
+        return true;
+    }
+
+    /**
+     * Exact-key read for an ordered key-segment list.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @param  list<string>  $keySegments
+     */
+    private function dataGet(array $data, array $keySegments, mixed $default = null): mixed
+    {
+        $sub = $data;
+
+        foreach ($keySegments as $keySegment) {
+            if (! is_array($sub) || ! array_key_exists($keySegment, $sub)) {
+                return $default;
+            }
+
+            $sub = $sub[$keySegment];
+        }
+
+        return $sub;
+    }
+
+    /**
+     * Exact-key write for an ordered key-segment list, creating intermediate arrays
+     * as needed.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @param  list<string>  $keySegments
+     */
+    private function dataSet(array &$data, array $keySegments, mixed $value): void
+    {
+        $ref = &$data;
+
+        $last = count($keySegments) - 1;
+
+        foreach ($keySegments as $i => $keySegment) {
+            if ($i === $last) {
+                $ref[$keySegment] = $value;
+
+                return;
+            }
+
+            if (! isset($ref[$keySegment]) || ! is_array($ref[$keySegment])) {
+                $ref[$keySegment] = [];
+            }
+
+            $ref = &$ref[$keySegment];
+        }
     }
 
     public function getValue(Property $property): mixed
     {
-        return Arr::get($this->data, $this->getKey($property), $property->default);
+        return $this->dataGet($this->data, $this->relativeKeySegments($property), $property->default);
     }
 
     /**

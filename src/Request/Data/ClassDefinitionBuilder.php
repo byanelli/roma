@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Request\Data;
 use BYanelli\Roma\Request\Attributes\AccessorAttribute;
 use BYanelli\Roma\Request\Attributes\AttributeTarget;
 use BYanelli\Roma\Request\Attributes\ErrorKeyAttribute;
+use BYanelli\Roma\Request\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Request\Attributes\KeyAttribute;
 use BYanelli\Roma\Request\Attributes\RulesAttribute;
 use BYanelli\Roma\Request\Attributes\SourceAttribute;
@@ -46,14 +47,27 @@ readonly class ClassDefinitionBuilder
     }
 
     /**
+     * The explicit request key an attribute declares, if any. A KeyAttribute
+     * (header/accessor) always supplies one; an ExplicitKeyAttribute (Body /
+     * Query / Input) may supply one or leave it null to use the property name.
+     *
      * @param  array<int, object>  $attributes
      */
     private function getKeyFromAttributes(array $attributes): ?string
     {
-        return collect($attributes)
-            ->whereInstanceOf(KeyAttribute::class)
-            ->map(fn (KeyAttribute $attr) => $attr->getKey())
-            ->first();
+        foreach ($attributes as $attribute) {
+            $key = match (true) {
+                $attribute instanceof KeyAttribute => $attribute->getKey(),
+                $attribute instanceof ExplicitKeyAttribute => $attribute->getKey(),
+                default => null,
+            };
+
+            if ($key !== null && $key !== '') {
+                return $key;
+            }
+        }
+
+        return null;
     }
 
     /**

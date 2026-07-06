@@ -16,4 +16,19 @@ abstract readonly class Source
             ? $this->getOwnKey()
             : "$parentKey.{$this->getOwnKey()}";
     }
+
+    /**
+     * The ordered key keySegments from the root source down to this one. Each
+     * key segment is an opaque array key and may itself contain a literal dot;
+     * data access must walk these keySegments rather than splitting getKey() on
+     * '.', which would misread a literal dot as structural nesting.
+     *
+     * @return list<string>
+     */
+    public function getKeySegments(): array
+    {
+        $parentKeySegments = $this->parent?->getKeySegments() ?? [];
+
+        return [...$parentKeySegments, $this->getOwnKey()];
+    }
 }

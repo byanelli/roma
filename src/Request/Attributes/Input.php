@@ -7,13 +7,13 @@ use BYanelli\Roma\Request\Data\Source;
 use BYanelli\Roma\Request\Data\Sources;
 
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
-readonly class Body implements ExplicitKeyAttribute, SourceAttribute
+readonly class Input implements ExplicitKeyAttribute, SourceAttribute
 {
     public function __construct(public ?string $key = null) {}
 
     public function getSource(): Source
     {
-        return new Sources\Body;
+        return new Sources\Input;
     }
 
     public function getKey(): ?string

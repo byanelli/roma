@@ -34,12 +34,14 @@ readonly class Property
         public bool $nullable = false,
         ?string $errorKey = null,
     ) {
-        // Roma builds dotted lookup paths and "key.*" validation rules, so a
-        // key segment containing '.' or '*' would be misread. Reject it up front
-        // rather than silently mis-map. (Property names can't contain these; the
-        // realistic culprit is a header/key attribute given such a name.)
-        if (Str::contains($key, ['.', '*'])) {
-            throw new RuntimeException("Roma request key \"$key\" (property \"$name\") may not contain '.' or '*'.");
+        // A key is one opaque key segment. A literal '.' is fully supported: data
+        // access walks key segments and validation rules escape it as "\.". A '*'
+        // however is Laravel's array wildcard with no escape hatch, so a literal
+        // '*' in a key can never be validated — reject it up front rather than
+        // silently mis-map. (Property names can't contain these; the realistic
+        // culprit is a header/key attribute given such a name.)
+        if (Str::contains($key, '*')) {
+            throw new RuntimeException("Roma request key \"$key\" (property \"$name\") may not contain '*'.");
         }
 
         // A nullable property with no explicit default resolves to null when
@@ -64,5 +66,18 @@ readonly class Property
     public function getFullKey(): string
     {
         return $this->source->getKey();
+    }
+
+    /**
+     * The ordered key segments for this property (source-prefix key segments
+     * plus this property's own key). Each key segment is opaque and may contain a
+     * literal dot; callers doing data access or building rule keys must treat
+     * them one key segment at a time.
+     *
+     * @return list<string>
+     */
+    public function getKeySegments(): array
+    {
+        return $this->source->getKeySegments();
     }
 }
