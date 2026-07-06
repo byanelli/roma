@@ -29,6 +29,8 @@ class ClassRequestMapping
      */
     private array $data;
 
+    private ?ValidationRules $validationRules = null;
+
     /**
      * @param  array<string, mixed>|null  $data
      */
@@ -503,7 +505,7 @@ class ClassRequestMapping
 
     private function validationRules(): ValidationRules
     {
-        return new ValidationRules($this->class);
+        return $this->validationRules ??= new ValidationRules($this->class);
     }
 
     /**
