@@ -13,6 +13,7 @@ use BYanelli\Roma\Request\Data\Sources\Input;
 use BYanelli\Roma\Request\Data\Sources\Property as PropertySource;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Data\Types\Mixed_;
+use BYanelli\Roma\Request\Enums\HasRequestSource;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Closure;
@@ -115,6 +116,16 @@ readonly class ClassDefinitionBuilder
 
         $type = $obj->getType();
         $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
+
+        // Self-sourcing metadata enums: a property typed as one of these enums
+        // with no explicit source attribute infers its source from the enum,
+        // exactly as if the equivalent source attribute had been written.
+        if ($typeName !== null
+            && collect($attributes)->whereInstanceOf(SourceAttribute::class)->isEmpty()
+            && enum_exists($typeName)
+            && is_a($typeName, HasRequestSource::class, true)) {
+            $attributes = [...$attributes, ...$typeName::requestSourceAttributes()];
+        }
 
         $parent = in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class])
             ? new File
