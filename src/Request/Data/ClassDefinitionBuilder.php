@@ -15,8 +15,6 @@ use BYanelli\Roma\Request\Data\Sources\Property as PropertySource;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Data\Types\Mixed_;
 use BYanelli\Roma\Request\Enums\HasRequestSource;
-use Carbon\Carbon;
-use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Http\UploadedFile;
@@ -232,9 +230,11 @@ readonly class ClassDefinitionBuilder
             'bool' => new Types\Boolean,
             'float' => new Types\Float_,
             'array' => new Types\Array_($this->getTypeByName($parent, $key, $obj, $this->phpDocTypeParser->getArrayElementTypeName($obj))),
-            \DateTimeInterface::class, Carbon::class, CarbonImmutable::class => new Types\Date,
             UploadedFile::class, SymfonyUploadedFile::class => new Types\File,
             default => match (true) {
+                // Any DateTimeInterface implementor is a date. The bare interface
+                // has no concrete target class; a concrete class carries its own.
+                is_a($name, \DateTimeInterface::class, true) => new Types\Date(interface_exists($name) ? null : $name),
                 enum_exists($name) => new Types\Enum($name),
                 class_exists($name) => (new ClassDefinitionBuilder(new PropertySource($parent, $key)))->buildClassDefinition($name),
                 default => throw new RuntimeException("Unsupported type $name"),

@@ -12,6 +12,7 @@ use BYanelli\Roma\Request\Data\Sources\RequestObject_;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Enums\NormalizesRawValue;
 use BYanelli\Roma\Request\Validation\ValidationRules;
+use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -166,14 +167,41 @@ class ClassRequestMapping
             : throw new CoercionException("Invalid float: $val");
     }
 
-    private function toDate(mixed $val): DateTimeInterface
+    private function toDate(Types\Date $type, mixed $val): DateTimeInterface
     {
         try {
-            return $this->dateFactory->parse($val);
+            $date = $this->dateFactory->parse($val);
         } catch (\Throwable $e) {
-            // Any failure to parse a date is bad input, not a bug.
+            // Any failure to parse a date is bad input, not a bug. The broad
+            // catch is deliberate: larastan's Carbon stub declares no @throws.
             throw new CoercionException('Invalid date: '.get_debug_type($val), previous: $e);
         }
+
+        $class = $type->class;
+
+        // Property typed as the bare interface: the mutable Carbon the factory
+        // returns already satisfies it.
+        if ($class === null) {
+            return $date;
+        }
+
+        // Immutable targets need an immutable instance; Carbon\CarbonImmutable
+        // (and DateTimeImmutable) are satisfied by ->toImmutable().
+        if (is_a($class, \DateTimeImmutable::class, true)) {
+            $date = $date->toImmutable();
+        }
+
+        if ($date instanceof $class) {
+            return $date;
+        }
+
+        // An exotic Carbon subclass the factory doesn't produce: reparse through
+        // the target itself so the hydrated value matches the declared type.
+        if (is_a($class, CarbonInterface::class, true)) {
+            return $class::parse($val);
+        }
+
+        throw new CoercionException('Cannot coerce date to '.$class);
     }
 
     /**
@@ -261,7 +289,7 @@ class ClassRequestMapping
             $type instanceof Types\Boolean => $this->toBoolean($rawValue),
             $type instanceof Types\Integer => $this->toInteger($rawValue),
             $type instanceof Types\Float_ => $this->toFloat($rawValue),
-            $type instanceof Types\Date => $this->toDate($rawValue),
+            $type instanceof Types\Date => $this->toDate($type, $rawValue),
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
