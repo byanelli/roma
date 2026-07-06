@@ -11,6 +11,7 @@ use BYanelli\Roma\Request\ContextualBinding\ContextualBindingException;
 use BYanelli\Roma\Request\ContextualBinding\Request as RequestAttribute;
 use BYanelli\Roma\Tests\Support\NamespacedArrayRequest;
 use BYanelli\Roma\Tests\Support\NamespacedItem;
+use BYanelli\Roma\Tests\Support\Nested\FqcnArrayRequest;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 use This\Class\Does\Not\Exist;
@@ -169,6 +170,85 @@ it('rejects a non-numeric string for an int property', function () {
 });
 
 /*
+| An array arriving where a scalar is declared (e.g. ?age[]=1 in a query
+| string, or an array/object in JSON) must become a validation error, never an
+| uncaught TypeError bubbling out of coercion.
+*/
+
+readonly class EdgeArrayForIntRequest
+{
+    public int $age;
+}
+
+it('rejects an array value for an int property without crashing', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['age' => ['1', '2']]);
+
+    try {
+        $this->mapRequest(EdgeArrayForIntRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.age');
+    }
+});
+
+readonly class EdgeArrayForFloatRequest
+{
+    public float $amount;
+}
+
+it('rejects an array value for a float property without crashing', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['amount' => ['1.5', '2.5']]);
+
+    try {
+        $this->mapRequest(EdgeArrayForFloatRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.amount');
+    }
+});
+
+readonly class EdgeArrayForBoolRequest
+{
+    public bool $active;
+}
+
+it('rejects an array value for a bool property without crashing', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['active' => ['x']]);
+
+    try {
+        $this->mapRequest(EdgeArrayForBoolRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.active');
+    }
+});
+
+enum EdgeArrayForEnumStatus: string
+{
+    case On = 'on';
+}
+
+readonly class EdgeArrayForEnumRequest
+{
+    public EdgeArrayForEnumStatus $status;
+}
+
+it('rejects an array value for an enum property without crashing', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['status' => ['on']]);
+
+    try {
+        $this->mapRequest(EdgeArrayForEnumRequest::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('input.status');
+    }
+});
+
+/*
 |--------------------------------------------------------------------------
 | Ajax rule matrix (mustBe: false / property-level null)
 |--------------------------------------------------------------------------
@@ -316,20 +396,16 @@ it('maps an array of nested objects', function () {
         ->and($request->items[1]->label)->toBe('b');
 });
 
-readonly class EdgeFqcnArrayRequest
-{
-    /** @var array<BYanelli\Roma\Tests\Support\NamespacedItem> */
-    public array $items;
-}
-
 it('maps an array of namespaced objects declared by FQCN', function () {
     /** @var TestCase $this */
+    // FqcnArrayRequest documents its items by fully-qualified name; the parser
+    // must accept the backslashes and resolve the class.
     $this->setRequest(
         headers: ['Content-Type' => 'application/json'],
         json: ['items' => [['name' => 'a'], ['name' => 'b']]],
     );
 
-    $request = $this->mapRequest(EdgeFqcnArrayRequest::class);
+    $request = $this->mapRequest(FqcnArrayRequest::class);
 
     expect($request->items)->toHaveCount(2)
         ->and($request->items[0])->toBeInstanceOf(NamespacedItem::class)
