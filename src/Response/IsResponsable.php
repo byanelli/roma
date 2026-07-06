@@ -29,6 +29,8 @@ trait IsResponsable
     {
         foreach (new ReflectionObject($this)->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             if ($property->getAttributes(Status::class) !== []) {
+                $this->requireInitialized($property);
+
                 return (int) $property->getValue($this);
             }
         }
@@ -53,6 +55,8 @@ trait IsResponsable
             if ($attributes === []) {
                 continue;
             }
+
+            $this->requireInitialized($property);
 
             $headers[$attributes[0]->newInstance()->name] = (string) $property->getValue($this);
         }

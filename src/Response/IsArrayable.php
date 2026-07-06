@@ -11,6 +11,7 @@ use DateTimeInterface;
 use Illuminate\Contracts\Support\Arrayable;
 use ReflectionObject;
 use ReflectionProperty;
+use RuntimeException;
 use UnitEnum;
 
 /**
@@ -39,11 +40,13 @@ trait IsArrayable
             }
 
             // An unset #[Optional] property is omitted. Any other unset property
-            // has no implicit default, so accessing it below throws — surfacing
-            // a response field that was never populated.
+            // has no implicit default and is a mistake, so surface it clearly
+            // instead of letting a raw uninitialized-property Error escape.
             if (! $property->isInitialized($this) && $property->getAttributes(Optional::class) !== []) {
                 continue;
             }
+
+            $this->requireInitialized($property);
 
             $result[$property->getName()] = $this->normalizeValue(
                 $property->getValue($this),
@@ -52,6 +55,24 @@ trait IsArrayable
         }
 
         return $result;
+    }
+
+    /**
+     * Guard against serializing (or lifting to status/header) a typed property
+     * that was never set, which would otherwise raise PHP's opaque
+     * "must not be accessed before initialization" Error.
+     */
+    private function requireInitialized(ReflectionProperty $property): void
+    {
+        if ($property->isInitialized($this)) {
+            return;
+        }
+
+        throw new RuntimeException(sprintf(
+            'Response property %s::$%s was never set. Mark it #[Optional] to omit it, or give it a default value.',
+            $property->getDeclaringClass()->getName(),
+            $property->getName(),
+        ));
     }
 
     /**

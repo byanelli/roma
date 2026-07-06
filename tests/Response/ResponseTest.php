@@ -154,10 +154,11 @@ class TestRequiredResponse extends Response
     public ?string $email;
 }
 
-it('throws for an unset non-optional property even when nullable', function () {
+it('throws an actionable error for an unset non-optional property even when nullable', function () {
     $response = new TestRequiredResponse;
 
-    expect(fn () => $response->toArray())->toThrow(Error::class);
+    expect(fn () => $response->toArray())
+        ->toThrow(RuntimeException::class, 'was never set. Mark it #[Optional]');
 });
 
 class TestDefaultResponse extends Response
