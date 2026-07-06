@@ -3,7 +3,7 @@
 namespace BYanelli\Roma\Request\ContextualBinding;
 
 use Attribute;
-use BYanelli\Roma\Request\RequestMapper;
+use BYanelli\Roma\Request\Contracts\RequestMapper;
 use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Container\ContextualAttribute;
