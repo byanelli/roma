@@ -293,6 +293,8 @@ class UserRequest {
 }
 ``` 
 
+A nested object inherits its location from the parent property, so source attributes (`#[Query]`, `#[Body]`, `#[Header]`, `#[RouteParameter]`, `#[Cookie]`, accessors) and self-sourcing metadata enums are only valid on top-level request classes. Declaring one on a nested property throws — its data always comes from within the parent's slice.
+
 ## Compose requests using traits
 
 Share common properties across multiple request classes using traits:

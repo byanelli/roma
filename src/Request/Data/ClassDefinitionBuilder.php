@@ -129,6 +129,32 @@ readonly class ClassDefinitionBuilder
         $type = $obj->getType();
         $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
 
+        // A nested object inherits its location from the parent, so a source
+        // that would relocate one of its properties is silently ignored, which
+        // surfaces as a baffling "required" validation error. #[Input] is the
+        // one exception: it names the default bucket rather than relocating, and
+        // is the sanctioned way to carry a literal dotted key onto a nested
+        // property, so it is allowed through.
+        $relocatesSource = collect($attributes)
+            ->whereInstanceOf(SourceAttribute::class)
+            ->map(fn (SourceAttribute $attr) => $attr->getSource())
+            ->contains(fn (Source $source) => ! $source instanceof Input);
+
+        $declaresOwnSource = $relocatesSource
+            || ($typeName !== null && enum_exists($typeName) && is_a($typeName, HasRequestSource::class, true));
+
+        // Reject a relocating source on a nested property up front with an
+        // actionable message rather than let it silently misbehave.
+        if ($this->parentSource !== null && $declaresOwnSource) {
+            $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
+
+            throw new RuntimeException(
+                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested request object and "
+                .'cannot declare its own source; sources (query/body/header/route/cookie/accessors and metadata '
+                .'enums) are only available on top-level request classes.'
+            );
+        }
+
         // Self-sourcing metadata enums: a property typed as one of these enums
         // with no explicit source attribute infers its source from the enum,
         // exactly as if the equivalent source attribute had been written.
