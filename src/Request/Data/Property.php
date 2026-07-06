@@ -7,6 +7,7 @@ use BYanelli\Roma\Request\Data\Sources\Property as PropertySource;
 use Closure;
 use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 readonly class Property
 {
@@ -33,6 +34,14 @@ readonly class Property
         public bool $nullable = false,
         ?string $errorKey = null,
     ) {
+        // Roma builds dotted lookup paths and "key.*" validation rules, so a
+        // key segment containing '.' or '*' would be misread. Reject it up front
+        // rather than silently mis-map. (Property names can't contain these; the
+        // realistic culprit is a header/key attribute given such a name.)
+        if (Str::contains($key, ['.', '*'])) {
+            throw new RuntimeException("Roma request key \"$key\" (property \"$name\") may not contain '.' or '*'.");
+        }
+
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).
         $this->default = ($nullable && $default instanceof MissingValue) ? null : $default;
