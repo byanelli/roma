@@ -173,6 +173,30 @@ readonly class RequestInfo {
 
 Every boolean accessor accepts `mustBe` to turn it into a constraint: `#[Secure(mustBe: true)]` requires HTTPS, `#[Ajax(mustBe: false)]` requires a non-AJAX request. Applied bare at the class level, a boolean accessor requires the truthy case (see [Class-Level Constraints](#class-level-constraints)).
 
+## Self-sourcing metadata enums
+
+Some request metadata has a small, fixed set of values. Roma ships enums for these, and typing a property as one of them is enough — the enum type says which request source it comes from, so no attribute is needed:
+
+```php
+use BYanelli\Roma\Request\Enums\ContentType;
+use BYanelli\Roma\Request\Enums\Method;
+use BYanelli\Roma\Request\Enums\Scheme;
+
+readonly class MetadataEnumRequest {
+    public Method $method;          // from $request->method(): Method::Get, Method::Post, ...
+
+    public ContentType $contentType; // from the Content-Type header: ContentType::Json, ...
+
+    public Scheme $scheme;          // from the URI scheme: Scheme::Http, Scheme::Https
+}
+```
+
+* `Method` is string-backed with cases like `Get = 'GET'`, `Post = 'POST'`, `Put = 'PUT'`, `Patch`, `Delete`, `Head`, `Options`, `Trace`, `Connect`.
+* `ContentType` covers common media types — `Json = 'application/json'`, `Markdown = 'text/markdown'`, `Toon = 'text/toon'`, `Html`, `Xml`, `Csv`, and more. Content-Type parameters are stripped before matching, so `application/json; charset=utf-8` still resolves to `ContentType::Json`.
+* `Scheme` is `Http = 'http'` or `Https = 'https'`.
+
+An explicit source attribute still wins over the inferred one, so `#[Query] public Method $method` reads the enum from the query string instead. And a value outside the enum's cases can still be mapped as a plain string — use the accessor/header attribute directly, e.g. `#[ContentType] public string $contentType`, to accept any media type.
+
 ## Map to enums
 
 Roma automatically maps values to string-backed, integer-backed, and unit enums:
@@ -311,6 +335,141 @@ $e->errors(); // returns:
 ];
 ```
 
+# Response objects
+
+Roma is a Request/Response Object MApper: responses are the mirror of requests. Where a request property has a _source_ — a place in the request it's pulled _from_ — a response property has a _destination_, a place in the response it's pushed _to_. By default that destination is the JSON body, but a property can instead be lifted to response metadata (the status code or a header).
+
+## Define and return a response
+
+Extend `Response`, declare typed public properties, and return the object from your controller. Roma serializes it to a JSON response:
+
+```php
+use BYanelli\Roma\Response\Response;
+
+class UserResponse extends Response {
+    public function __construct(
+        public string $name,
+        public int $age,
+    ) {}
+}
+
+class ShowUserController {
+    public function __invoke(): UserResponse {
+        return new UserResponse('Bill', 40);
+    }
+}
+```
+
+If a class already extends something else, use the traits directly instead of the base class: `IsResponsable` (adds `toResponse()` and, transitively, `toArray()`) for a full HTTP response, or `IsArrayable` alone (adds `toArray()`) for a nested value that only needs to serialize:
+
+```php
+use BYanelli\Roma\Response\IsArrayable;
+use Illuminate\Contracts\Support\Arrayable;
+
+class AddressResponse implements Arrayable {
+    use IsArrayable;
+
+    public function __construct(
+        public string $city,
+        public string $zip,
+    ) {}
+}
+```
+
+## Value conversion
+
+Property values are converted to their JSON form on the way out, recursively:
+
+```php
+use BYanelli\Roma\Response\Response;
+
+enum Status: string { case Active = 'active'; }
+enum Rank { case Gold; }
+
+class ProfileResponse extends Response {
+    public function __construct(
+        public Status $status,             // backed enum -> its value: "active"
+        public Rank $rank,                 // unit enum -> its name: "Gold"
+        public \DateTimeInterface $createdAt, // DateTimeInterface -> ISO-8601 (ATOM) string
+        public AddressResponse $address,   // nested response object -> recurses
+        /** @var array<AddressResponse> */
+        public array $addresses,           // arrays recurse element by element
+    ) {}
+}
+```
+
+## Omit unset properties with `#[Optional]`
+
+A response property has no implicit default: leaving it unset — nullable or not — makes serialization throw, surfacing a field you forgot to populate. Mark it `#[Optional]` to omit it from the output when unset instead, or give it an explicit default to serialize that value:
+
+```php
+use BYanelli\Roma\Response\Attributes\Optional;
+use BYanelli\Roma\Response\Response;
+
+class ContactResponse extends Response {
+    public string $name;
+
+    #[Optional]
+    public ?string $nickname; // omitted from the output entirely when unset
+
+    public ?string $note = null; // an explicit default serializes as null
+}
+```
+
+## Set the status code with `#[Status]`
+
+Mark an `int` property `#[Status]` and its value becomes the HTTP status code. The property is lifted out of the body:
+
+```php
+use BYanelli\Roma\Response\Attributes\Status;
+use BYanelli\Roma\Response\Response;
+
+class CreatedResponse extends Response {
+    public string $name = 'Bill';
+
+    #[Status]
+    public int $status = 201; // response is 201; body is just {"name":"Bill"}
+}
+```
+
+Without a `#[Status]` property the response defaults to 200.
+
+## Emit headers with `#[Header]`
+
+Mark a property `#[Header('Name')]` and its value becomes that response header, lifted out of the body. This is the same attribute name as the request-side `#[Header]`, in the opposite direction — request `#[Header]` sources a property _from_ a request header; response `#[Header]` sends a property _to_ a response header. Response header names are emitted verbatim:
+
+```php
+use BYanelli\Roma\Response\Attributes\Header;
+use BYanelli\Roma\Response\Response;
+
+class CachedResponse extends Response {
+    public string $name = 'Bill';
+
+    #[Header('Cache-Control')]
+    public string $cacheControl = 'max-age=3600'; // becomes the Cache-Control header
+}
+```
+
+## Format dates with `#[DateFormat]`
+
+`DateTimeInterface` values serialize as ISO-8601 (ATOM) by default. Apply `#[DateFormat]` to a property to format that date differently; other date properties are unaffected:
+
+```php
+use BYanelli\Roma\Response\Attributes\DateFormat;
+use BYanelli\Roma\Response\Response;
+
+class TimestampsResponse extends Response {
+    #[DateFormat('Y-m-d')]
+    public \DateTimeInterface $createdAt; // "2024-01-02"
+
+    public \DateTimeInterface $updatedAt; // "2024-01-02T03:04:05+00:00" (ATOM)
+}
+```
+
+## Dynamic status, headers, and date format
+
+Status, headers, and per-property date format each also have an overridable `protected` method for cases that can't be expressed as a fixed attribute: `responseStatus(): int`, `responseHeaders(): array`, and `dateFormat(ReflectionProperty $property): string`. Override the one you need when the value has to be computed at runtime.
+
 ## More to come
 
-* Type-safe responses! We want this to be a Request/Response Object MApper
+Roma now maps both requests and responses. Further work is tracked toward a 1.0 release.
