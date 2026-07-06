@@ -10,6 +10,7 @@ use BYanelli\Roma\Request\Data\Sources\Input;
 use BYanelli\Roma\Request\Data\Sources\Query;
 use BYanelli\Roma\Request\Data\Sources\RequestObject_;
 use BYanelli\Roma\Request\Data\Types\Class_;
+use BYanelli\Roma\Request\Enums\NormalizesRawValue;
 use BYanelli\Roma\Request\Validation\ValidationRules;
 use DateTimeInterface;
 use Illuminate\Http\Request;
@@ -178,6 +179,10 @@ class ClassRequestMapping
     private function toEnum(Types\Enum $type, string $val): mixed
     {
         $class = $type->class;
+
+        if (is_a($class, NormalizesRawValue::class, true)) {
+            $val = $class::normalizeRawValue($val);
+        }
 
         try {
             if (is_a($class, BackedEnum::class, true)) {

@@ -42,6 +42,30 @@ it('infers the Content-Type header for a ContentType enum property', function ()
     $this->assertEquals(ContentType::Json, $mapped->contentType);
 });
 
+it('strips Content-Type parameters before matching the enum', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: [
+            'Content-Type' => 'application/json; charset=utf-8',
+        ],
+    );
+
+    $mapped = $this->mapRequest(TestItInfersContentTypeEnumSource::class);
+
+    $this->assertEquals(ContentType::Json, $mapped->contentType);
+});
+
+it('maps newer media types like text/markdown and text/toon', function () {
+    /** @var TestCase $this */
+    $this->setRequest(headers: ['Content-Type' => 'text/markdown']);
+    expect($this->mapRequest(TestItInfersContentTypeEnumSource::class)->contentType)
+        ->toBe(ContentType::Markdown);
+
+    $this->setRequest(headers: ['Content-Type' => 'text/toon']);
+    expect($this->mapRequest(TestItInfersContentTypeEnumSource::class)->contentType)
+        ->toBe(ContentType::Toon);
+});
+
 readonly class TestExplicitSourceOverridesEnumInference
 {
     #[Query]
