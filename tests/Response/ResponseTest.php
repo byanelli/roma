@@ -2,7 +2,10 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Response\Attributes\DateFormat;
+use BYanelli\Roma\Response\Attributes\Header;
 use BYanelli\Roma\Response\Attributes\Optional;
+use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\IsArrayable;
 use BYanelli\Roma\Response\Response;
 use Illuminate\Contracts\Support\Arrayable;
@@ -166,4 +169,95 @@ it('serializes an explicit default', function () {
     $response = new TestDefaultResponse;
 
     expect($response->toArray())->toBe(['note' => null]);
+});
+
+// --- #[Status] ---
+
+class TestStatusResponse extends Response
+{
+    public string $name = 'Bill';
+
+    #[Status]
+    public int $status = 201;
+}
+
+class TestDynamicStatusResponse extends Response
+{
+    public string $name = 'Bill';
+
+    protected function responseStatus(): int
+    {
+        return 418;
+    }
+}
+
+it('sets the HTTP status from the #[Status] property and drops it from the body', function () {
+    $response = new TestStatusResponse;
+
+    $httpResponse = $response->toResponse(new Request);
+
+    expect($httpResponse->getStatusCode())->toBe(201)
+        ->and($httpResponse->getData(true))->toBe(['name' => 'Bill']);
+});
+
+it('defaults the HTTP status to 200 without a #[Status] property', function () {
+    $response = new TestDefaultResponse;
+
+    expect($response->toResponse(new Request)->getStatusCode())->toBe(200);
+});
+
+it('allows overriding responseStatus() for a dynamic code', function () {
+    $response = new TestDynamicStatusResponse;
+
+    expect($response->toResponse(new Request)->getStatusCode())->toBe(418);
+});
+
+// --- #[Header] ---
+
+class TestHeaderResponse extends Response
+{
+    public string $name = 'Bill';
+
+    #[Header('X-A')]
+    public string $a = '1';
+
+    #[Header('X-B')]
+    public string $b = '2';
+}
+
+it('lifts #[Header] properties into response headers and drops them from the body', function () {
+    $response = new TestHeaderResponse;
+
+    $httpResponse = $response->toResponse(new Request);
+
+    expect($httpResponse->headers->get('X-A'))->toBe('1')
+        ->and($httpResponse->headers->get('X-B'))->toBe('2')
+        ->and($httpResponse->getData(true))->toBe(['name' => 'Bill']);
+});
+
+it('adds no extra headers without a #[Header] property', function () {
+    $response = new TestDefaultResponse;
+
+    expect($response->toResponse(new Request)->headers->get('X-A'))->toBeNull();
+});
+
+// --- #[DateFormat] ---
+
+class TestDateFormatResponse extends Response
+{
+    #[DateFormat('Y-m-d')]
+    public DateTimeImmutable $createdAt;
+
+    public DateTimeImmutable $updatedAt;
+}
+
+it('formats a date property with its #[DateFormat] and leaves others ATOM', function () {
+    $response = new TestDateFormatResponse;
+    $response->createdAt = new DateTimeImmutable('2024-01-02T03:04:05+00:00');
+    $response->updatedAt = new DateTimeImmutable('2024-01-02T03:04:05+00:00');
+
+    expect($response->toArray())->toBe([
+        'createdAt' => '2024-01-02',
+        'updatedAt' => '2024-01-02T03:04:05+00:00',
+    ]);
 });
