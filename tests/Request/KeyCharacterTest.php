@@ -5,6 +5,7 @@
 use BYanelli\Roma\Request\Attributes\Body;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Attributes\Input;
+use BYanelli\Roma\Request\Attributes\Key;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 
@@ -119,7 +120,7 @@ it('validates a literal dotted key with the friendly error key when missing', fu
 
 readonly class TestDottedNestedChild
 {
-    #[Input('c.d')]
+    #[Key('c.d')]
     public string $val;
 }
 
@@ -158,6 +159,75 @@ it('validates a literal dotted key inside a nested object', function () {
     }
 
     $this->fail('Exception was not thrown');
+});
+
+/*
+|--------------------------------------------------------------------------
+| #[Key] overrides a plain (non-dotted) key inside a nested object too.
+|--------------------------------------------------------------------------
+*/
+
+readonly class TestKeyNestedChild
+{
+    #[Key('other_name')]
+    public string $val;
+}
+
+readonly class TestKeyNestedRequest
+{
+    public TestKeyNestedChild $nested;
+}
+
+it('overrides a plain nested key with #[Key]', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['nested' => ['other_name' => 'deep']],
+    );
+
+    $request = $this->mapRequest(TestKeyNestedRequest::class);
+
+    expect($request->nested->val)->toBe('deep');
+});
+
+/*
+|--------------------------------------------------------------------------
+| A source attribute on a nested property is rejected; #[Key] is the only
+| way to override a nested key. #[Key] is conversely rejected at top level.
+|--------------------------------------------------------------------------
+*/
+
+readonly class TestNestedInputSourceChild
+{
+    #[Input('c.d')]
+    public string $val;
+}
+
+readonly class TestNestedInputSourceRequest
+{
+    public TestNestedInputSourceChild $nested;
+}
+
+it('rejects a source attribute on a nested property', function () {
+    /** @var TestCase $this */
+    $this->setRequest();
+
+    expect(fn () => $this->mapRequest(TestNestedInputSourceRequest::class))
+        ->toThrow(RuntimeException::class, 'cannot declare its own source');
+});
+
+readonly class TestTopLevelKeyRequest
+{
+    #[Key('a.b')]
+    public string $x;
+}
+
+it('rejects #[Key] on a top-level property', function () {
+    /** @var TestCase $this */
+    $this->setRequest();
+
+    expect(fn () => $this->mapRequest(TestTopLevelKeyRequest::class))
+        ->toThrow(RuntimeException::class, '#[Key] does not apply');
 });
 
 /*

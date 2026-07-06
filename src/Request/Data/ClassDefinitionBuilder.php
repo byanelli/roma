@@ -6,6 +6,7 @@ use BYanelli\Roma\Request\Attributes\AccessorAttribute;
 use BYanelli\Roma\Request\Attributes\AttributeTarget;
 use BYanelli\Roma\Request\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Request\Attributes\ExplicitKeyAttribute;
+use BYanelli\Roma\Request\Attributes\Key;
 use BYanelli\Roma\Request\Attributes\KeyAttribute;
 use BYanelli\Roma\Request\Attributes\RulesAttribute;
 use BYanelli\Roma\Request\Attributes\SourceAttribute;
@@ -129,29 +130,37 @@ readonly class ClassDefinitionBuilder
         $type = $obj->getType();
         $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
 
-        // A nested object inherits its location from the parent, so a source
-        // that would relocate one of its properties is silently ignored, which
-        // surfaces as a baffling "required" validation error. #[Input] is the
-        // one exception: it names the default bucket rather than relocating, and
-        // is the sanctioned way to carry a literal dotted key onto a nested
-        // property, so it is allowed through.
-        $relocatesSource = collect($attributes)
-            ->whereInstanceOf(SourceAttribute::class)
-            ->map(fn (SourceAttribute $attr) => $attr->getSource())
-            ->contains(fn (Source $source) => ! $source instanceof Input);
-
-        $declaresOwnSource = $relocatesSource
+        // A nested object always inherits its location from the parent, so a
+        // property inside one cannot declare its own source: a source attribute
+        // (query/body/input/header/route/cookie/accessor) or a self-sourcing
+        // metadata enum would silently relocate it, surfacing as a baffling
+        // "required" validation error. To override a nested property's key
+        // (e.g. a literal dotted key) use #[Key] instead.
+        $declaresOwnSource = collect($attributes)->whereInstanceOf(SourceAttribute::class)->isNotEmpty()
             || ($typeName !== null && enum_exists($typeName) && is_a($typeName, HasRequestSource::class, true));
 
-        // Reject a relocating source on a nested property up front with an
-        // actionable message rather than let it silently misbehave.
+        // Reject a source on a nested property up front with an actionable
+        // message rather than let it silently misbehave.
         if ($this->parentSource !== null && $declaresOwnSource) {
             $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
 
             throw new RuntimeException(
                 "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested request object and "
-                .'cannot declare its own source; sources (query/body/header/route/cookie/accessors and metadata '
-                .'enums) are only available on top-level request classes.'
+                .'cannot declare its own source; sources (query/body/input/header/route/cookie/accessors and '
+                .'metadata enums) are only available on top-level request classes. To override a nested '
+                .'property\'s key (e.g. a key containing a literal dot) use #[Key] instead.'
+            );
+        }
+
+        // #[Key] is the inverse: it overrides a key only inside a nested object.
+        // On a top-level property there is no inherited location to override, so
+        // reject it and point at the source attribute's key argument.
+        if ($this->parentSource === null && collect($attributes)->contains(fn (object $attr) => $attr instanceof Key)) {
+            $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
+
+            throw new RuntimeException(
+                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is on a top-level request class, where "
+                .'#[Key] does not apply; pass the key to the source attribute instead, e.g. #[Input(\'a.b\')].'
             );
         }
 

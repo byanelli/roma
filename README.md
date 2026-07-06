@@ -273,6 +273,8 @@ class FileRequest {
 }
 ```
 
+File uploads must be declared on the top-level request class. A `UploadedFile` property inside a nested object is not supported and throws — declare it at the top level instead.
+
 ## Map to nested objects
 
 Type-hint your properties to other POPOs to deserialize complex nested structures from JSON payloads:
@@ -293,7 +295,23 @@ class UserRequest {
 }
 ``` 
 
-A nested object inherits its location from the parent property, so source attributes (`#[Query]`, `#[Body]`, `#[Header]`, `#[RouteParameter]`, `#[Cookie]`, accessors) and self-sourcing metadata enums are only valid on top-level request classes. Declaring one on a nested property throws — its data always comes from within the parent's slice.
+A nested object inherits its location from the parent property, so source attributes (`#[Input]`, `#[Query]`, `#[Body]`, `#[Header]`, `#[RouteParameter]`, `#[Cookie]`, accessors) and self-sourcing metadata enums are only valid on top-level request classes. Declaring one on a nested property throws — its data always comes from within the parent's slice.
+
+To override a nested property's key — for example when the client field name contains a literal dot and can't be written as a PHP property name — use `#[Key]`. It is nested-only (top-level properties instead pass the key to their source attribute, e.g. `#[Body('a.b')]`):
+
+```php
+use BYanelli\Roma\Request\Attributes\Key;
+
+class Meta {
+    #[Key('created.at')]   // reads the "created.at" field from the parent's slice
+    public string $createdAt;
+}
+
+class ArticleRequest {
+    public string $title;
+    public Meta $meta;
+}
+```
 
 ## Compose requests using traits
 
