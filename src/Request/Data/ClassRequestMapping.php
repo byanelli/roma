@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Request\Data;
 
 use BackedEnum;
 use BYanelli\Roma\Request\Data\Sources\Body;
+use BYanelli\Roma\Request\Data\Sources\Cookie;
 use BYanelli\Roma\Request\Data\Sources\File;
 use BYanelli\Roma\Request\Data\Sources\Header;
 use BYanelli\Roma\Request\Data\Sources\Input;
@@ -70,6 +71,7 @@ class ClassRequestMapping
                 : $this->request->request->all(),
             (new File)->getKey() => $this->request->files->all(),
             (new RouteParameter)->getKey() => $this->routeParameters(),
+            (new Cookie)->getKey() => $this->request->cookies->all(),
         ];
     }
 

@@ -145,6 +145,22 @@ readonly class ShowPostRequest {
 
 If the request has no bound route, a required route parameter simply fails validation with a `route.` error — it never crashes.
 
+## Map cookies
+
+Bind a property to a request cookie with `#[Cookie]`, using the property name or an explicit cookie name. Values coerce like any other source. Cookie names may contain literal dots, so pass one explicitly when the name isn't a valid PHP property name:
+
+```php
+use BYanelli\Roma\Request\Attributes\Cookie;
+
+readonly class PreferencesRequest {
+    #[Cookie]
+    public bool $darkMode;        // from the "darkMode" cookie
+
+    #[Cookie('my.pref')]
+    public string $pref;          // from the "my.pref" cookie
+}
+```
+
 ## Map request metadata
 
 Access (and optionally validate) request metadata:
@@ -341,6 +357,7 @@ When validation fails, Roma throws Laravel's `ValidationException`. Errors are k
 * `query.page` / `body.token` — a `#[Query]` / `#[Body]` property
 * `header.X-Flag` — a header, by its real (un-normalized) name
 * `route.id` — a `#[RouteParameter]` property
+* `cookie.session` — a `#[Cookie]` property
 * `request.ajax` — request metadata from an accessor
 
 Nested fields keep their full path, and array elements are indexed:
