@@ -7,6 +7,7 @@ use BYanelli\Roma\Request\Attributes\Accessors\Method;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Attributes\Headers\ContentType;
 use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Request\Enums\ContentType as RomaContentType;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;
@@ -214,6 +215,25 @@ it('maps header values to enums', function () {
     $this->assertEquals(ContentTypeEnum::ApplicationJson, $request->contentType);
 });
 
+readonly class TestIntBackedEnumRequest
+{
+    public Intensity $intensity;
+}
+
+it('maps a JSON integer to an int-backed enum', function () {
+    /** @var TestCase $this */
+    // JSON delivers a real int (not a numeric string), which the coercer must
+    // accept for an int-backed enum.
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['intensity' => 20],
+    );
+
+    $request = $this->mapRequest(TestIntBackedEnumRequest::class);
+
+    expect($request->intensity)->toBe(Intensity::Medium);
+});
+
 readonly class TestSubSubObject
 {
     public string $floob;
@@ -307,4 +327,34 @@ it('requires header values to be valid via class attributes', function () {
     }
 
     $this->assertTrue($thrown);
+});
+
+#[ContentType(RomaContentType::Json)]
+class TestItAcceptsContentTypeEnumConstraint
+{
+    public string $data;
+}
+
+it('accepts the ContentType enum as a class-level #[ContentType] constraint', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['data' => 'ok'],
+    );
+
+    $request = $this->mapRequest(TestItAcceptsContentTypeEnumConstraint::class);
+
+    expect($request->data)->toBe('ok');
+});
+
+it('rejects a mismatched content type against an enum #[ContentType] constraint', function () {
+    /** @var TestCase $this */
+    $this->setRequest(headers: ['Content-Type' => 'text/html']);
+
+    try {
+        $this->mapRequest(TestItAcceptsContentTypeEnumConstraint::class);
+        $this->fail('Expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('header.Content-Type');
+    }
 });

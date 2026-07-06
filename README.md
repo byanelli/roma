@@ -305,9 +305,10 @@ Apply validation rules at the class level to enforce global requirements:
 ```php
 use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
 use BYanelli\Roma\Request\Attributes\Headers\ContentType;
+use BYanelli\Roma\Request\Enums\ContentType as ContentTypeEnum;
 
 #[Ajax] // Requires all requests mapped to this class to be AJAX 
-#[ContentType(ContentType::APPLICATION_JSON)] // Requires JSON content type
+#[ContentType(ContentTypeEnum::Json)] // Requires JSON content type
 class ApiOnlyRequest { 
     public string $data;
 }
