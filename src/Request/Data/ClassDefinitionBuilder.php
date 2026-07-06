@@ -164,6 +164,19 @@ readonly class ClassDefinitionBuilder
             );
         }
 
+        // Nested file uploads are not supported for 1.0: the file-source
+        // override conflicts with the parent's key-path slicing, so the array
+        // slice would be assigned straight to the UploadedFile property and
+        // TypeError. Reject up front with an actionable message.
+        if ($this->parentSource !== null && in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class])) {
+            $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
+
+            throw new RuntimeException(
+                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is a file upload inside a nested request "
+                .'object, which is not supported; declare the UploadedFile property on the top-level request class.'
+            );
+        }
+
         // Self-sourcing metadata enums: a property typed as one of these enums
         // with no explicit source attribute infers its source from the enum,
         // exactly as if the equivalent source attribute had been written.

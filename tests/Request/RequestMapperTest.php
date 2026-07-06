@@ -191,6 +191,29 @@ it('fails to map invalid requests', function () {
     $this->assertTrue(false, 'Exception was not thrown');
 });
 
+readonly class TestNestedFileChild
+{
+    public string $label;
+
+    public UploadedFile $doc;
+}
+
+readonly class TestNestedFileRequest
+{
+    public TestNestedFileChild $attachment;
+}
+
+it('rejects a file upload inside a nested object', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        query: ['attachment' => ['label' => 'x']],
+        files: ['doc' => UploadedFile::fake()->createWithContent('doc.txt', 'z')],
+    );
+
+    expect(fn () => $this->mapRequest(TestNestedFileRequest::class))
+        ->toThrow(RuntimeException::class, 'file upload inside a nested request object, which is not supported');
+});
+
 enum ContentTypeEnum: string
 {
     case ApplicationJson = 'application/json';
