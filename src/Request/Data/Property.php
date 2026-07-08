@@ -21,10 +21,12 @@ readonly class Property
 
     /**
      * @param  array<int, mixed>  $rules
+     * @param  list<object>  $rawAttributes
      */
     public function __construct(
         public string $name,
         public string $key,
+        public string $wireKey,
         public Type $type,
         public Role $role,
         mixed $default,
@@ -33,6 +35,7 @@ readonly class Property
         public array $rules,
         public bool $nullable = false,
         ?string $errorKey = null,
+        public array $rawAttributes = [],
     ) {
         // A key is one opaque key segment. A literal '.' is fully supported: data
         // access walks key segments and validation rules escape it as "\.". A '*'
@@ -79,5 +82,29 @@ readonly class Property
     public function getKeySegments(): array
     {
         return $this->source->getKeySegments();
+    }
+
+    /**
+     * @param  class-string  $class
+     */
+    public function hasAttribute(string $class): bool
+    {
+        return array_filter($this->rawAttributes, fn ($attribute) => $attribute instanceof $class) !== [];
+    }
+
+    /**
+     * The root source of this property. Every property's source is a chain of
+     * Sources\Property wrappers (one per nested key segment); the location it
+     * actually reads from is the source at the root of that chain.
+     */
+    public function getRootSource(): Source
+    {
+        $source = $this->source;
+
+        while ($source->parent !== null) {
+            $source = $source->parent;
+        }
+
+        return $source;
     }
 }

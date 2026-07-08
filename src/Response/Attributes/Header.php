@@ -9,7 +9,7 @@ use Attribute;
  * That property is lifted out of the serialized body. Mirrors the request-side
  * #[Header], which sources a property from a request header.
  */
-#[Attribute(Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class Header
 {
     public function __construct(public string $name) {}

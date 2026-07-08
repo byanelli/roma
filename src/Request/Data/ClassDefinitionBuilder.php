@@ -6,16 +6,19 @@ use BYanelli\Roma\Request\Attributes\AccessorAttribute;
 use BYanelli\Roma\Request\Attributes\AttributeTarget;
 use BYanelli\Roma\Request\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Request\Attributes\ExplicitKeyAttribute;
+use BYanelli\Roma\Request\Attributes\Header as HeaderAttribute;
 use BYanelli\Roma\Request\Attributes\Key;
 use BYanelli\Roma\Request\Attributes\KeyAttribute;
 use BYanelli\Roma\Request\Attributes\RulesAttribute;
 use BYanelli\Roma\Request\Attributes\SourceAttribute;
 use BYanelli\Roma\Request\Data\Sources\File;
+use BYanelli\Roma\Request\Data\Sources\Header;
 use BYanelli\Roma\Request\Data\Sources\Input;
 use BYanelli\Roma\Request\Data\Sources\Property as PropertySource;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Data\Types\Mixed_;
 use BYanelli\Roma\Request\Enums\HasRequestSource;
+use BYanelli\Roma\Response\Attributes\Key as ResponseKey;
 use Closure;
 use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Http\UploadedFile;
@@ -114,13 +117,14 @@ readonly class ClassDefinitionBuilder
 
     /**
      * @param  array<int, ReflectionAttribute<object>>  $attributes
-     * @return array<int, object>
+     * @return list<object>
      */
     private function getAttributeInstances(array $attributes): array
     {
-        return collect($attributes)
-            ->map(fn (ReflectionAttribute $attr) => $attr->newInstance())
-            ->all();
+        return array_values(array_map(
+            fn (ReflectionAttribute $attr) => $attr->newInstance(),
+            $attributes,
+        ));
     }
 
     private function getFromReflectionParameterOrProperty(ReflectionParameter|ReflectionProperty $obj): Property
@@ -196,6 +200,7 @@ readonly class ClassDefinitionBuilder
         return new Property(
             name: $obj->getName(),
             key: $key,
+            wireKey: $this->getWireKey($attributes) ?: $key,
             type: $this->getTypeFromReflectionObject($parent, $key, $obj),
             role: $this->getRole($obj),
             default: $this->getDefault($obj),
@@ -204,7 +209,32 @@ readonly class ClassDefinitionBuilder
             rules: $this->getRulesForParameterOrProperty($attributes),
             nullable: $obj->getType()?->allowsNull() ?? true,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
+            rawAttributes: $attributes,
         );
+    }
+
+    /**
+     * The key a property appears under on the wire, when an attribute relocates
+     * it off its property name. A request #[Header] normalizes its lookup key
+     * (e.g. "X-Api-Key" -> "x_api_key"), but the client sends the original
+     * header name, so emit that; a response #[Key] renames the serialized key.
+     * Everything else uses the property's own key.
+     *
+     * @param  list<object>  $attributes
+     */
+    private function getWireKey(array $attributes): ?string
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof HeaderAttribute) {
+                return $attribute->name;
+            }
+
+            if ($attribute instanceof ResponseKey) {
+                return $attribute->key;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -360,6 +390,7 @@ readonly class ClassDefinitionBuilder
             $result[] = new Property(
                 name: $attr->getKey(),
                 key: $attr->getKey(),
+                wireKey: $this->getWireKey($attributes) ?: $attr->getKey(),
                 type: $attr->getType(),
                 role: Role::ValidationOnly,
                 default: new MissingValue,
@@ -369,6 +400,7 @@ readonly class ClassDefinitionBuilder
                     : fn () => null,
                 rules: $attr->getRules(AttributeTarget::Class_),
                 errorKey: ($attr instanceof ErrorKeyAttribute) ? $attr->getErrorKey() : null,
+                rawAttributes: $attributes,
             );
         }
 

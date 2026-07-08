@@ -9,7 +9,7 @@ use Attribute;
  * when serializing. Applies to that property (and dates nested within its
  * value). Without it, dates serialize as DateTimeInterface::ATOM.
  */
-#[Attribute(Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class DateFormat
 {
     public function __construct(public string $format) {}

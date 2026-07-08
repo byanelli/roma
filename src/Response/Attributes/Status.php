@@ -9,5 +9,5 @@ use Attribute;
  * That property is lifted out of the serialized body. Without it, the response
  * defaults to 200.
  */
-#[Attribute(Attribute::TARGET_PROPERTY)]
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class Status {}

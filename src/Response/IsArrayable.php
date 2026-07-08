@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Response;
 use BackedEnum;
 use BYanelli\Roma\Response\Attributes\DateFormat;
 use BYanelli\Roma\Response\Attributes\Header;
+use BYanelli\Roma\Response\Attributes\Key;
 use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Attributes\Status;
 use DateTimeInterface;
@@ -48,7 +49,7 @@ trait IsArrayable
 
             $this->requireInitialized($property);
 
-            $result[$property->getName()] = $this->normalizeValue(
+            $result[$this->outputKey($property)] = $this->normalizeValue(
                 $property->getValue($this),
                 $this->dateFormat($property),
             );
@@ -73,6 +74,19 @@ trait IsArrayable
             $property->getDeclaringClass()->getName(),
             $property->getName(),
         ));
+    }
+
+    /**
+     * The key a property serializes under: its #[Key] override if present, else
+     * its PHP property name.
+     */
+    private function outputKey(ReflectionProperty $property): string
+    {
+        $attributes = $property->getAttributes(Key::class);
+
+        // todo what if more than one #[Key]? something to check for elsewhere too?
+
+        return $attributes === [] ? $property->getName() : $attributes[0]->newInstance()->key;
     }
 
     /**
