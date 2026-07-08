@@ -60,12 +60,13 @@ readonly class TypeScriptGenerator
             // properties come from; empty buckets are dropped downstream. A
             // request field is optional when it is not required (has a default
             // or is nullable-defaulted).
-            foreach (RequestBucket::cases() as $bucket) {
+            foreach ([Bucket::Body, Bucket::Query, Bucket::Headers] as $bucket) {
                 $interfaces[] = $tsInterfaceBuilder->buildInterface(
                     $phpClass,
                     isPropertyOptional: fn (PhpProperty $property) => ! $property->isRequired,
-                    includeProperty: fn (PhpProperty $property) => $this->requestBucket($property) === $bucket,
+                    includeProperty: fn (PhpProperty $property) => $this->getBucket($property) === $bucket,
                     name: class_basename($request).$bucket->name,
+                    stringValued: $bucket === Bucket::Headers,
                 );
             }
         }
@@ -73,16 +74,28 @@ readonly class TypeScriptGenerator
         foreach ($this->responses as $response) {
             $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($response);
 
-            // A response is a single interface; there is no source split to
-            // make. A response field is optional only when marked #[Optional],
-            // and #[Status] / #[Header] fields are lifted out of the body.
-            $interfaces[] = $tsInterfaceBuilder->buildInterface(
-                $phpClass,
-                isPropertyOptional: fn (PhpProperty $property) => $property->hasAttribute(ResponseOptional::class),
-                includeProperty: fn (PhpProperty $property) => ! $property->hasAttribute(ResponseStatus::class)
-                    && ! $property->hasAttribute(ResponseHeader::class),
-                name: class_basename($response),
-            );
+            foreach ([Bucket::Body, Bucket::Headers] as $bucket) {
+                if ($bucket === Bucket::Body) {
+                    // The body is everything not lifted elsewhere: #[Status] becomes the
+                    // HTTP status code and #[Header] properties become response headers,
+                    // so both are dropped from the body.
+                    $includeProperty = fn (PhpProperty $property) => ! $property->hasAttribute(ResponseStatus::class)
+                        && ! $property->hasAttribute(ResponseHeader::class);
+                } else {
+                    // The response headers are their own interface, keyed by header
+                    // name — mirroring a request's Headers interface. Dropped if empty.
+                    $includeProperty = fn (PhpProperty $property) => $property->hasAttribute(ResponseHeader::class);
+                }
+
+                $interfaces[] = $tsInterfaceBuilder->buildInterface(
+                    $phpClass,
+                    // A response field is optional only when marked #[Optional].
+                    isPropertyOptional: fn (PhpProperty $property) => $property->hasAttribute(ResponseOptional::class),
+                    includeProperty: $includeProperty,
+                    name: class_basename($response).$bucket->name,
+                    stringValued: $bucket === Bucket::Headers,
+                );
+            }
         }
 
         // Remove empty interfaces, flatten nested interfaces into the top
@@ -102,17 +115,17 @@ readonly class TypeScriptGenerator
      * Headers — or null when the property is not sent in the JSON payload (a
      * cookie, route parameter, file upload or nested request object).
      */
-    private function requestBucket(PhpProperty $property): ?RequestBucket
+    private function getBucket(PhpProperty $property): ?Bucket
     {
         return match ($property->getRootSource()::class) {
-            Sources\Body::class => RequestBucket::Body,
-            Sources\Query::class => RequestBucket::Query,
-            Sources\Header::class => RequestBucket::Headers,
+            Sources\Body::class => Bucket::Body,
+            Sources\Query::class => Bucket::Query,
+            Sources\Header::class => Bucket::Headers,
             // #[Input] reads body ∪ query, so it is ambiguous: it maps to Body
             // by default, or to Query when annotated to move there.
             Sources\Input::class => $property->hasAttribute(InputMapsToTypeScriptQuery::class)
-                ? RequestBucket::Query
-                : RequestBucket::Body,
+                ? Bucket::Query
+                : Bucket::Body,
             default => null,
         };
     }

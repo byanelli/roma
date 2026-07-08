@@ -21,7 +21,7 @@ it('writes generated TypeScript to the configured output path', function () {
     $this->artisan('roma:typescript')->assertSuccessful();
 
     expect(file_get_contents($output))
-        ->toContain('export interface CmdPingResponse {')
+        ->toContain('export interface CmdPingResponseBody {')
         ->toContain('  message: string;')
         ->toContain('  code: number;');
 

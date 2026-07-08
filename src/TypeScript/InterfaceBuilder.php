@@ -39,7 +39,10 @@ readonly class InterfaceBuilder
      * nullability. `$isPropertyOptional` decides the `?` (it threads into nested
      * objects); `$includeProperty` restricts which top-level properties are
      * emitted — request source bucketing, or dropping response properties lifted
-     * out of the body. Validation-only pseudo-properties and file uploads are
+     * out of the body. `$stringValued` forces every field to `string` regardless
+     * of its PHP type, for HTTP header interfaces: header values are strings on
+     * the wire, and the caller sends / receives them as strings with no coercion
+     * layer of its own. Validation-only pseudo-properties and file uploads are
      * never emitted.
      *
      * @param  Closure(PhpProperty): bool  $isPropertyOptional
@@ -50,6 +53,7 @@ readonly class InterfaceBuilder
         Closure $isPropertyOptional,
         ?Closure $includeProperty = null,
         ?string $name = null,
+        bool $stringValued = false,
     ): Interface_ {
         $properties = [];
 
@@ -64,7 +68,7 @@ readonly class InterfaceBuilder
 
             $properties[] = new Property(
                 key: $property->wireKey,
-                type: $this->buildType($property->type, $isPropertyOptional),
+                type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional),
                 optional: $isPropertyOptional($property),
                 nullable: $property->nullable,
             );

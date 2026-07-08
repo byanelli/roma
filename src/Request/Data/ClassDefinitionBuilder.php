@@ -18,6 +18,7 @@ use BYanelli\Roma\Request\Data\Sources\Property as PropertySource;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Data\Types\Mixed_;
 use BYanelli\Roma\Request\Enums\HasRequestSource;
+use BYanelli\Roma\Response\Attributes\Header as ResponseHeaderAttribute;
 use BYanelli\Roma\Response\Attributes\Key as ResponseKey;
 use Closure;
 use Illuminate\Http\Resources\MissingValue;
@@ -217,15 +218,16 @@ readonly class ClassDefinitionBuilder
      * The key a property appears under on the wire, when an attribute relocates
      * it off its property name. A request #[Header] normalizes its lookup key
      * (e.g. "X-Api-Key" -> "x_api_key"), but the client sends the original
-     * header name, so emit that; a response #[Key] renames the serialized key.
-     * Everything else uses the property's own key.
+     * header name, so emit that; a response #[Header] likewise emits its real
+     * header name, and a response #[Key] renames the serialized key. Everything
+     * else uses the property's own key.
      *
      * @param  list<object>  $attributes
      */
     private function getWireKey(array $attributes): ?string
     {
         foreach ($attributes as $attribute) {
-            if ($attribute instanceof HeaderAttribute) {
+            if ($attribute instanceof HeaderAttribute || $attribute instanceof ResponseHeaderAttribute) {
                 return $attribute->name;
             }
 

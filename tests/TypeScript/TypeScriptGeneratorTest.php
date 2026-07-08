@@ -122,11 +122,11 @@ it('emits a named interface for a nested request object', function () {
         TS);
 });
 
-it('generates one interface per response, keyed by output key, excluding lifted properties', function () {
+it('generates a response body interface keyed by output key, excluding lifted properties', function () {
     $ts = new TypeScriptGenerator([], [TsUserResponse::class])->generate();
 
     expect($ts)->toContain(<<<'TS'
-        export interface TsUserResponse {
+        export interface TsUserResponseBody {
           name: string;
           user_id: number;
           address: TsAddressResponse;
@@ -143,11 +143,23 @@ it('generates one interface per response, keyed by output key, excluding lifted 
         ->not->toContain('rateLimit');
 });
 
+it('emits a response Headers interface keyed by header name, with string values', function () {
+    // Header values are strings on the wire and the client reads them back as
+    // strings, so the field is `string` even though the property is an int.
+    $ts = new TypeScriptGenerator([], [TsUserResponse::class])->generate();
+
+    expect($ts)->toContain(<<<'TS'
+        export interface TsUserResponseHeaders {
+          'X-Rate-Limit': string;
+        }
+        TS);
+});
+
 it('marks a response field optional only when #[Optional], not when it has a default or is nullable', function () {
     $ts = new TypeScriptGenerator([], [TsDefaultedResponse::class])->generate();
 
     expect($ts)->toContain(<<<'TS'
-        export interface TsDefaultedResponse {
+        export interface TsDefaultedResponseBody {
           title: string;
           role: string;
           bio: string | null;
