@@ -11,6 +11,7 @@ use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\Response;
 use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
+use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 
 enum TsRole: string
@@ -91,11 +92,11 @@ it('splits a request into Body, Query and Headers interfaces keyed by wire key',
         export interface TsCreateUserRequestBody {
           name: string;
           active: boolean;
-          role: 'admin' | 'user';
+          role: TsRole;
           tags: string[];
           address: TsAddressRequest;
           age?: number | null;
-          priority?: 1 | 2;
+          priority?: TsPriority;
         }
         TS)
         ->toContain(<<<'TS'
@@ -108,6 +109,49 @@ it('splits a request into Body, Query and Headers interfaces keyed by wire key',
         export interface TsCreateUserRequestHeaders {
           'X-Api-Key': string;
         }
+        TS);
+});
+
+#[TypeScriptName('KindEnum')]
+enum TsKind: string
+{
+    case A = 'a';
+    case B = 'b';
+}
+
+class TsNamedEnumRequest
+{
+    public function __construct(
+        public TsKind $kind,
+    ) {}
+}
+
+it('honors #[TypeScriptName] for the generated enum type name', function () {
+    $ts = new TypeScriptGenerator([TsNamedEnumRequest::class])->generate();
+
+    expect($ts)->toContain('export type KindEnum = typeof KindEnum[keyof typeof KindEnum];')
+        ->toContain('kind: KindEnum;')
+        ->not->toContain('TsKind');
+});
+
+it('emits a backed enum as a companion const plus a finite value-union type', function () {
+    $ts = new TypeScriptGenerator([TsCreateUserRequest::class])->generate();
+
+    expect($ts)->toContain(<<<'TS'
+        export const TsRole = {
+          Admin: { name: 'Admin', value: 'admin' },
+          User: { name: 'User', value: 'user' },
+        } as const;
+
+        export type TsRole = typeof TsRole[keyof typeof TsRole];
+        TS)
+        ->toContain(<<<'TS'
+        export const TsPriority = {
+          Low: { name: 'Low', value: 1 },
+          High: { name: 'High', value: 2 },
+        } as const;
+
+        export type TsPriority = typeof TsPriority[keyof typeof TsPriority];
         TS);
 });
 

@@ -104,7 +104,10 @@ trait IsArrayable
     private function normalizeValue(mixed $value, string $dateFormat = DateTimeInterface::ATOM): mixed
     {
         return match (true) {
-            $value instanceof BackedEnum => $value->value,
+            // A backed enum serializes to a {name, value} object so the client
+            // keeps both the wire value and a stable, human-readable name; a
+            // unit enum has only a name.
+            $value instanceof BackedEnum => ['name' => $value->name, 'value' => $value->value],
             $value instanceof UnitEnum => $value->name,
             $value instanceof DateTimeInterface => $value->format($dateFormat),
             $value instanceof Arrayable => $this->normalizeValue($value->toArray(), $dateFormat),

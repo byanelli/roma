@@ -15,6 +15,7 @@ use BYanelli\Roma\Request\Data\Types\Float_ as PhpFloat;
 use BYanelli\Roma\Request\Data\Types\Integer as PhpInteger;
 use BYanelli\Roma\Request\Data\Types\Mixed_ as PhpMixed;
 use BYanelli\Roma\Request\Data\Types\String_ as PhpString;
+use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;
 use BYanelli\Roma\TypeScript\Types\Boolean;
 use BYanelli\Roma\TypeScript\Types\Date;
@@ -75,7 +76,7 @@ readonly class InterfaceBuilder
         }
 
         return new Interface_(
-            name: $name ?: class_basename($class->class),
+            name: $name ?: TypeScriptName::for($class->class),
             properties: $properties,
             phpFqcn: $class->class,
         );

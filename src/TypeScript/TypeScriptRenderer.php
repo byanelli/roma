@@ -2,8 +2,11 @@
 
 namespace BYanelli\Roma\TypeScript;
 
+use BackedEnum;
+use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Interface_;
 use ReflectionEnum;
+use UnitEnum;
 
 readonly class TypeScriptRenderer
 {
@@ -45,7 +48,8 @@ readonly class TypeScriptRenderer
             $type instanceof Types\Number => 'number',
             $type instanceof Types\Boolean => 'boolean',
             $type instanceof Types\Date => 'string',
-            $type instanceof Types\Enum => $this->renderEnumUnion($type->class),
+            // Enums are emitted as their own named types; reference by name.
+            $type instanceof Types\Enum => TypeScriptName::for($type->class),
             $type instanceof Types\Array_ => $this->renderArrayType($type->memberType),
             $type instanceof Interface_ => $this->namesBag->nameFor($type),
             $type instanceof Types\File => 'Blob',
@@ -55,44 +59,53 @@ readonly class TypeScriptRenderer
 
     private function renderArrayType(Type $member): string
     {
-        $ts = $this->renderType($member);
-
-        // A union member (an enum) must be parenthesised before the [] suffix.
-        if ($member instanceof Types\Enum) {
-            $ts = "($ts)";
-        }
-
-        return $ts.'[]';
+        return $this->renderType($member).'[]';
     }
 
     /**
-     * @param  class-string<\UnitEnum>  $class
+     * A backed enum renders as a companion `const` of {name, value} objects plus
+     * a type alias over its values: callers get named construction (`Name.Case`)
+     * and a finite, discriminated union type the compiler can narrow. A unit enum
+     * renders as a string-literal union of its case names.
+     *
+     * @param  class-string<UnitEnum>  $class
      *
      * @throws \ReflectionException
      */
-    private function renderEnumUnion(string $class): string
+    public function renderEnum(string $class): string
     {
+        $name = TypeScriptName::for($class);
         $cases = $class::cases();
 
-        if ($cases === []) {
-            return 'never';
+        if (! new ReflectionEnum($class)->isBacked()) {
+            $members = $cases === []
+                ? 'never'
+                : implode(' | ', array_map(fn (UnitEnum $case): string => $this->renderString($case->name), $cases));
+
+            return "export type $name = $members;";
         }
 
-        $reflection = new ReflectionEnum($class);
-        $isInt = $reflection->isBacked() && $reflection->getBackingType()?->getName() === 'int';
+        if ($cases === []) {
+            return "export type $name = never;";
+        }
 
-        $members = array_map(
-            function (\UnitEnum $case) use ($isInt): string {
-                if ($case instanceof \BackedEnum) {
-                    return $isInt ? (string) $case->value : $this->renderString((string) $case->value);
-                }
-
-                return $this->renderString($case->name);
-            },
+        $entries = array_map(
+            fn (BackedEnum $case): string => sprintf(
+                '  %s: { name: %s, value: %s },',
+                $this->renderKey($case->name),
+                $this->renderString($case->name),
+                $this->renderEnumValue($case->value),
+            ),
             $cases,
         );
 
-        return implode(' | ', $members);
+        return "export const $name = {\n".implode("\n", $entries)."\n} as const;\n\n"
+            ."export type $name = typeof $name".'[keyof typeof '.$name.'];';
+    }
+
+    private function renderEnumValue(int|string $value): string
+    {
+        return is_int($value) ? (string) $value : $this->renderString($value);
     }
 
     private function renderKey(string $key): string

@@ -83,7 +83,7 @@ it('converts enums and dates to their JSON form', function () {
     );
 
     expect($response->toArray())->toBe([
-        'status' => 'active',                 // backed enum -> value
+        'status' => ['name' => 'Active', 'value' => 'active'], // backed enum -> {name, value}
         'rank' => 'Gold',                     // unit enum -> name
         'createdAt' => '2024-01-02T03:04:05+00:00',
     ]);
@@ -112,7 +112,10 @@ it('recurses through arrays of response objects and enums', function () {
             ['city' => 'NYC', 'zip' => '10001'],
             ['city' => 'LA', 'zip' => '90001'],
         ],
-        'statuses' => ['active', 'active'],
+        'statuses' => [
+            ['name' => 'Active', 'value' => 'active'],
+            ['name' => 'Active', 'value' => 'active'],
+        ],
     ]);
 });
 

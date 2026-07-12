@@ -9,6 +9,9 @@ use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
 use BYanelli\Roma\Response\Attributes\Optional as ResponseOptional;
 use BYanelli\Roma\Response\Attributes\Status as ResponseStatus;
 use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
+use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
+use BYanelli\Roma\TypeScript\Types\Array_;
+use BYanelli\Roma\TypeScript\Types\Enum;
 use BYanelli\Roma\TypeScript\Types\Interface_;
 
 /**
@@ -37,10 +40,51 @@ readonly class TypeScriptGenerator
     {
         $interfaces = $this->collectInterfaces();
 
-        $bodies = array_map($this->renderer->renderInterface(...), $interfaces);
+        // Enums referenced by any interface are emitted as their own named types,
+        // ahead of the interfaces that reference them.
+        $blocks = [
+            ...array_map($this->renderer->renderEnum(...), $this->collectEnums($interfaces)),
+            ...array_map($this->renderer->renderInterface(...), $interfaces),
+        ];
 
         return "// This file is auto-generated. Do not edit by hand.\n\n"
-            .implode("\n\n", $bodies)."\n";
+            .implode("\n\n", $blocks)."\n";
+    }
+
+    /**
+     * The distinct enums referenced (directly or through arrays) by any emitted
+     * interface, ordered by their TypeScript name.
+     *
+     * @param  list<Interface_>  $interfaces
+     * @return list<class-string<\UnitEnum>>
+     */
+    private function collectEnums(array $interfaces): array
+    {
+        $classes = [];
+
+        foreach ($interfaces as $interface) {
+            foreach ($interface->properties as $property) {
+                $this->collectEnumsFromType($property->type, $classes);
+            }
+        }
+
+        return collect($classes)
+            ->unique()
+            ->sortBy(fn (string $class) => TypeScriptName::for($class))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  list<class-string<\UnitEnum>>  $classes
+     */
+    private function collectEnumsFromType(mixed $type, array &$classes): void
+    {
+        if ($type instanceof Enum) {
+            $classes[] = $type->class;
+        } elseif ($type instanceof Array_) {
+            $this->collectEnumsFromType($type->memberType, $classes);
+        }
     }
 
     /**
@@ -65,7 +109,7 @@ readonly class TypeScriptGenerator
                     $phpClass,
                     isPropertyOptional: fn (PhpProperty $property) => ! $property->isRequired,
                     includeProperty: fn (PhpProperty $property) => $this->getBucket($property) === $bucket,
-                    name: class_basename($request).$bucket->name,
+                    name: TypeScriptName::for($request).$bucket->name,
                     stringValued: $bucket === Bucket::Headers,
                 );
             }
@@ -92,7 +136,7 @@ readonly class TypeScriptGenerator
                     // A response field is optional only when marked #[Optional].
                     isPropertyOptional: fn (PhpProperty $property) => $property->hasAttribute(ResponseOptional::class),
                     includeProperty: $includeProperty,
-                    name: class_basename($response).$bucket->name,
+                    name: TypeScriptName::for($response).$bucket->name,
                     stringValued: $bucket === Bucket::Headers,
                 );
             }

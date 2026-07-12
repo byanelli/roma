@@ -249,13 +249,49 @@ class ClassRequestMapping
 
     private function toEnum(Types\Enum $type, mixed $val): mixed
     {
+        // Be liberal in what we accept: a backed enum serializes out as a
+        // {name, value} object, so accept that shape back as well as the bare
+        // scalar backing value.
+        if (is_array($val)) {
+            return $this->enumFromObject($type->class, $val);
+        }
+
+        return $this->enumFromScalar($type->class, $val);
+    }
+
+    /**
+     * Coerce the {name, value} object a backed enum serializes to back into the
+     * enum. The value is authoritative; a supplied name must match, so a
+     * mismatched pair is rejected as malformed.
+     *
+     * @param  class-string<UnitEnum>  $class
+     * @param  array<array-key, mixed>  $val
+     */
+    private function enumFromObject(string $class, array $val): mixed
+    {
+        if (! is_a($class, BackedEnum::class, true) || ! array_key_exists('value', $val)) {
+            throw new CoercionException("Expected a {name, value} object for backed enum $class");
+        }
+
+        $enum = $this->enumFromScalar($class, $val['value']);
+
+        if (array_key_exists('name', $val) && $val['name'] !== $enum->name) {
+            throw new CoercionException("Enum object for $class has a name/value mismatch");
+        }
+
+        return $enum;
+    }
+
+    /**
+     * @param  class-string<UnitEnum>  $class
+     */
+    private function enumFromScalar(string $class, mixed $val): mixed
+    {
         // Backed enums accept their scalar backing directly (e.g. a JSON int for
         // an int-backed enum); anything else is bad input, not a bug.
         if (! is_string($val) && ! is_int($val)) {
             throw new CoercionException('Expected enum value, got '.get_debug_type($val));
         }
-
-        $class = $type->class;
 
         if (is_string($val) && is_a($class, NormalizesRawValue::class, true)) {
             $val = $class::normalizeRawValue($val);
