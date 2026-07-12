@@ -134,6 +134,36 @@ it('honors #[TypeScriptName] for the generated enum type name', function () {
         ->not->toContain('TsKind');
 });
 
+#[TypeScriptName('SharedEnum')]
+enum TsCollideOne: string
+{
+    case X = 'x';
+}
+
+#[TypeScriptName('SharedEnum')]
+enum TsCollideTwo: string
+{
+    case Y = 'y';
+}
+
+class TsEnumCollisionRequest
+{
+    public function __construct(
+        public TsCollideOne $first,
+        public TsCollideTwo $second,
+    ) {}
+}
+
+it('auto-suffixes a name collision between two enums, like it does for interfaces', function () {
+    $ts = new TypeScriptGenerator([TsEnumCollisionRequest::class])->generate();
+
+    expect($ts)
+        ->toContain('export type SharedEnum = typeof SharedEnum[keyof typeof SharedEnum];')
+        ->toContain('export type SharedEnum2 = typeof SharedEnum2[keyof typeof SharedEnum2];')
+        ->toContain('first: SharedEnum;')
+        ->toContain('second: SharedEnum2;');
+});
+
 it('emits a backed enum as a companion const plus a finite value-union type', function () {
     $ts = new TypeScriptGenerator([TsCreateUserRequest::class])->generate();
 

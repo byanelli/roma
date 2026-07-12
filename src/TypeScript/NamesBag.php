@@ -2,15 +2,16 @@
 
 namespace BYanelli\Roma\TypeScript;
 
+use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Interface_;
 
 class NamesBag
 {
-    /** @var array<string, true> reserved interface names, to avoid collisions. */
+    /** @var array<string, true> reserved type names, to avoid collisions. */
     private array $usedNames = [];
 
-    /** @var array<string, string> resolved name per interface identity (uniqueKey). */
-    private array $resolvedByInterface = [];
+    /** @var array<string, string> resolved name per type identity (uniqueKey). */
+    private array $resolvedByKey = [];
 
     /**
      * The TypeScript name for an interface. Resolution is idempotent per
@@ -21,8 +22,26 @@ class NamesBag
      */
     public function nameFor(Interface_ $interface): string
     {
-        return $this->resolvedByInterface[$interface->uniqueKey]
-            ??= $this->reserveName($interface->name);
+        return $this->reserve($interface->uniqueKey, $interface->name);
+    }
+
+    /**
+     * The TypeScript name for an enum. Enums share the flat type namespace with
+     * interfaces, so they reserve through the same bag: a name clash between two
+     * enums, or between an enum and an interface, is auto-suffixed (e.g. Status,
+     * Status2) exactly as two interfaces would be. Every reference to the enum
+     * resolves to the same name via its class-string identity.
+     *
+     * @param  class-string  $enumClass
+     */
+    public function nameForEnum(string $enumClass): string
+    {
+        return $this->reserve('enum/'.$enumClass, TypeScriptName::for($enumClass));
+    }
+
+    private function reserve(string $key, string $preferred): string
+    {
+        return $this->resolvedByKey[$key] ??= $this->reserveName($preferred);
     }
 
     private function reserveName(string $preferred): string

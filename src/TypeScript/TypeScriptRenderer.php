@@ -3,7 +3,6 @@
 namespace BYanelli\Roma\TypeScript;
 
 use BackedEnum;
-use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Interface_;
 use ReflectionEnum;
 use UnitEnum;
@@ -49,7 +48,7 @@ readonly class TypeScriptRenderer
             $type instanceof Types\Boolean => 'boolean',
             $type instanceof Types\Date => 'string',
             // Enums are emitted as their own named types; reference by name.
-            $type instanceof Types\Enum => TypeScriptName::for($type->class),
+            $type instanceof Types\Enum => $this->namesBag->nameForEnum($type->class),
             $type instanceof Types\Array_ => $this->renderArrayType($type->memberType),
             $type instanceof Interface_ => $this->namesBag->nameFor($type),
             $type instanceof Types\File => 'Blob',
@@ -74,7 +73,7 @@ readonly class TypeScriptRenderer
      */
     public function renderEnum(string $class): string
     {
-        $name = TypeScriptName::for($class);
+        $name = $this->namesBag->nameForEnum($class);
         $cases = $class::cases();
 
         if (! new ReflectionEnum($class)->isBacked()) {
