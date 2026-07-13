@@ -4,7 +4,11 @@
 
 ## Introduction
 
-Roma is a Request Object MApper. It has its own implementation of an object mapper designed to map _all_ aspects of Laravel's `Illuminate\Http\Request` request to a fully type-safe and validated POPO (plain old PHP object). That includes headers, the query string, the body, files, and convenience methods of the request object (e.g., `$request->ajax()`). The goal is that when using a custom Roma request, you should never have to interact with the underlying Laravel request directly.
+Roma is a Request/Response Object MApper. It has its own implementation of an object mapper designed to map _all_ aspects of Laravel's `Illuminate\Http\Request` request to a fully type-safe and validated POPO (plain old PHP object). That includes headers, the query string, the body, files, and convenience methods of the request object (e.g., `$request->ajax()`). The goal is that when using a custom Roma request, you should never have to interact with the underlying Laravel request directly.
+
+On the response side, Roma converts a POPO (recursively) to an array, which is used as the body of a `JsonResponse`. Certain properties may also be annotated to set the response's headers or status code.
+
+With one command, you can generate TypeScript definitions for both requests and responses. This feature may be especially useful for Inertia frontends.
 
 ## Create a request object
 
@@ -47,6 +51,32 @@ class CreateContactController {
         ]);
     }
 }
+```
+
+## Auto-inject with a class-level `#[Request]`
+
+`#[Request]` can also be applied to the request class itself, not just the injection site. A class-marked request resolves from the container by its type-hint alone — the parameter-level attribute becomes optional:
+
+```php
+use BYanelli\Roma\Request\ContextualBinding\Request;
+
+#[Request]
+readonly class CreateContactRequest { /* properties as above */ }
+
+class CreateContactController {
+    public function __invoke(CreateContactRequest $request) {
+        // Resolved and validated from the request — no parameter attribute needed.
+    }
+}
+```
+
+Both forms work and can coexist. Marking the class is also what lets the [TypeScript generator](#typescript-generation) auto-detect it as a request.
+
+Auto-injection is on by default. To require the explicit parameter attribute everywhere, turn it off in `config/roma.php`:
+
+```php
+// config/roma.php
+'auto_inject' => false,
 ```
 
 ## Map headers
@@ -369,6 +399,50 @@ class ApiOnlyRequest {
 }
 ```
 
+## Dynamic validation rules
+
+Beyond string rules, a `#[Rule]` argument can be a first-class-callable reference. Roma calls it through the container at validation time, so the rule can depend on runtime state — a service, the current user, config. It may return a single rule or a list of rules; a returned list is spread into the property's rules in place:
+
+```php
+use BYanelli\Roma\Request\Attributes\Rule;
+
+readonly class UpdateBioRequest {
+    public function __construct(
+        #[Rule('string', self::maxLength(...))]
+        public string $bio = '',
+    ) {}
+
+    // Resolved through the container, so it can inject dependencies.
+    public static function maxLength(BioSettings $settings): string {
+        return "max:{$settings->limit}";
+    }
+}
+```
+
+## Guard a request with `#[Guard]`
+
+Mark a method `#[Guard]` to run it after the request validates successfully. Guards are called through the container, so they can type-hint dependencies — a service, the current user, the underlying request — and have them injected. A guard rejects the request by throwing (a `ValidationException`, an `AuthorizationException`, anything); its return value is ignored. Multiple guards run in declaration order.
+
+```php
+use BYanelli\Roma\Request\Attributes\Guard;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Container\Attributes\CurrentUser;
+
+readonly class UpdatePostRequest {
+    public function __construct(
+        public int $postId,
+        public string $body,
+    ) {}
+
+    #[Guard]
+    public function authorize(#[CurrentUser] User $user): void {
+        if ($user->cannot('update', Post::findOrFail($this->postId))) {
+            throw new AuthorizationException;
+        }
+    }
+}
+```
+
 ## Validation error keys
 
 When validation fails, Roma throws Laravel's `ValidationException`. Errors are keyed by a source-prefixed, request-relative name so the caller always knows where the offending value belongs:
@@ -446,7 +520,7 @@ enum Rank { case Gold; }
 
 class ProfileResponse extends Response {
     public function __construct(
-        public Status $status,             // backed enum -> its value: "active"
+        public Status $status,             // backed enum -> { name: "Active", value: "active" }
         public Rank $rank,                 // unit enum -> its name: "Gold"
         public \DateTimeInterface $createdAt, // DateTimeInterface -> ISO-8601 (ATOM) string
         public AddressResponse $address,   // nested response object -> recurses
@@ -528,6 +602,123 @@ class TimestampsResponse extends Response {
 
 Status, headers, and per-property date format each also have an overridable `protected` method for cases that can't be expressed as a fixed attribute: `responseStatus(): int`, `responseHeaders(): array`, and `dateFormat(ReflectionProperty $property): string`. Override the one you need when the value has to be computed at runtime.
 
+# TypeScript generation
+
+Roma generates TypeScript definitions for your request and response objects, so the frontend and backend share one source of truth. Run:
+
+```
+php artisan roma:typescript
+```
+
+It writes a `.d.ts` file (default `resources/js/roma.d.ts`, overridable with `--output` or config) containing an interface for every request and response.
+
+## What gets generated
+
+A request is split into up to three interfaces — one per HTTP location its properties come from — named `{Name}Body`, `{Name}Query`, and `{Name}Headers`; empty ones are dropped. A response produces a `{Name}Body`, plus a `{Name}Headers` when it emits `#[Header]`s. Fields are keyed by their **wire key** (the source key, or a `#[Key]`/header name) rather than the PHP property name, and optional properties get a `?`.
+
+```php
+#[Request]
+readonly class SearchRequest {
+    public function __construct(
+        public string $note,                          // default (input) -> Body
+        #[Query] public int $page = 1,                // -> Query (optional: has a default)
+        #[Header('X-Api-Key')] public string $apiKey, // -> Headers
+    ) {}
+}
+```
+
+generates:
+
+```typescript
+export interface SearchRequestBody {
+  note: string;
+}
+
+export interface SearchRequestHeaders {
+  'X-Api-Key': string;
+}
+
+export interface SearchRequestQuery {
+  page?: number;
+}
+```
+
+Enums become a named `const` of `{ name, value }` objects plus a union type over them, emitted ahead of the interfaces that use them:
+
+```php
+enum Plan: int { case Free = 1; case Pro = 2; }
+
+class SubscriptionResponse extends Response {
+    public function __construct(
+        public string $title,
+        public Plan $plan,
+    ) {}
+}
+```
+
+```typescript
+export const Plan = {
+  Free: { name: 'Free', value: 1 },
+  Pro: { name: 'Pro', value: 2 },
+} as const;
+
+export type Plan = typeof Plan[keyof typeof Plan];
+
+export interface SubscriptionResponseBody {
+  title: string;
+  plan: Plan;
+}
+```
+
+## Auto-detection
+
+Classes are discovered automatically by scanning the directories in `roma.typescript.discover` (default `app/`) — there is no list to maintain by hand:
+
+* a **request** is any class marked with a class-level `#[Request]` attribute;
+* a **response** is any class extending `Response` or using the `IsResponsable` trait.
+
+```php
+// config/roma.php
+'typescript' => [
+
+    // Where the generated .d.ts file is written.
+    'output' => resource_path('js/roma.d.ts'),
+
+    // Directories scanned to auto-detect request and response classes.
+    'discover' => [app_path()],
+
+    // Additional classes to include beyond what discovery finds.
+    'requests' => [],
+    'responses' => [],
+],
+```
+
+The `requests` and `responses` lists are an additive escape hatch for classes that live outside the scanned directories; discovered and listed classes are merged.
+
+## Rename a type with `#[TypeScriptName]`
+
+A generated type takes its short class name by default. Override it with `#[TypeScriptName]` — handy when the short name would collide with another generated type or a hand-written one:
+
+```php
+use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
+
+#[TypeScriptName('PlatformTypeEnum')] // avoids clashing with a hand-written PlatformType
+enum PlatformType: int { case YouTube = 1; case Web = 2; }
+```
+
+## Put an `#[Input]` property in the Query interface
+
+An `#[Input]` property (the default source) reads from both the body and the query string, so the generator can't tell which interface it belongs to and defaults it to `Body`. Force it into the `Query` interface with `#[InputMapsToTypeScriptQuery]` — this only affects generation, not mapping:
+
+```php
+use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
+
+readonly class SearchRequest {
+    #[InputMapsToTypeScriptQuery]
+    public string $q; // appears in SearchRequestQuery instead of SearchRequestBody
+}
+```
+
 ## More to come
 
-Roma now maps both requests and responses. Further work is tracked toward a 1.0 release.
+Roma maps requests and responses and generates matching TypeScript for both. Further work is tracked toward a 1.0 release.
