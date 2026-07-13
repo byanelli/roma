@@ -8,6 +8,7 @@ use BYanelli\Roma\Request\Data\ClassRequestMapping;
 use Closure;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use ReflectionClass;
 use ReflectionMethod;
@@ -104,26 +105,16 @@ readonly class RequestMapper implements Contracts\RequestMapper
     private function resolveRuleClosures(array $rules): array
     {
         foreach ($rules as $key => $ruleSet) {
-            if (! is_array($ruleSet)) {
-                $rules[$key] = $ruleSet instanceof Closure ? $this->container->call($ruleSet) : $ruleSet;
-
-                continue;
-            }
-
             $resolved = [];
 
-            foreach ($ruleSet as $rule) {
-                if (! $rule instanceof Closure) {
-                    $resolved[] = $rule;
+            foreach (Arr::wrap($ruleSet) as $rule) {
+                $value = Arr::wrap(
+                    $rule instanceof Closure
+                        ? $this->container->call($rule)
+                        : $rule
+                );
 
-                    continue;
-                }
-
-                $value = $this->container->call($rule);
-
-                $resolved = is_array($value)
-                    ? array_merge($resolved, array_values($value))
-                    : [...$resolved, $value];
+                $resolved = array_merge($resolved, array_values($value));
             }
 
             $rules[$key] = $resolved;
