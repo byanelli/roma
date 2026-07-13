@@ -721,7 +721,3 @@ readonly class SearchRequest {
     public string $q; // appears in SearchRequestQuery instead of SearchRequestBody
 }
 ```
-
-## More to come
-
-Roma maps requests and responses and generates matching TypeScript for both. Further work is tracked toward a 1.0 release.
