@@ -1,6 +1,11 @@
 # Path-based git attributes
 # https://www.kernel.org/pub/software/scm/git/docs/gitattributes.html
 
+# Force LF line endings for text files on every platform. Generated TypeScript
+# is always LF, and the generator tests compare against LF heredocs, so a CRLF
+# checkout (Git's default on Windows) would otherwise fail those comparisons.
+* text=auto eol=lf
+
 # Ignore all test and documentation with "export-ignore".
 /.github            export-ignore
 /.gitattributes     export-ignore
