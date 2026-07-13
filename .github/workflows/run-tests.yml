@@ -6,6 +6,7 @@ on:
     paths:
       - '**.php'
       - '.github/workflows/run-tests.yml'
+      - '.gitattributes'
       - 'phpunit.xml.dist'
       - 'composer.json'
       - 'composer.lock'
@@ -14,6 +15,7 @@ on:
     paths:
       - '**.php'
       - '.github/workflows/run-tests.yml'
+      - '.gitattributes'
       - 'phpunit.xml.dist'
       - 'composer.json'
       - 'composer.lock'
