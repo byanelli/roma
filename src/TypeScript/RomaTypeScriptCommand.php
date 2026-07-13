@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\TypeScript;
 
+use BYanelli\Roma\Discovery\RomaClassDiscovery;
 use Illuminate\Console\Command;
 
 class RomaTypeScriptCommand extends Command
@@ -10,15 +11,19 @@ class RomaTypeScriptCommand extends Command
 
     protected $description = 'Generate TypeScript definitions for Roma request and response objects';
 
-    public function handle(): int
+    public function handle(RomaClassDiscovery $discovery): int
     {
+        /** @var list<string> $paths */
+        $paths = config('roma.typescript.discover', []);
+        $discovered = $discovery->discover($paths);
+
         /** @var list<class-string> $requests */
-        $requests = config('roma.typescript.requests', []);
+        $requests = $this->merge(config('roma.typescript.requests', []), $discovered->requests);
         /** @var list<class-string> $responses */
-        $responses = config('roma.typescript.responses', []);
+        $responses = $this->merge(config('roma.typescript.responses', []), $discovered->responses);
 
         if ($requests === [] && $responses === []) {
-            $this->warn('No request or response classes configured under roma.typescript. Nothing to generate.');
+            $this->warn('No request or response classes found. Mark requests with #[Request], extend Response (or use IsResponsable), and check roma.typescript.discover. Nothing to generate.');
 
             return self::SUCCESS;
         }
@@ -45,5 +50,18 @@ class RomaTypeScriptCommand extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Combine explicitly-configured classes with discovered ones, preserving
+     * order and dropping duplicates.
+     *
+     * @param  list<class-string>  $configured
+     * @param  list<class-string>  $discovered
+     * @return list<class-string>
+     */
+    private function merge(array $configured, array $discovered): array
+    {
+        return array_values(array_unique([...$configured, ...$discovered]));
     }
 }

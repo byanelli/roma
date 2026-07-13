@@ -8,12 +8,41 @@ use Illuminate\Contracts\Container\BindingResolutionException;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Container\ContextualAttribute;
 use Illuminate\Validation\ValidationException;
+use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
 
-#[Attribute(Attribute::TARGET_PARAMETER)]
+/**
+ * Marks a class as a Roma request. Apply it at the parameter level as an
+ * injection hint — `fn (#[Request] Foo $foo) => ...` — or at the class level,
+ * which additionally lets the class be resolved by type-hint alone (see
+ * RomaServiceProvider) and be auto-detected by the TypeScript generator.
+ */
+#[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_CLASS)]
 class Request implements ContextualAttribute
 {
+    /** @var array<string, bool> */
+    private static array $markedCache = [];
+
+    /**
+     * Whether the given name is a class carrying a class-level #[Request]
+     * attribute. Accepts any string (e.g. a container abstract) and returns
+     * false for non-classes. Cached per process, since a class's attributes
+     * cannot change at runtime.
+     */
+    public static function isMarkedOn(string $class): bool
+    {
+        if (isset(self::$markedCache[$class])) {
+            return self::$markedCache[$class];
+        }
+
+        if (! class_exists($class)) {
+            return self::$markedCache[$class] = false;
+        }
+
+        return self::$markedCache[$class] = new ReflectionClass($class)->getAttributes(self::class) !== [];
+    }
+
     /**
      * @throws ContextualBindingException
      * @throws \ReflectionException
