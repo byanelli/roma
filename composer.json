@@ -19,7 +19,8 @@
         "php": "^8.5",
         "illuminate/contracts": "^13.0",
         "phpstan/phpdoc-parser": "^2.0",
-        "spatie/laravel-package-tools": "^1.16"
+        "spatie/laravel-package-tools": "^1.16",
+        "spatie/php-structure-discoverer": "^2.4"
     },
     "require-dev": {
         "laravel/pint": "^1.14",

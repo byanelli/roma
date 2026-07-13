@@ -6,6 +6,7 @@ use BYanelli\Roma\Request\ContextualBinding\Request;
 use BYanelli\Roma\Response\IsResponsable;
 use BYanelli\Roma\Response\Response;
 use ReflectionClass;
+use Spatie\StructureDiscoverer\Discover;
 
 /**
  * Classifies the classes under a set of directories into Roma requests and
@@ -13,22 +14,29 @@ use ReflectionClass;
  *
  * A request is any concrete class carrying a class-level #[Request] attribute.
  * A response is any concrete class extending Response or using IsResponsable.
+ * Locating the classes on disk is delegated to spatie/php-structure-discoverer;
+ * this class owns only the request/response classification.
  */
 class RomaClassDiscovery
 {
-    public function __construct(
-        private ClassFinder $finder = new ClassFinder,
-    ) {}
-
     /**
      * @param  list<string>  $paths
      */
     public function discover(array $paths): DiscoveredClasses
     {
+        $directories = array_values(array_filter($paths, 'is_dir'));
+
+        if ($directories === []) {
+            return new DiscoveredClasses;
+        }
+
         $requests = [];
         $responses = [];
 
-        foreach ($this->finder->classesIn($paths) as $class) {
+        /** @var list<class-string> $classes */
+        $classes = Discover::in(...$directories)->classes()->get();
+
+        foreach ($classes as $class) {
             if (! $this->isConcrete($class)) {
                 continue;
             }
