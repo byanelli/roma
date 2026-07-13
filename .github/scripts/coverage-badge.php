@@ -47,16 +47,40 @@ $color = match (true) {
 $label = 'coverage';
 $value = $percent.'%';
 
-// Geometry. textLength forces the text to fit its slot regardless of the
-// renderer's font metrics, so approximate per-character widths are fine.
-$labelWidth = 62;
-$valueWidth = strlen($value) * 7 + 10;
+// Approximate rendered text width (px) at the 11px badge font. The exact figure
+// doesn't need to be perfect: the text is drawn with lengthAdjust
+// "spacingAndGlyphs", so it scales uniformly to fill textLength — it never
+// overlaps the way a too-small "spacing"-only textLength would.
+$measure = static function (string $text): int {
+    $width = 0;
+
+    foreach (str_split($text) as $char) {
+        $width += match (true) {
+            $char === '%' => 10,
+            ctype_digit($char) => 7,
+            ctype_upper($char) => 8,
+            $char === 'i' || $char === 'l' || $char === 'j' || $char === 't' => 4,
+            default => 7,
+        };
+    }
+
+    return $width;
+};
+
+$labelTextWidth = $measure($label);
+$valueTextWidth = $measure($value);
+
+$padding = 6; // per side
+$labelWidth = $labelTextWidth + 2 * $padding;
+$valueWidth = $valueTextWidth + 2 * $padding;
 $totalWidth = $labelWidth + $valueWidth;
 
-$labelX = (int) ($labelWidth * 10 / 2);
-$labelTextLength = ($labelWidth - 10) * 10;
-$valueX = (int) (($labelWidth + $valueWidth / 2) * 10);
-$valueTextLength = ($valueWidth - 12) * 10;
+// The text sits in a coordinate system scaled by 0.1 (font-size 110 -> 11px),
+// so positions and lengths are ten times their pixel values.
+$labelCenter = (int) round($labelWidth / 2 * 10);
+$valueCenter = (int) round(($labelWidth + $valueWidth / 2) * 10);
+$labelTextLength = $labelTextWidth * 10;
+$valueTextLength = $valueTextWidth * 10;
 
 $svg = <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{$totalWidth}" height="20" role="img" aria-label="{$label}: {$value}">
@@ -72,10 +96,10 @@ $svg = <<<SVG
     <rect width="{$totalWidth}" height="20" fill="url(#s)"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="110">
-    <text x="{$labelX}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{$labelTextLength}">{$label}</text>
-    <text x="{$labelX}" y="140" transform="scale(.1)" textLength="{$labelTextLength}">{$label}</text>
-    <text x="{$valueX}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{$valueTextLength}">{$value}</text>
-    <text x="{$valueX}" y="140" transform="scale(.1)" textLength="{$valueTextLength}">{$value}</text>
+    <text x="{$labelCenter}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{$labelTextLength}" lengthAdjust="spacingAndGlyphs">{$label}</text>
+    <text x="{$labelCenter}" y="140" transform="scale(.1)" textLength="{$labelTextLength}" lengthAdjust="spacingAndGlyphs">{$label}</text>
+    <text x="{$valueCenter}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="{$valueTextLength}" lengthAdjust="spacingAndGlyphs">{$value}</text>
+    <text x="{$valueCenter}" y="140" transform="scale(.1)" textLength="{$valueTextLength}" lengthAdjust="spacingAndGlyphs">{$value}</text>
   </g>
 </svg>
 SVG;
