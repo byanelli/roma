@@ -62,27 +62,32 @@ readonly class TypeScriptRenderer
     }
 
     /**
-     * A backed enum renders as a companion `const` of {name, value} objects plus
-     * a type alias over its values: callers get named construction (`Name.Case`)
-     * and a finite, discriminated union type the compiler can narrow. A unit enum
-     * renders as a string-literal union of its case names.
-     *
      * @param  class-string<UnitEnum>  $class
      *
      * @throws \ReflectionException
      */
     public function renderEnum(string $class): string
     {
+        return new ReflectionEnum($class)->isBacked()
+            ? $this->renderBackedEnum($class)
+            : $this->renderUnitEnum($class);
+    }
+
+    /**
+     * A backed enum renders as a companion `const` of {name, value} objects plus
+     * a type alias over its values: callers get named construction (`Name.Case`)
+     * and a finite, discriminated union type the compiler can narrow.
+     *
+     * Note: this must be called with a BackedEnum, but PHPStan won't listen to
+     * my assertion that a UnitEnum where `new ReflectionEnum($class)->isBacked()
+     * == true` must be backed ¯\_(ツ)_/¯
+     *
+     * @param  class-string<UnitEnum>  $class
+     */
+    private function renderBackedEnum(string $class): string
+    {
         $name = $this->namesBag->nameForEnum($class);
         $cases = $class::cases();
-
-        if (! new ReflectionEnum($class)->isBacked()) {
-            $members = $cases === []
-                ? 'never'
-                : implode(' | ', array_map(fn (UnitEnum $case): string => $this->renderString($case->name), $cases));
-
-            return "export type $name = $members;";
-        }
 
         if ($cases === []) {
             return "export type $name = never;";
@@ -91,10 +96,8 @@ readonly class TypeScriptRenderer
         $entries = [];
 
         foreach ($cases as $case) {
-            // Reached only past the isBacked() guard above, so every case is a
-            // BackedEnum; the instanceof narrows UnitEnum to expose ->value.
-            if (! $case instanceof BackedEnum) {
-                continue;
+            if (! ($case instanceof BackedEnum)) {
+                throw new \InvalidArgumentException('This function only accepts a BackedEnum');
             }
 
             $entries[] = sprintf(
@@ -107,6 +110,26 @@ readonly class TypeScriptRenderer
 
         return "export const $name = {\n".implode("\n", $entries)."\n} as const;\n\n"
             ."export type $name = typeof $name".'[keyof typeof '.$name.'];';
+    }
+
+    /**
+     * A unit enum renders as a string-literal union of its case names.
+     *
+     * @param  class-string<UnitEnum>  $class
+     */
+    private function renderUnitEnum(string $class): string
+    {
+        $name = $this->namesBag->nameForEnum($class);
+        $cases = $class::cases();
+
+        $members = $cases === []
+            ? 'never'
+            : implode(
+                ' | ',
+                array_map(fn (UnitEnum $case): string => $this->renderString($case->name), $cases)
+            );
+
+        return "export type $name = $members;";
     }
 
     private function renderEnumValue(int|string $value): string
