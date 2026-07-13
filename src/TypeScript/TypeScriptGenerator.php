@@ -39,11 +39,12 @@ readonly class TypeScriptGenerator
     public function generate(): string
     {
         $interfaces = $this->collectInterfaces();
+        $enums = $this->collectEnums($interfaces);
 
         // Enums referenced by any interface are emitted as their own named types,
         // ahead of the interfaces that reference them.
         $blocks = [
-            ...array_map($this->renderer->renderEnum(...), $this->collectEnums($interfaces)),
+            ...array_map($this->renderer->renderEnum(...), $enums),
             ...array_map($this->renderer->renderInterface(...), $interfaces),
         ];
 
@@ -101,15 +102,11 @@ readonly class TypeScriptGenerator
         foreach ($this->requests as $request) {
             $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($request);
 
-            // A request is split into one interface per HTTP location its
-            // properties come from; empty buckets are dropped downstream. A
-            // request field is optional when it is not required (has a default
-            // or is nullable-defaulted).
             foreach ([Bucket::Body, Bucket::Query, Bucket::Headers] as $bucket) {
                 $interfaces[] = $tsInterfaceBuilder->buildInterface(
                     $phpClass,
-                    isPropertyOptional: fn (PhpProperty $property) => ! $property->isRequired,
-                    includeProperty: fn (PhpProperty $property) => $this->getBucket($property) === $bucket,
+                    isPropertyOptional: $this->isRequestPropertyOptional(...),
+                    includeProperty: fn (PhpProperty $p) => $this->includeRequestProperty($p, $bucket),
                     name: TypeScriptName::for($request).$bucket->name,
                     stringValued: $bucket === Bucket::Headers,
                 );
@@ -120,23 +117,10 @@ readonly class TypeScriptGenerator
             $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($response);
 
             foreach ([Bucket::Body, Bucket::Headers] as $bucket) {
-                if ($bucket === Bucket::Body) {
-                    // The body is everything not lifted elsewhere: #[Status] becomes the
-                    // HTTP status code and #[Header] properties become response headers,
-                    // so both are dropped from the body.
-                    $includeProperty = fn (PhpProperty $property) => ! $property->hasAttribute(ResponseStatus::class)
-                        && ! $property->hasAttribute(ResponseHeader::class);
-                } else {
-                    // The response headers are their own interface, keyed by header
-                    // name — mirroring a request's Headers interface. Dropped if empty.
-                    $includeProperty = fn (PhpProperty $property) => $property->hasAttribute(ResponseHeader::class);
-                }
-
                 $interfaces[] = $tsInterfaceBuilder->buildInterface(
                     $phpClass,
-                    // A response field is optional only when marked #[Optional].
-                    isPropertyOptional: fn (PhpProperty $property) => $property->hasAttribute(ResponseOptional::class),
-                    includeProperty: $includeProperty,
+                    isPropertyOptional: $this->isResponsePropertyOptional(...),
+                    includeProperty: fn (PhpProperty $p) => $this->includeResponseProperty($p, $bucket),
                     name: TypeScriptName::for($response).$bucket->name,
                     stringValued: $bucket === Bucket::Headers,
                 );
@@ -160,7 +144,7 @@ readonly class TypeScriptGenerator
      * Headers — or null when the property is not sent in the JSON payload (a
      * cookie, route parameter, file upload or nested request object).
      */
-    private function getBucket(PhpProperty $property): ?Bucket
+    private function getRequestBucket(PhpProperty $property): ?Bucket
     {
         return match ($property->getRootSource()::class) {
             Sources\Body::class => Bucket::Body,
@@ -173,5 +157,59 @@ readonly class TypeScriptGenerator
                 : Bucket::Body,
             default => null,
         };
+    }
+
+    /**
+     * The response interface bucket a property belongs to.
+     *
+     * The body is everything not lifted elsewhere: #[Status] becomes the
+     * HTTP status code and #[Header] properties become response headers,
+     * so both are dropped from the body.
+     *
+     * The response headers are their own interface, keyed by header
+     * name — mirroring a request's Headers interface.
+     */
+    private function getResponseBucket(PhpProperty $property): ?Bucket
+    {
+        return match (true) {
+            (! $property->hasAttribute(ResponseStatus::class)
+                && ! $property->hasAttribute(ResponseHeader::class)) => Bucket::Body,
+            $property->hasAttribute(ResponseHeader::class) => Bucket::Headers,
+            default => null,
+        };
+    }
+
+    /**
+     * A request field is optional when it is not required (has a default
+     * or is nullable-defaulted).
+     */
+    private function isRequestPropertyOptional(PhpProperty $property): bool
+    {
+        return ! $property->isRequired;
+    }
+
+    /**
+     * A request is split into one interface per HTTP location its
+     * properties come from; empty buckets are dropped downstream.
+     */
+    private function includeRequestProperty(PhpProperty $property, Bucket $bucket): bool
+    {
+        return $this->getRequestBucket($property) === $bucket;
+    }
+
+    /**
+     * A response field is optional only when marked #[Optional].
+     */
+    private function isResponsePropertyOptional(PhpProperty $property): bool
+    {
+        return $property->hasAttribute(ResponseOptional::class);
+    }
+
+    /**
+     * A response is split into Body and Headers.
+     */
+    private function includeResponseProperty(PhpProperty $property, Bucket $bucket): bool
+    {
+        return $this->getResponseBucket($property) === $bucket;
     }
 }
