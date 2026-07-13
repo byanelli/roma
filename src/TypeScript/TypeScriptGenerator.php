@@ -68,11 +68,12 @@ readonly class TypeScriptGenerator
             }
         }
 
-        return collect($classes)
-            ->unique()
-            ->sortBy(fn (string $class) => TypeScriptName::for($class))
-            ->values()
-            ->all();
+        return array_values(
+            collect($classes)
+                ->unique()
+                ->sortBy(fn (string $class) => TypeScriptName::for($class))
+                ->all()
+        );
     }
 
     /**

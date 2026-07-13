@@ -88,15 +88,22 @@ readonly class TypeScriptRenderer
             return "export type $name = never;";
         }
 
-        $entries = array_map(
-            fn (BackedEnum $case): string => sprintf(
+        $entries = [];
+
+        foreach ($cases as $case) {
+            // Reached only past the isBacked() guard above, so every case is a
+            // BackedEnum; the instanceof narrows UnitEnum to expose ->value.
+            if (! $case instanceof BackedEnum) {
+                continue;
+            }
+
+            $entries[] = sprintf(
                 '  %s: { name: %s, value: %s },',
                 $this->renderKey($case->name),
                 $this->renderString($case->name),
                 $this->renderEnumValue($case->value),
-            ),
-            $cases,
-        );
+            );
+        }
 
         return "export const $name = {\n".implode("\n", $entries)."\n} as const;\n\n"
             ."export type $name = typeof $name".'[keyof typeof '.$name.'];';

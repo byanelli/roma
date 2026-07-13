@@ -141,7 +141,10 @@ readonly class RequestMapper implements Contracts\RequestMapper
     {
         foreach (new ReflectionClass($instance)->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
             if ($method->getAttributes(Guard::class) !== []) {
-                $this->container->call([$instance, $method->getName()]);
+                // getClosure() yields a real Closure (params intact for the
+                // container to inject) rather than an [$object, method] array,
+                // which the container/Closure callable typehints reject.
+                $this->container->call($method->getClosure($instance));
             }
         }
     }

@@ -29,8 +29,10 @@ class Rule implements RulesAttribute
         // rule rather than "url" with parameters). A closure argument (a
         // first-class-callable reference) is left intact for the mapper to
         // resolve through the container at validation time.
-        return collect($this->rules)
-            ->flatMap(fn (mixed $rule): array => is_array($rule) ? array_values($rule) : [$rule])
-            ->all();
+        return array_values(
+            collect($this->rules)
+                ->flatMap(fn (mixed $rule): array => is_array($rule) ? array_values($rule) : [$rule])
+                ->all()
+        );
     }
 }
