@@ -10,8 +10,8 @@ class NamesBag
     /** @var array<string, true> reserved type names, to avoid collisions. */
     private array $usedNames = [];
 
-    /** @var array<string, string> resolved name per type identity (uniqueKey). */
-    private array $resolvedByKey = [];
+    /** @var array<string, string> already resolved name per type identity (uniqueKey). */
+    private array $alreadyResolved = [];
 
     /**
      * The TypeScript name for an interface. Resolution is idempotent per
@@ -39,9 +39,9 @@ class NamesBag
         return $this->reserve('enum/'.$enumClass, TypeScriptName::for($enumClass));
     }
 
-    private function reserve(string $key, string $preferred): string
+    private function reserve(string $uniqueKey, string $preferred): string
     {
-        return $this->resolvedByKey[$key] ??= $this->reserveName($preferred);
+        return $this->alreadyResolved[$uniqueKey] ??= $this->reserveName($preferred);
     }
 
     private function reserveName(string $preferred): string
