@@ -118,7 +118,8 @@ class ClassRequestMapping
     {
         return array_values(
             collect($this->class->properties)
-                ->filter(fn (Property $p) => $p->role == Role::Property)
+                // A virtual (computed) property has no backing store to write to.
+                ->filter(fn (Property $p) => $p->role == Role::Property && ! $p->isVirtual)
                 ->all()
         );
     }
@@ -317,7 +318,7 @@ class ClassRequestMapping
         foreach ($this->class->properties as $property) {
             [$role, $type, $keySegments] = [$property->role, $property->type, $this->relativeKeySegments($property)];
 
-            if ($role == Role::ValidationOnly) {
+            if ($property->isVirtual || $role == Role::ValidationOnly) {
                 continue;
             }
 

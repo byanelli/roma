@@ -180,6 +180,9 @@ readonly class ValidationRules
     {
         return array_values(
             collect($properties)
+                // A virtual (computed) property is not a request input, so it
+                // gets no rules — otherwise it would validate as required.
+                ->reject(fn (Property $property) => $property->isVirtual)
                 ->flatMap(fn (Property $property) => $this->entryFromProperty($property, $objectKeySegments))
                 ->all()
         );

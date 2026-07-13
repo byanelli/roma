@@ -36,6 +36,7 @@ readonly class Property
         public bool $nullable = false,
         ?string $errorKey = null,
         public array $rawAttributes = [],
+        public bool $isVirtual = false,
     ) {
         // A key is one opaque key segment. A literal '.' is fully supported: data
         // access walks key segments and validation rules escape it as "\.". A '*'

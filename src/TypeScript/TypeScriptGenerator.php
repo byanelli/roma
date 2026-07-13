@@ -194,7 +194,10 @@ readonly class TypeScriptGenerator
      */
     private function includeRequestProperty(PhpProperty $property, Bucket $bucket): bool
     {
-        return $this->getRequestBucket($property) === $bucket;
+        // A computed (virtual) property is derived, never a request input, so it
+        // belongs to no request interface. (Responses keep theirs — a computed
+        // property is legitimate output, and the serializer emits it.)
+        return ! $property->isVirtual && $this->getRequestBucket($property) === $bucket;
     }
 
     /**

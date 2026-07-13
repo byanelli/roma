@@ -211,6 +211,10 @@ readonly class ClassDefinitionBuilder
             nullable: $obj->getType()?->allowsNull() ?? true,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
             rawAttributes: $attributes,
+            // A virtual (hooked, backing-less) property is a computed value, not
+            // a stored one. On the request side it is never a mappable input; the
+            // request mapper, validator and request TypeScript all skip it.
+            isVirtual: $obj instanceof ReflectionProperty && $obj->isVirtual(),
         );
     }
 
