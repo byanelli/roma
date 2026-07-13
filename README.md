@@ -1,6 +1,9 @@
 # Roma 🍅
 
 [![Tests](https://github.com/billisonline/roma/actions/workflows/run-tests.yml/badge.svg)](https://github.com/billisonline/roma/actions/workflows/run-tests.yml)
+[![PHPStan](https://github.com/billisonline/roma/actions/workflows/phpstan.yml/badge.svg)](https://github.com/billisonline/roma/actions/workflows/phpstan.yml)
+[![Pint](https://github.com/billisonline/roma/actions/workflows/pint.yml/badge.svg)](https://github.com/billisonline/roma/actions/workflows/pint.yml)
+[![Coverage](https://raw.githubusercontent.com/billisonline/roma/badges/coverage.svg)](https://github.com/billisonline/roma/actions/workflows/coverage.yml)
 
 ## Introduction
 

@@ -1,0 +1,68 @@
+name: Coverage
+
+on:
+  push:
+    # Track coverage on the mainline branches. Drop road-to-1.0 after it merges.
+    branches: [main, road-to-1.0]
+    paths:
+      - '**.php'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/coverage.yml'
+      - '.github/scripts/coverage-badge.php'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  coverage:
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run tests with coverage
+        run: vendor/bin/pest --coverage-clover=coverage.xml
+
+      - name: Generate coverage badge
+        run: php .github/scripts/coverage-badge.php coverage.xml "$RUNNER_TEMP/coverage.svg"
+
+      - name: Publish badge to the badges branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          cd "$RUNNER_TEMP"
+
+          # Check out the existing badges branch, or start it as an orphan.
+          if git clone --depth=1 --branch badges "$remote" badges-repo 2>/dev/null; then
+            cd badges-repo
+          else
+            mkdir badges-repo && cd badges-repo
+            git init -q
+            git remote add origin "$remote"
+            git checkout -q --orphan badges
+          fi
+
+          cp "$RUNNER_TEMP/coverage.svg" coverage.svg
+          git add coverage.svg
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git commit -q -m "Update coverage badge"; then
+            git push origin badges
+          else
+            echo "Coverage badge unchanged; nothing to push."
+          fi
