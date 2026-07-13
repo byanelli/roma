@@ -2,8 +2,7 @@ name: Coverage
 
 on:
   push:
-    # Track coverage on the mainline branches. Drop road-to-1.0 after it merges.
-    branches: [main, road-to-1.0]
+    branches: [main]
     paths:
       - '**.php'
       - 'composer.json'

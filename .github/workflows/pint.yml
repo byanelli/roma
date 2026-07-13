@@ -2,6 +2,13 @@ name: Pint
 
 on:
   push:
+    branches: [main]
+    paths:
+      - '**.php'
+      - 'pint.json'
+      - '.github/workflows/pint.yml'
+  pull_request:
+    branches: [main]
     paths:
       - '**.php'
       - 'pint.json'
