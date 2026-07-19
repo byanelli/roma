@@ -5,14 +5,18 @@ namespace BYanelli\Roma\Request;
 use BYanelli\Roma\Request\Attributes\Guard;
 use BYanelli\Roma\Request\Data\ClassDefinitionBuilder;
 use BYanelli\Roma\Request\Data\ClassRequestMapping;
+use BYanelli\Roma\Request\Validation\ClientDataKeys;
+use BYanelli\Roma\Request\Validation\PrecognitiveRuleFilter;
 use Closure;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Validator;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 readonly class RequestMapper implements Contracts\RequestMapper
 {
@@ -21,6 +25,8 @@ readonly class RequestMapper implements Contracts\RequestMapper
         private ValidatorFactory $validatorFactory,
         private Container $container,
         private ClassDefinitionBuilder $classDefinitionBuilder = new ClassDefinitionBuilder,
+        private PrecognitiveRuleFilter $precognitiveRuleFilter = new PrecognitiveRuleFilter,
+        private ClientDataKeys $clientDataKeys = new ClientDataKeys,
     ) {}
 
     /**
@@ -68,6 +74,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
      * @return T
      *
      * @throws \ReflectionException|ValidationException
+     * @throws HttpException a passing precognitive request short-circuits with a 204
      */
     public function mapRequest(string $className)
     {
@@ -78,12 +85,49 @@ readonly class RequestMapper implements Contracts\RequestMapper
 
         $attributeNames = $mapping->attributeNames();
 
+        // A precognitive response is consumed by front-end form tooling, so
+        // its form-data errors are keyed and named by the bare field the
+        // client posted ("email", not "input.email") — the shape the official
+        // laravel-precognition-* helpers map onto form fields. Ordinary
+        // validation keeps Roma's source-prefixed keys.
+        $stripPrefixes = $request->isPrecognitive()
+            && ! config('roma.precognition.source_prefixed_errors', false);
+
+        if ($stripPrefixes) {
+            $attributeNames = array_map($this->clientDataKeys->stripSourcePrefix(...), $attributeNames);
+        }
+
+        $validator = $this->validatorFactory->make(
+            $mapping->data(),
+            $this->resolveRuleClosures($mapping->rules()),
+            [],
+            $attributeNames,
+        );
+
+        // A precognitive request validates form data only, optionally narrowed
+        // to the fields named in its Precognition-Validate-Only header. As in
+        // FormRequest, filtering runs on the validator's expanded rules —
+        // after wildcard expansion against the data — so a client pattern like
+        // "items.0.code" can match an array-member rule.
+        if ($request->isPrecognitive() && $validator instanceof Validator) {
+            $validator->setRules(
+                $this->precognitiveRuleFilter->filter($request, $validator->getRulesWithoutPlaceholders()),
+            );
+        }
+
         try {
-            $this->validatorFactory
-                ->make($mapping->data(), $this->resolveRuleClosures($mapping->rules()), [], $attributeNames)
-                ->validate();
+            $validator->validate();
         } catch (ValidationException $e) {
-            throw ValidationException::withMessages($this->rekeyErrors($e, $attributeNames));
+            throw ValidationException::withMessages($this->rekeyErrors($e, $attributeNames, $stripPrefixes));
+        }
+
+        // A precognitive request asks only "would this form data pass?" — the
+        // controller never runs. Non-form rules were dropped above, so the
+        // object cannot be safely built (and guards cannot run): answer now,
+        // as FormRequest's validate-only hook does (see
+        // Illuminate\Foundation\Precognition).
+        if ($request->isPrecognitive()) {
+            abort(204, headers: ['Precognition-Success' => 'true']);
         }
 
         $instance = $this->mapClass($mapping);
@@ -142,18 +186,25 @@ readonly class RequestMapper implements Contracts\RequestMapper
 
     /**
      * Re-key the error bag from internal source-prefixed keys to the
-     * client-facing names (e.g. "header.x_flag" => "header.X-Flag"). Keys
-     * without a mapping (plain and array-indexed paths) are already correct.
+     * client-facing names (e.g. "header.x_flag" => "header.X-Flag", plus —
+     * when a precognitive request is stripping prefixes — "input.email" =>
+     * "email"). An array-indexed path expanded by the validator
+     * ("input.items.1.code") has no attribute-name entry, so it falls through
+     * to the same prefix stripping its siblings got. Two fields that share a
+     * client-facing name merge their messages.
      *
      * @param  array<string, string>  $attributeNames
      * @return array<string, list<string>>
      */
-    private function rekeyErrors(ValidationException $e, array $attributeNames): array
+    private function rekeyErrors(ValidationException $e, array $attributeNames, bool $stripPrefixes): array
     {
         $errors = [];
 
         foreach ($e->errors() as $key => $messages) {
-            $errors[$attributeNames[$key] ?? $key] = $messages;
+            $name = $attributeNames[$key]
+                ?? ($stripPrefixes ? $this->clientDataKeys->stripSourcePrefix($key) : $key);
+
+            $errors[$name] = array_values(array_merge($errors[$name] ?? [], $messages));
         }
 
         return $errors;

@@ -17,6 +17,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Precognition
+    |--------------------------------------------------------------------------
+    |
+    | A precognitive request validates form data on behalf of a front-end
+    | form, so its validation errors are keyed by the bare field name the
+    | client posted ("email", not "input.email") — the shape the official
+    | laravel-precognition-* helpers map onto form fields. Ordinary requests
+    | are unaffected and keep Roma's source-prefixed error keys. Enable
+    | source_prefixed_errors to key precognitive errors by their full
+    | source-prefixed names as well.
+    |
+    */
+
+    'precognition' => [
+        'source_prefixed_errors' => false,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | TypeScript Generation
     |--------------------------------------------------------------------------
     |

@@ -446,6 +446,23 @@ readonly class UpdatePostRequest {
 }
 ```
 
+## Laravel Precognition
+
+Roma request objects work with [Laravel Precognition](https://laravel.com/docs/precognition) out of the box. Add the framework's `HandlePrecognitiveRequests` middleware to the route, and a request carrying the `Precognition: true` header is validated without running your controller:
+
+```php
+use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
+
+Route::post('/signup', SignupController::class)
+    ->middleware(HandlePrecognitiveRequests::class);
+```
+
+Precognition is a front-end form concern, so a precognitive request validates **form data only** — the `input`, `query`, `body`, and `file` sources. Rules for headers, cookies, route parameters, and request metadata are skipped, and because those values go unvalidated the request object is never constructed and `#[Guard]` methods never run. Everything runs as normal on the real submission.
+
+A failing precognitive request returns the usual `422`, with its form-data errors keyed by the bare field name the client posted (`email`, `address.city`) rather than Roma's usual [source-prefixed keys](#validation-error-keys), so the official `laravel-precognition-*` front-end helpers map them onto form fields without translation. Set `roma.precognition.source_prefixed_errors` to `true` to keep the prefixed keys (`input.email`) under precognition too. A passing precognitive request returns an empty `204` with a `Precognition-Success: true` header.
+
+When the client narrows validation further with a `Precognition-Validate-Only` header — as the official helpers do on every keystroke — Roma validates only the matching fields. A pattern matches a field by either name the client might know it by: the bare posted name (`email`, `items.0.code`), which is what the official helpers send, or Roma's source-prefixed key (`input.email`). Fields outside the filter may be missing or invalid; the request still succeeds if the named fields pass.
+
 ## Validation error keys
 
 When validation fails, Roma throws Laravel's `ValidationException`. Errors are keyed by a source-prefixed, request-relative name so the caller always knows where the offending value belongs:
@@ -469,6 +486,8 @@ $e->errors(); // returns:
     'request.ajax'       => ['The request.ajax field must be accepted.'],
 ];
 ```
+
+The one exception is a [precognitive request](#laravel-precognition), whose errors are consumed by front-end form tooling: there, form-data errors are keyed by the bare posted field name instead.
 
 # Response objects
 
