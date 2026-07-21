@@ -59,4 +59,29 @@ readonly class Authorization implements HasRequestSource, HasValidationRules, Pa
     {
         return $this->scheme === AuthScheme::Bearer;
     }
+
+    /**
+     * The decoded Basic credentials, or null when this is not a Basic header or
+     * its credentials are not well-formed (invalid base64, or no colon to
+     * separate the user-id from the password).
+     */
+    public function basic(): ?BasicCredentials
+    {
+        if ($this->scheme !== AuthScheme::Basic) {
+            return null;
+        }
+
+        $decoded = base64_decode($this->credentials, strict: true);
+
+        if ($decoded === false || ! str_contains($decoded, ':')) {
+            return null;
+        }
+
+        // The user-id cannot contain a colon, so the first one is the separator;
+        // everything after it is the password (which may be empty or contain
+        // further colons).
+        [$username, $password] = explode(':', $decoded, 2);
+
+        return new BasicCredentials($username, $password);
+    }
 }

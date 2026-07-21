@@ -4,6 +4,7 @@
 
 use BYanelli\Roma\Request\Enums\AuthScheme;
 use BYanelli\Roma\Request\Values\Authorization;
+use BYanelli\Roma\Request\Values\BasicCredentials;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 
@@ -77,4 +78,43 @@ it('leaves a nullable Authorization property null when the header is absent', fu
     $this->setRequest();
 
     expect($this->mapRequest(TestNullableAuthorizationHeaderSource::class)->auth)->toBeNull();
+});
+
+it('decodes Basic credentials from a mapped request end to end', function () {
+    /** @var TestCase $this */
+    $this->setRequest(headers: ['Authorization' => 'Basic '.base64_encode('aladdin:opensesame')]);
+
+    $basic = $this->mapRequest(TestItInfersAuthorizationHeaderSource::class)->auth->basic();
+
+    expect($basic)->toEqual(new BasicCredentials('aladdin', 'opensesame'));
+});
+
+it('splits Basic credentials on the first colon so the password may contain colons', function () {
+    $auth = new Authorization(AuthScheme::Basic, base64_encode('user:p:a:ss'));
+
+    expect($auth->basic())->toEqual(new BasicCredentials('user', 'p:a:ss'));
+});
+
+it('decodes Basic credentials with an empty password', function () {
+    $auth = new Authorization(AuthScheme::Basic, base64_encode('user:'));
+
+    expect($auth->basic())->toEqual(new BasicCredentials('user', ''));
+});
+
+it('returns null Basic credentials when the scheme is not Basic', function () {
+    $auth = new Authorization(AuthScheme::Bearer, base64_encode('user:pass'));
+
+    expect($auth->basic())->toBeNull();
+});
+
+it('returns null Basic credentials when the base64 is invalid', function () {
+    $auth = new Authorization(AuthScheme::Basic, 'not valid base64!!');
+
+    expect($auth->basic())->toBeNull();
+});
+
+it('returns null Basic credentials when the decoded value has no colon', function () {
+    $auth = new Authorization(AuthScheme::Basic, base64_encode('nocolonhere'));
+
+    expect($auth->basic())->toBeNull();
 });
