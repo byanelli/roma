@@ -138,11 +138,11 @@ readonly class ClassDefinitionBuilder
         // A nested object always inherits its location from the parent, so a
         // property inside one cannot declare its own source: a source attribute
         // (query/body/input/header/route/cookie/accessor) or a self-sourcing
-        // metadata enum would silently relocate it, surfacing as a baffling
+        // metadata type would silently relocate it, surfacing as a baffling
         // "required" validation error. To override a nested property's key
         // (e.g. a literal dotted key) use #[Key] instead.
         $declaresOwnSource = collect($attributes)->whereInstanceOf(SourceAttribute::class)->isNotEmpty()
-            || ($typeName !== null && enum_exists($typeName) && is_a($typeName, HasRequestSource::class, true));
+            || ($typeName !== null && (enum_exists($typeName) || class_exists($typeName)) && is_a($typeName, HasRequestSource::class, true));
 
         // Reject a source on a nested property up front with an actionable
         // message rather than let it silently misbehave.
@@ -182,14 +182,16 @@ readonly class ClassDefinitionBuilder
             );
         }
 
-        // Self-sourcing metadata enums: a property typed as one of these enums
-        // with no explicit source attribute infers its source from the enum,
-        // exactly as if the equivalent source attribute had been written.
+        // Self-sourcing metadata types: a property typed as one of these (a
+        // metadata enum like Method/ContentType, or a value object like
+        // Authorization) with no explicit source attribute infers its source
+        // from the type, exactly as if the equivalent source attribute had been
+        // written.
         if ($typeName !== null
             && collect($attributes)->whereInstanceOf(SourceAttribute::class)->isEmpty()
-            && enum_exists($typeName)
+            && (enum_exists($typeName) || class_exists($typeName))
             && is_a($typeName, HasRequestSource::class, true)) {
-            $attributes = [...$attributes, ...$typeName::requestSourceAttributes()];
+            $attributes = [...$attributes, $typeName::requestSourceAttribute()];
         }
 
         $parent = in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class])

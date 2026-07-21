@@ -12,8 +12,8 @@ enum Scheme: string implements HasRequestSource
     case Http = 'http';
     case Https = 'https';
 
-    public static function requestSourceAttributes(): array
+    public static function requestSourceAttribute(): SchemeAccessor
     {
-        return [new SchemeAccessor];
+        return new SchemeAccessor;
     }
 }

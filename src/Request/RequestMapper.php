@@ -10,12 +10,15 @@ use BYanelli\Roma\Request\Validation\PrecognitiveRuleFilter;
 use Closure;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
+use Illuminate\Contracts\Validation\Validator as ValidatorContract;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionProperty;
+use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 readonly class RequestMapper implements Contracts\RequestMapper
@@ -33,20 +36,15 @@ readonly class RequestMapper implements Contracts\RequestMapper
      * @param  array<array-key, mixed>  $values
      * @return array<array-key, mixed>
      */
-    private function mapValuesToNestedClasses(array $values): array
+    private function mapNestedClassesToValues(array $values): array
     {
         return collect($values)
-            ->map(fn ($v) => $this->mapValue($v))
+            ->map(fn ($v) => match (true) {
+                $v instanceof ClassRequestMapping => $this->mapClass($v),
+                is_array($v) => $this->mapNestedClassesToValues($v),
+                default => $v,
+            })
             ->all();
-    }
-
-    private function mapValue(mixed $v): mixed
-    {
-        return match (true) {
-            $v instanceof ClassRequestMapping => $this->mapClass($v),
-            is_array($v) => $this->mapValuesToNestedClasses($v),
-            default => $v,
-        };
     }
 
     /**
@@ -55,12 +53,16 @@ readonly class RequestMapper implements Contracts\RequestMapper
     private function mapClass(ClassRequestMapping $mapping): mixed
     {
         $className = $mapping->getClassName();
-        $constructorValues = $this->mapValuesToNestedClasses($mapping->getConstructorValuesArray());
-        $classProperties = $this->mapValuesToNestedClasses($mapping->getClassPropertiesMap());
+        $constructorValues = $this->mapNestedClassesToValues(
+            $mapping->getConstructorMappedValuesOrNestedClassesAsList()
+        );
+        $classPropertyValues = $this->mapNestedClassesToValues(
+            $mapping->getClassPropertiesMappedValuesOrNestedClassesAsMap()
+        );
 
         $instance = new $className(...$constructorValues);
 
-        foreach ($classProperties as $name => $value) {
+        foreach ($classPropertyValues as $name => $value) {
             new ReflectionProperty($className, $name)->setValue($instance, $value);
         }
 
@@ -83,58 +85,107 @@ readonly class RequestMapper implements Contracts\RequestMapper
 
         $mapping = new ClassRequestMapping($class, $request);
 
+        if ($request->isPrecognitive()) {
+            $this->validatePrecognitiveRequest($mapping, $request);
+        }
+
         $attributeNames = $mapping->attributeNames();
 
-        // A precognitive response is consumed by front-end form tooling, so
-        // its form-data errors are keyed and named by the bare field the
-        // client posted ("email", not "input.email") — the shape the official
-        // laravel-precognition-* helpers map onto form fields. Ordinary
-        // validation keeps Roma's source-prefixed keys.
-        $stripPrefixes = $request->isPrecognitive()
-            && ! config('roma.precognition.source_prefixed_errors', false);
-
-        if ($stripPrefixes) {
-            $attributeNames = array_map($this->clientDataKeys->stripSourcePrefix(...), $attributeNames);
-        }
-
-        $validator = $this->validatorFactory->make(
-            $mapping->data(),
-            $this->resolveRuleClosures($mapping->rules()),
-            [],
+        $this->validate(
+            $this->makeValidator($mapping, $attributeNames),
             $attributeNames,
+            stripPrefixes: false,
         );
-
-        // A precognitive request validates form data only, optionally narrowed
-        // to the fields named in its Precognition-Validate-Only header. As in
-        // FormRequest, filtering runs on the validator's expanded rules —
-        // after wildcard expansion against the data — so a client pattern like
-        // "items.0.code" can match an array-member rule.
-        if ($request->isPrecognitive() && $validator instanceof Validator) {
-            $validator->setRules(
-                $this->precognitiveRuleFilter->filter($request, $validator->getRulesWithoutPlaceholders()),
-            );
-        }
-
-        try {
-            $validator->validate();
-        } catch (ValidationException $e) {
-            throw ValidationException::withMessages($this->rekeyErrors($e, $attributeNames, $stripPrefixes));
-        }
-
-        // A precognitive request asks only "would this form data pass?" — the
-        // controller never runs. Non-form rules were dropped above, so the
-        // object cannot be safely built (and guards cannot run): answer now,
-        // as FormRequest's validate-only hook does (see
-        // Illuminate\Foundation\Precognition).
-        if ($request->isPrecognitive()) {
-            abort(204, headers: ['Precognition-Success' => 'true']);
-        }
 
         $instance = $this->mapClass($mapping);
 
         $this->runGuards($instance);
 
         return $instance;
+    }
+
+    /**
+     * Validate a precognitive request against its form data only, then answer
+     * with a 204 — a precognitive request asks only "would this form data
+     * pass?", so the controller never runs and this method never returns.
+     * Non-form rules are dropped, so the object cannot be safely built (and
+     * guards cannot run): answer from validation alone, as FormRequest's
+     * validate-only hook does (see Illuminate\Foundation\Precognition).
+     *
+     * @throws RuntimeException the validator factory did not return a Laravel Validator
+     * @throws ValidationException
+     * @throws HttpException a passing request short-circuits with a 204
+     */
+    private function validatePrecognitiveRequest(ClassRequestMapping $mapping, Request $request): never
+    {
+        // A precognitive response is consumed by front-end form tooling, so
+        // its form-data errors are keyed and named by the bare field the
+        // client posted ("email", not "input.email") — the shape the official
+        // laravel-precognition-* helpers map onto form fields. Ordinary
+        // validation keeps Roma's source-prefixed keys.
+        $stripPrefixes = ! config('roma.precognition.source_prefixed_errors', false);
+
+        $attributeNames = $mapping->attributeNames();
+
+        if ($stripPrefixes) {
+            $attributeNames = array_map($this->clientDataKeys->stripSourcePrefix(...), $attributeNames);
+        }
+
+        $validator = $this->makeValidator($mapping, $attributeNames);
+
+        // Validation is optionally narrowed to the fields named in the
+        // Precognition-Validate-Only header. As in FormRequest, filtering
+        // runs on the validator's expanded rules — after wildcard expansion
+        // against the data — so a client pattern like "items.0.code" can
+        // match an array-member rule. That needs Laravel's concrete Validator
+        // (or a subclass of it), whose setRules()/getRulesWithoutPlaceholders()
+        // the filter relies on.
+        if (! ($validator instanceof Validator)) {
+            throw new RuntimeException(sprintf(
+                'Precognitive validation requires an instance of %s so its rules can be '
+                .'narrowed to the requested fields; the configured validator factory returned %s.',
+                Validator::class,
+                get_debug_type($validator),
+            ));
+        }
+
+        $validator->setRules(
+            $this->precognitiveRuleFilter->filter($request, $validator->getRulesWithoutPlaceholders()),
+        );
+
+        $this->validate($validator, $attributeNames, $stripPrefixes);
+
+        abort(204, headers: ['Precognition-Success' => 'true']);
+    }
+
+    /**
+     * @param  array<string, string>  $attributeNames
+     */
+    private function makeValidator(ClassRequestMapping $mapping, array $attributeNames): ValidatorContract
+    {
+        return $this->validatorFactory->make(
+            $mapping->data(),
+            $this->resolveRuleClosures($mapping->rules()),
+            [],
+            $attributeNames,
+        );
+    }
+
+    /**
+     * Validate, re-keying any errors from internal source-prefixed keys to
+     * client-facing names before rethrowing.
+     *
+     * @param  array<string, string>  $attributeNames
+     *
+     * @throws ValidationException
+     */
+    private function validate(ValidatorContract $validator, array $attributeNames, bool $stripPrefixes): void
+    {
+        try {
+            $validator->validate();
+        } catch (ValidationException $e) {
+            throw ValidationException::withMessages($this->rekeyErrors($e, $attributeNames, $stripPrefixes));
+        }
     }
 
     /**

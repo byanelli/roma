@@ -88,6 +88,12 @@ readonly class InterfaceBuilder
     private function buildType(PhpType $type, Closure $optional): Type
     {
         return match (true) {
+            // A value object that parses from a single string (e.g. an
+            // Authorization header) is that string on the wire, wherever it is
+            // sourced from — so it is emitted as `string`, never descended into
+            // as an object. This holds regardless of bucket, so it does not rely
+            // on header interfaces already being forced to string values.
+            $type instanceof Class_ && $type->parsesStringValue() => new String_,
             // A nested object emits all of its properties (no top-level filter)
             // but inherits the same optionality policy as its parent.
             $type instanceof Class_ => $this->buildInterface($type, $optional),

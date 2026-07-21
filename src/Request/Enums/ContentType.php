@@ -29,9 +29,9 @@ enum ContentType: string implements HasRequestSource, NormalizesRawValue
     case OctetStream = 'application/octet-stream';
     case Pdf = 'application/pdf';
 
-    public static function requestSourceAttributes(): array
+    public static function requestSourceAttribute(): ContentTypeHeader
     {
-        return [new ContentTypeHeader];
+        return new ContentTypeHeader;
     }
 
     public static function normalizeRawValue(string $value): string

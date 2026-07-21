@@ -137,19 +137,24 @@ class ClassRequestMapping
     }
 
     /**
+     * Get an argument list for the constructor of values and/or nested class mappings.
+     *
      * @return list<mixed>
      */
-    public function getConstructorValuesArray(): array
+    public function getConstructorMappedValuesOrNestedClassesAsList(): array
     {
-        return array_values(Arr::map($this->getConstructorProperties(), $this->getValue(...)));
+        return array_values(Arr::map($this->getConstructorProperties(), $this->getMappedValue(...)));
     }
 
     /**
+     * Get a map/associative array of values and/or nested class mappings to be assigned to
+     * class properties.
+     *
      * @return array<string, mixed>
      */
-    public function getClassPropertiesMap(): array
+    public function getClassPropertiesMappedValuesOrNestedClassesAsMap(): array
     {
-        return Arr::mapWithKeys($this->getClassProperties(), fn (Property $p) => [$p->name => $this->getValue($p)]);
+        return Arr::mapWithKeys($this->getClassProperties(), fn (Property $p) => [$p->name => $this->getMappedValue($p)]);
     }
 
     private function toBoolean(mixed $val): bool
@@ -361,9 +366,7 @@ class ClassRequestMapping
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
-            $type instanceof Class_ => is_array($rawValue)
-                ? $this->toNestedClass($property, $type, $rawValue)
-                : throw new CoercionException('Expected object, got '.get_debug_type($rawValue)),
+            $type instanceof Class_ => $this->castObjectValue($property, $type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),
@@ -489,9 +492,19 @@ class ClassRequestMapping
         }
     }
 
-    public function getValue(Property $property): mixed
+    public function getMappedValue(Property $property): mixed
     {
-        return $this->dataGet($this->data, $this->relativeKeySegments($property), $property->default);
+        $value = $this->dataGet($this->data, $this->relativeKeySegments($property), $property->default);
+
+        // A deferred string value (see castObjectValue) is parsed here, at
+        // construction time, now that validation has accepted the raw string.
+        if ($property->type instanceof Class_
+            && is_string($value)
+            && $property->type->defersStringParsing()) {
+            return $this->toNestedClass($property, $property->type, $property->type->class::parseString($value));
+        }
+
+        return $value;
     }
 
     /**
@@ -524,6 +537,34 @@ class ClassRequestMapping
             is_array($val) => $this->normalizeData($val),
             default => $val,
         };
+    }
+
+    /**
+     * Coerce a value bound for a nested-object property.
+     *
+     * A structured array hydrates the object directly. A raw string is a value
+     * object that parses from a single string (ParsesStringValue, e.g., an
+     * Authorization header): when the object also defers string parsing--i.e.,
+     * emits its own validation rule--we leave the string untouched here so
+     * validation can vet it before it is parsed (deferred to getMappedValue); without
+     * a rule we parse eagerly, so the object's fields still validate individually
+     * as a safety net.
+     */
+    private function castObjectValue(Property $property, Class_ $type, mixed $rawValue): mixed
+    {
+        if (is_string($rawValue) && $type->defersStringParsing()) {
+            return $rawValue;
+        }
+
+        if (is_string($rawValue) && $type->parsesStringValue()) {
+            return $this->toNestedClass($property, $type, $type->class::parseString($rawValue));
+        }
+
+        if (! is_array($rawValue)) {
+            throw new CoercionException('Expected object, got '.get_debug_type($rawValue));
+        }
+
+        return $this->toNestedClass($property, $type, $rawValue);
     }
 
     /**

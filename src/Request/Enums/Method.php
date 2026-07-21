@@ -19,8 +19,8 @@ enum Method: string implements HasRequestSource
     case Trace = 'TRACE';
     case Connect = 'CONNECT';
 
-    public static function requestSourceAttributes(): array
+    public static function requestSourceAttribute(): MethodAccessor
     {
-        return [new MethodAccessor];
+        return new MethodAccessor;
     }
 }

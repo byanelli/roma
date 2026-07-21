@@ -8,6 +8,8 @@ use BYanelli\Roma\Request\Data\Type;
 use BYanelli\Roma\Request\Data\Types;
 use BYanelli\Roma\Request\Data\Types\Class_;
 use BYanelli\Roma\Request\Validation\Rules\RequiredWithinObject;
+use BYanelli\Roma\Request\Values\HasValidationRules;
+use BYanelli\Roma\Request\Values\ParsesStringValue;
 use Illuminate\Validation\Rule;
 
 readonly class ValidationRules
@@ -44,6 +46,34 @@ readonly class ValidationRules
 
         $this->rules = $rules;
         $this->attributeNames = $names;
+    }
+
+    /**
+     * A value object that parses from a string and emits its own validation rule
+     * is validated as a leaf string (its own rule vetting the raw value) rather
+     * than descended into as a structured object.
+     *
+     * @param  class-string  $class
+     */
+    private function validatesAsString(string $class): bool
+    {
+        return is_a($class, ParsesStringValue::class, true)
+            && is_a($class, HasValidationRules::class, true);
+    }
+
+    /**
+     * The rules a leaf string value object contributes at its own key (empty
+     * when it emits none). The is_a check narrows the class-string so the static
+     * call resolves to HasValidationRules::validationRules().
+     *
+     * @param  class-string  $class
+     * @return list<mixed>
+     */
+    private function stringValueRules(string $class): array
+    {
+        return is_a($class, HasValidationRules::class, true)
+            ? $class::validationRules()
+            : [];
     }
 
     /**
@@ -104,6 +134,23 @@ readonly class ValidationRules
         // so they don't collide with real request keys.
         if ($property->role == Role::ValidationOnly) {
             $keySegments = ['__request', ...$keySegments];
+        }
+
+        // A value object that parses from a raw string and vets it with its own
+        // rule is validated as a leaf string at its own key — the client sends
+        // one header value, not a structured sub-object, so the object's shape is
+        // not exposed to the validator and its fields are not recursed into.
+        if ($type instanceof Class_ && $this->validatesAsString($type->class)) {
+            return [[
+                'keySegments' => $keySegments,
+                'rules' => array_merge(
+                    $this->leadingRules($property, $objectKeySegments),
+                    $rules,
+                    ['string'],
+                    $this->stringValueRules($type->class),
+                ),
+                'name' => $name,
+            ]];
         }
 
         // Nested object: validate the object's presence/shape, then recurse
