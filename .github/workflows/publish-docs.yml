@@ -1,0 +1,28 @@
+name: Publish docs to yanelli.dev
+
+# Rebuild the docs site whenever the published docs change. The paths filter is
+# the gate: a push that doesn't touch docs/ never triggers a site rebuild.
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      # Dispatch the site's deploy workflow, which clones this repo's docs/ and
+      # rebuilds. Needs a fine-grained PAT with actions:write on
+      # byanelli/yanelli.dev, stored as the SITE_DISPATCH_TOKEN secret here.
+      - name: Trigger yanelli.dev deploy
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${{ secrets.SITE_DISPATCH_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/byanelli/yanelli.dev/actions/workflows/deploy.yml/dispatches \
+            -d '{"ref":"main"}'
