@@ -32,14 +32,18 @@ readonly class CreateContactRequest {
 
 ## Inject it into your controller
 
-Inject the request with the `#[Request]` contextual-binding attribute. Roma resolves it
-from the container, maps the request onto it, and validates it before your action runs:
+Mark the request _class_ with `#[Request]` and type-hint it in your controller. Roma
+resolves it from the container, maps the request onto it, and validates it before your
+action runs:
 
 ```php
 use BYanelli\Roma\Request\ContextualBinding\Request;
 
+#[Request]
+readonly class CreateContactRequest { /* properties as above */ }
+
 class CreateContactController {
-    public function __invoke(#[Request] CreateContactRequest $request) {
+    public function __invoke(CreateContactRequest $request) {
         Contact::create([
             'name'  => $request->name,
             'email' => $request->email,
@@ -49,29 +53,25 @@ class CreateContactController {
 }
 ```
 
-## Auto-inject with a class-level `#[Request]`
+Marking the class is also what lets the [TypeScript generator](/docs/roma/v1/typescript)
+auto-detect it as a request. Auto-injection is on by default; to require an explicit
+attribute everywhere, set `auto_inject` to `false` in `config/roma.php`.
 
-`#[Request]` can also mark the request _class_ itself. A class-marked request resolves by
-its type-hint alone — the parameter attribute becomes optional:
+### Annotating the parameter instead
+
+`#[Request]` also works on the controller parameter rather than the class. Both forms work
+and can coexist — reach for the parameter attribute when auto-injection is off, or for a
+one-off request you'd rather not mark at the class level:
 
 ```php
 use BYanelli\Roma\Request\ContextualBinding\Request;
 
-#[Request]
-readonly class CreateContactRequest { /* ... */ }
-
 class CreateContactController {
-    public function __invoke(CreateContactRequest $request) {
-        // Resolved and validated from the request — no parameter attribute needed.
+    public function __invoke(#[Request] CreateContactRequest $request) {
+        // ...
     }
 }
 ```
-
-Both forms work and can coexist. Marking the class is also what lets the
-[TypeScript generator](/docs/roma/v1/typescript) auto-detect it as a request.
-
-Auto-injection is on by default. To require the explicit parameter attribute everywhere,
-set `auto_inject` to `false` in `config/roma.php`.
 
 ## Share properties with traits
 

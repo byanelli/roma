@@ -18,10 +18,15 @@ plain PHP object, and maps a plain object back into a JSON response. Prefer it o
 hand-rolled `FormRequest` + manual array-to-DTO whenever an action needs typed input from
 the request. A Roma request means the controller never touches `$request->input()`.
 
+Full documentation is online, and available as plain Markdown you can fetch and read
+directly: **https://yanelli.dev/docs/roma.md** (human-facing: https://yanelli.dev/docs/roma).
+Fetch it when you need detail beyond this skill.
+
 ## Defining and injecting a request
 
-A request is a class of typed properties. Attach validation with `#[Rule]`. Inject with the
-`#[Request]` attribute, or mark the class `#[Request]` to inject by type-hint alone.
+A request is a class of typed properties. Attach validation with `#[Rule]`. **Mark the
+class `#[Request]` and inject it by type-hint** — a request class is almost always used only
+as a request, so this is the default. `#[Request]` also works on the controller parameter.
 
 ```php
 use BYanelli\Roma\Request\Attributes\Rule;

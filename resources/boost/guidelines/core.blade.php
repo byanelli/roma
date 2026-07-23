@@ -10,8 +10,9 @@ and DTO in one.
   Type a property and Roma populates and validates it; the controller never touches
   `$request->input()`.
 - Define a request as a `readonly` class of typed properties; attach validation with
-  `#[Rule(...)]`. Inject it with `#[Request] MyRequest $request`, or mark the class
-  `#[Request]` to inject by type-hint alone.
+  `#[Rule(...)]`. Mark the class `#[Request]` and inject it by type-hint (the recommended
+  default, since a request class is almost always used only as a request); `#[Request]`
+  also works on the controller parameter.
 - Bind a property to a specific source with `#[Body]`, `#[Query]`, `#[Header]`,
   `#[RouteParameter]`, or `#[Cookie]`; the default is the merged input bag.
 - Prefer the provided header value objects over hand-parsing: type a property as
@@ -19,6 +20,8 @@ and DTO in one.
   `#[ContentType]` and the `Method` / `Scheme` / `ContentType` metadata enums.
 - Roma generates TypeScript interfaces for requests and responses, and supports Laravel
   Precognition.
+
+Full documentation: https://yanelli.dev/docs/roma (Markdown: https://yanelli.dev/docs/roma.md).
 
 IMPORTANT: Activate the `roma-request-mapping` skill whenever creating or editing Roma
 request/response objects, source-binding attributes, header value objects, TypeScript

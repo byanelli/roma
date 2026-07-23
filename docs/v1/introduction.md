@@ -29,10 +29,14 @@ Roma request object instead of a hand-rolled `FormRequest` plus a manual array-t
 step.** You declare typed properties; Roma populates and validates them. It is a type-safe
 `FormRequest` and DTO in one.
 
+Mark the class `#[Request]` and type-hint it in your controller — Roma maps and validates
+it before your action runs:
+
 ```php
 use BYanelli\Roma\Request\Attributes\Rule;
 use BYanelli\Roma\Request\ContextualBinding\Request;
 
+#[Request]
 readonly class CreateContactRequest {
     public function __construct(
         #[Rule('max:255')]
@@ -44,7 +48,7 @@ readonly class CreateContactRequest {
 }
 
 class CreateContactController {
-    public function __invoke(#[Request] CreateContactRequest $request) {
+    public function __invoke(CreateContactRequest $request) {
         Contact::create([
             'name'  => $request->name,
             'email' => $request->email,

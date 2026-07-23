@@ -5,738 +5,79 @@
 [![Pint](https://github.com/byanelli/roma/actions/workflows/pint.yml/badge.svg)](https://github.com/byanelli/roma/actions/workflows/pint.yml)
 [![Coverage](https://raw.githubusercontent.com/byanelli/roma/badges/coverage.svg)](https://github.com/byanelli/roma/actions/workflows/coverage.yml)
 
-## Introduction
+Roma is a **Request/Response Object MApper** for Laravel. It maps the _entire_
+`Illuminate\Http\Request` — body, query string, headers, route parameters, cookies, files,
+and convenience methods like `$request->ajax()` — into a fully type-safe, validated plain
+PHP object, and maps response objects back to JSON. It is a type-safe `FormRequest` and DTO
+in one, so your controller never has to touch the underlying Laravel request.
 
-Roma is a Request/Response Object MApper. It has its own implementation of an object mapper designed to map _all_ aspects of Laravel's `Illuminate\Http\Request` request to a fully type-safe and validated POPO (plain old PHP object). That includes headers, the query string, the body, files, and convenience methods of the request object (e.g., `$request->ajax()`). The goal is that when using a custom Roma request, you should never have to interact with the underlying Laravel request directly.
+📚 **Full documentation: [yanelli.dev/docs/roma](https://yanelli.dev/docs/roma)**
 
-On the response side, Roma converts a POPO (recursively) to an array, which is used as the body of a `JsonResponse`. Certain properties may also be annotated to set the response's headers or status code.
+## Installation
 
-With one command, you can generate TypeScript definitions for both requests and responses. This feature may be especially useful for Inertia frontends.
+```bash
+composer require byanelli/roma
+```
 
-## Create a request object
+## At a glance
 
-Creating a request object is as simple as adding all the properties you want to populate from the request. Validation rules can be added using the `#[Rule]` attribute:
+Define a request as a typed class, mark it `#[Request]`, and type-hint it in your
+controller. Roma maps and validates it before your action runs:
 
 ```php
 use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Request\ContextualBinding\Request;
 
+#[Request]
 readonly class CreateContactRequest {
     public function __construct(
         #[Rule('max:255')]
         public string $name,
 
-        #[Rule(['email', 'unique:contacts', 'max:255'])]
+        #[Rule(['email', 'unique:contacts'])]
         public string $email,
     ) {}
-
-    // Constructor promoted properties and class properties can be used interchangeably.
-    #[Rule('phone')]
-    public string $phone;
 }
-```
-
-## Use the request object in your controller
-
-Simply inject the request object using the contextual binding attribute:
-
-```php
-use BYanelli\Roma\Request\ContextualBinding\Request;
-use App\Models\Contact;
 
 class CreateContactController {
-    public function __invoke(
-        #[Request] CreateContactRequest $request,
-    ) {
+    public function __invoke(CreateContactRequest $request) {
         Contact::create([
-            'name' => $request->name,
+            'name'  => $request->name,
             'email' => $request->email,
-            'phone' => $request->phone,
         ]);
     }
 }
 ```
 
-## Auto-inject with a class-level `#[Request]`
+## Highlights
 
-`#[Request]` can also be applied to the request class itself, not just the injection site. A class-marked request resolves from the container by its type-hint alone — the parameter-level attribute becomes optional:
+- **Map from anywhere in the request.** Bind properties to the body, query, headers, route
+  parameters, or cookies with `#[Body]`, `#[Query]`, `#[Header]`, `#[RouteParameter]`,
+  `#[Cookie]`; the default is the merged input bag.
+- **Typed and validated.** Automatic coercion (strings → `int` / `float` / `bool` / enum /
+  date / `UploadedFile`), validation via `#[Rule]`, nested objects, and `#[Guard]`
+  authorization methods.
+- **Header value objects.** Type a property as `Authorization` to get the scheme +
+  credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
+  / `Scheme` / `ContentType` metadata enums.
+- **Response objects.** Return a typed `Response` object and Roma serializes it to JSON,
+  with properties liftable to the status code or headers.
+- **TypeScript generation.** `php artisan roma:typescript` emits an interface for every
+  request and response — one source of truth for your frontend (great with Inertia).
+- **Laravel Precognition.** Works out of the box.
+- **AI-ready.** Ships [Laravel Boost](https://github.com/laravel/boost) guidelines, so AI
+  coding agents know when and how to reach for Roma.
 
-```php
-use BYanelli\Roma\Request\ContextualBinding\Request;
+See the **[full documentation](https://yanelli.dev/docs/roma)** for everything: request
+objects, sources, validation & guards, headers & metadata, nested objects, responses,
+TypeScript generation, and Precognition.
 
-#[Request]
-readonly class CreateContactRequest { /* properties as above */ }
+## Testing
 
-class CreateContactController {
-    public function __invoke(CreateContactRequest $request) {
-        // Resolved and validated from the request — no parameter attribute needed.
-    }
-}
+```bash
+composer test
 ```
 
-Both forms work and can coexist. Marking the class is also what lets the [TypeScript generator](#typescript-generation) auto-detect it as a request.
+## License
 
-Auto-injection is on by default. To require the explicit parameter attribute everywhere, turn it off in `config/roma.php`:
-
-```php
-// config/roma.php
-'auto_inject' => false,
-```
-
-## Map headers
-
-Map specific headers to properties using the `#[Header]` attribute, or take advantage of pre-made ones like `#[ContentType]` (a shortcut for `#[Header('Content-Type')]`):
-
-```php
-use BYanelli\Roma\Request\Attributes\Header; 
-use BYanelli\Roma\Request\Attributes\Headers\ContentType;
-
-readonly class ApiRequest { 
-    #[Header('X-API-Key')]
-    public string $apiKey;
-
-    #[ContentType]
-    public string $contentType;
-}
-``` 
-
-## Nullable and optional properties
-
-A non-nullable property with no default is required. Give it a default value to make it optional. Making the type nullable (`?T`) also makes it optional: an absent _or_ explicitly-`null` key resolves to `null` (Roma applies Laravel's `nullable` rather than `required`).
-
-```php
-class ProductSearchRequest {
-    public string $name;       // required
-
-    public int $perPage = 15;  // optional (has a default)
-
-    public ?string $search;    // optional; null when absent or null
-}
-```
-
-The same holds for nested objects: an absent or null nullable object stays `null` and its children are _not_ required. But a *present* object — even an empty `{}` — is validated, so its required children must be supplied.
-
-```php
-readonly class Address {
-    public string $city;
-}
-
-readonly class OrderRequest {
-    public string $name;
-
-    public ?Address $shipTo; // null when absent; when present, `city` is required
-}
-```
-
-## Require a key to be present but nullable
-
-Use `#[Present]` on a nullable property when the key _must_ appear in the request but is allowed to be `null` — "present but may be null". It adds Laravel's `present` rule, so an omitted key fails validation while an explicit `null` passes.
-
-```php
-use BYanelli\Roma\Request\Attributes\Present;
-
-readonly class UpdateNoteRequest {
-    public string $id;
-
-    #[Present]
-    public ?string $note; // must be sent, but may be null
-}
-```
-
-## Choose the query string or body
-
-By default a property reads from the merged input bag (query string + body). Use `#[Query]` or `#[Body]` to bind to one specifically — handy when the same key can appear in both.
-
-```php
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Attributes\Query;
-
-readonly class SearchRequest {
-    #[Query]
-    public int $page;   // always from the query string
-
-    #[Body]
-    public string $token; // always from the request body
-}
-```
-
-## Map route parameters
-
-Bind a property to a route parameter with `#[RouteParameter]`. The property name is the parameter name unless you pass an explicit one. Route parameters arrive as strings, so scalar and enum coercion applies as usual:
-
-```php
-use BYanelli\Roma\Request\Attributes\RouteParameter;
-
-// Route: /users/{id}/posts/{post_slug}
-readonly class ShowPostRequest {
-    #[RouteParameter]
-    public int $id;              // from {id}, coerced "42" -> 42
-
-    #[RouteParameter('post_slug')]
-    public string $slug;         // from {post_slug}
-}
-```
-
-If the request has no bound route, a required route parameter simply fails validation with a `route.` error — it never crashes.
-
-## Map cookies
-
-Bind a property to a request cookie with `#[Cookie]`, using the property name or an explicit cookie name. Values coerce like any other source. Cookie names may contain literal dots, so pass one explicitly when the name isn't a valid PHP property name:
-
-```php
-use BYanelli\Roma\Request\Attributes\Cookie;
-
-readonly class PreferencesRequest {
-    #[Cookie]
-    public bool $darkMode;        // from the "darkMode" cookie
-
-    #[Cookie('my.pref')]
-    public string $pref;          // from the "my.pref" cookie
-}
-```
-
-## Map request metadata
-
-Access (and optionally validate) request metadata:
-
-```php
-use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
-use BYanelli\Roma\Request\Attributes\Accessors\Method;
-
-readonly class MetadataRequest {
-    #[Ajax(mustBe: true)] // Requires AJAX request
-    public bool $isAjax;
-
-    #[Method]
-    public string $method;  // GET, POST, etc.
-}
-```
-
-Roma wraps most of the Laravel request surface with accessor attributes. Group them by what they return:
-
-```php
-use BYanelli\Roma\Request\Attributes\Accessors\Ip;
-use BYanelli\Roma\Request\Attributes\Accessors\Secure;
-use BYanelli\Roma\Request\Attributes\Accessors\Segments;
-use BYanelli\Roma\Request\Attributes\Accessors\UserAgent;
-
-readonly class RequestInfo {
-    #[Secure]
-    public bool $isSecure;
-
-    #[Ip]
-    public string $ip;
-
-    #[UserAgent]
-    public string $userAgent;
-
-    /** @var array<string> */
-    #[Segments]
-    public array $segments;
-}
-```
-
-* **Booleans:** `#[Ajax]`, `#[Secure]`, `#[Pjax]`, `#[Prefetch]`, `#[IsJson]`, `#[ExpectsJson]`, `#[WantsJson]`
-* **Strings:** `#[Method]`, `#[Ip]`, `#[UserAgent]`, `#[Url]`, `#[FullUrl]`, `#[Path]`, `#[DecodedPath]`, `#[Root]`, `#[Host]`, `#[SchemeAndHttpHost]`, `#[BearerToken]`, `#[Format]`
-* **Arrays:** `#[Ips]`, `#[Segments]`
-
-Every boolean accessor accepts `mustBe` to turn it into a constraint: `#[Secure(mustBe: true)]` requires HTTPS, `#[Ajax(mustBe: false)]` requires a non-AJAX request. Applied bare at the class level, a boolean accessor requires the truthy case (see [Class-Level Constraints](#class-level-constraints)).
-
-## Self-sourcing metadata enums
-
-Some request metadata has a small, fixed set of values. Roma ships enums for these, and typing a property as one of them is enough — the enum type says which request source it comes from, so no attribute is needed:
-
-```php
-use BYanelli\Roma\Request\Enums\ContentType;
-use BYanelli\Roma\Request\Enums\Method;
-use BYanelli\Roma\Request\Enums\Scheme;
-
-readonly class MetadataEnumRequest {
-    public Method $method;          // from $request->method(): Method::Get, Method::Post, ...
-
-    public ContentType $contentType; // from the Content-Type header: ContentType::Json, ...
-
-    public Scheme $scheme;          // from the URI scheme: Scheme::Http, Scheme::Https
-}
-```
-
-* `Method` is string-backed with cases like `Get = 'GET'`, `Post = 'POST'`, `Put = 'PUT'`, `Patch`, `Delete`, `Head`, `Options`, `Trace`, `Connect`.
-* `ContentType` covers common media types — `Json = 'application/json'`, `Markdown = 'text/markdown'`, `Toon = 'text/toon'`, `Html`, `Xml`, `Csv`, and more. Content-Type parameters are stripped before matching, so `application/json; charset=utf-8` still resolves to `ContentType::Json`.
-* `Scheme` is `Http = 'http'` or `Https = 'https'`.
-
-An explicit source attribute still wins over the inferred one, so `#[Query] public Method $method` reads the enum from the query string instead. And a value outside the enum's cases can still be mapped as a plain string — use the accessor/header attribute directly, e.g. `#[ContentType] public string $contentType`, to accept any media type.
-
-## Map to enums
-
-Roma automatically maps values to string-backed, integer-backed, and unit enums:
-
-```php
-enum Status: string { 
-    case NotStarted = 'not_started';
-    case InProgress = 'in_progress';
-    case Complete = 'complete';
-}
-
-enum Priority: int {
-    case Low = 1; 
-    case Medium = 2; 
-    case High = 3;
-}
-
-enum Department {
-    case CustomerService;
-    case Sales;
-}
-
-class UpdateTaskRequest {
-    public Status $status; 
-    public Priority $priority;
-    public Department $department;
-}
-``` 
-
-## Map to files
-
-Type-hint any property with `Illuminate\Http\UploadedFile` and it will be mapped.
-
-```php
-use Illuminate\Http\UploadedFile;
-
-class FileRequest {
-    public UploadedFile $myFile;
-}
-```
-
-File uploads must be declared on the top-level request class. A `UploadedFile` property inside a nested object is not supported and throws — declare it at the top level instead.
-
-## Map to nested objects
-
-Type-hint your properties to other POPOs to deserialize complex nested structures from JSON payloads:
-
-```php
-class Address { 
-    public string $address; 
-    public string $city; 
-    public State $state;
-    public string $zipCode; 
-    public Country $country; 
-}
-
-class UserRequest { 
-    public string $name; 
-    public string $email; 
-    public Address $address; 
-}
-``` 
-
-A nested object inherits its location from the parent property, so source attributes (`#[Input]`, `#[Query]`, `#[Body]`, `#[Header]`, `#[RouteParameter]`, `#[Cookie]`, accessors) and self-sourcing metadata enums are only valid on top-level request classes. Declaring one on a nested property throws — its data always comes from within the parent's slice.
-
-To override a nested property's key — for example when the client field name contains a literal dot and can't be written as a PHP property name — use `#[Key]`. It is nested-only (top-level properties instead pass the key to their source attribute, e.g. `#[Body('a.b')]`):
-
-```php
-use BYanelli\Roma\Request\Attributes\Key;
-
-class Meta {
-    #[Key('created.at')]   // reads the "created.at" field from the parent's slice
-    public string $createdAt;
-}
-
-class ArticleRequest {
-    public string $title;
-    public Meta $meta;
-}
-```
-
-## Compose requests using traits
-
-Share common properties across multiple request classes using traits:
-
-```php
-use BYanelli\Roma\Request\Attributes\Rule;
-
-trait HasPagination {
-    #[Rule('integer|min:1')] 
-    public int $page = 1;
-
-    #[Rule('integer|min:1|max:100')]
-    public int $perPage = 15;
-}
-
-class ProductListRequest {
-    use HasPagination;
-
-    public ?string $search;
-    public ?Category $category;
-}
-```
-
-## Coerce non-string types
-
-Roma handles automatic type conversion for common types:
-
-```php
-class OrderRequest { 
-    public float $price; // "9.99" → 9.99
-
-    public bool $isGift; // "true" → true
-
-    public \DateTimeInterface $deliveryDate; // "2024-01-01" → DateTime object
-
-    /** @var array<int> */
-    public array $itemIds; // ["1", "2", "3"] → [1, 2, 3]
-}
-``` 
-
-## Class-Level Constraints
-
-Apply validation rules at the class level to enforce global requirements:
-
-```php
-use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
-use BYanelli\Roma\Request\Attributes\Headers\ContentType;
-use BYanelli\Roma\Request\Enums\ContentType as ContentTypeEnum;
-
-#[Ajax] // Requires all requests mapped to this class to be AJAX 
-#[ContentType(ContentTypeEnum::Json)] // Requires JSON content type
-class ApiOnlyRequest { 
-    public string $data;
-}
-```
-
-## Dynamic validation rules
-
-Beyond string rules, a `#[Rule]` argument can be a first-class-callable reference. Roma calls it through the container at validation time, so the rule can depend on runtime state — a service, the current user, config. It may return a single rule or a list of rules; a returned list is spread into the property's rules in place:
-
-```php
-use BYanelli\Roma\Request\Attributes\Rule;
-
-readonly class UpdateBioRequest {
-    public function __construct(
-        #[Rule('string', self::maxLength(...))]
-        public string $bio = '',
-    ) {}
-
-    // Resolved through the container, so it can inject dependencies.
-    public static function maxLength(BioSettings $settings): string {
-        return "max:{$settings->limit}";
-    }
-}
-```
-
-## Guard a request with `#[Guard]`
-
-Mark a method `#[Guard]` to run it after the request validates successfully. Guards are called through the container, so they can type-hint dependencies — a service, the current user, the underlying request — and have them injected. A guard rejects the request by throwing (a `ValidationException`, an `AuthorizationException`, anything); its return value is ignored. Multiple guards run in declaration order.
-
-```php
-use BYanelli\Roma\Request\Attributes\Guard;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Container\Attributes\CurrentUser;
-
-readonly class UpdatePostRequest {
-    public function __construct(
-        public int $postId,
-        public string $body,
-    ) {}
-
-    #[Guard]
-    public function authorize(#[CurrentUser] User $user): void {
-        if ($user->cannot('update', Post::findOrFail($this->postId))) {
-            throw new AuthorizationException;
-        }
-    }
-}
-```
-
-## Laravel Precognition
-
-Roma request objects work with [Laravel Precognition](https://laravel.com/docs/precognition) out of the box. Add the framework's `HandlePrecognitiveRequests` middleware to the route, and a request carrying the `Precognition: true` header is validated without running your controller:
-
-```php
-use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
-
-Route::post('/signup', SignupController::class)
-    ->middleware(HandlePrecognitiveRequests::class);
-```
-
-Precognition is a front-end form concern, so a precognitive request validates **form data only** — the `input`, `query`, `body`, and `file` sources. Rules for headers, cookies, route parameters, and request metadata are skipped, and because those values go unvalidated the request object is never constructed and `#[Guard]` methods never run. Everything runs as normal on the real submission.
-
-A failing precognitive request returns the usual `422`, with its form-data errors keyed by the bare field name the client posted (`email`, `address.city`) rather than Roma's usual [source-prefixed keys](#validation-error-keys), so the official `laravel-precognition-*` front-end helpers map them onto form fields without translation. Set `roma.precognition.source_prefixed_errors` to `true` to keep the prefixed keys (`input.email`) under precognition too. A passing precognitive request returns an empty `204` with a `Precognition-Success: true` header.
-
-When the client narrows validation further with a `Precognition-Validate-Only` header — as the official helpers do on every keystroke — Roma validates only the matching fields. A pattern matches a field by either name the client might know it by: the bare posted name (`email`, `items.0.code`), which is what the official helpers send, or Roma's source-prefixed key (`input.email`). Fields outside the filter may be missing or invalid; the request still succeeds if the named fields pass.
-
-## Validation error keys
-
-When validation fails, Roma throws Laravel's `ValidationException`. Errors are keyed by a source-prefixed, request-relative name so the caller always knows where the offending value belongs:
-
-* `input.price` — merged input (query + body)
-* `query.page` / `body.token` — a `#[Query]` / `#[Body]` property
-* `header.X-Flag` — a header, by its real (un-normalized) name
-* `route.id` — a `#[RouteParameter]` property
-* `cookie.session` — a `#[Cookie]` property
-* `request.ajax` — request metadata from an accessor
-
-Nested fields keep their full path, and array elements are indexed:
-
-```php
-$e->errors(); // returns:
-
-[
-    'input.name'         => ['The input.name field is required.'],
-    'input.address.city' => ['The input.address.city field is required.'],
-    'input.items.1.code' => ['The input.items.* field must be at least 3 characters.'],
-    'request.ajax'       => ['The request.ajax field must be accepted.'],
-];
-```
-
-The one exception is a [precognitive request](#laravel-precognition), whose errors are consumed by front-end form tooling: there, form-data errors are keyed by the bare posted field name instead.
-
-# Response objects
-
-Roma is a Request/Response Object MApper: responses are the mirror of requests. Where a request property has a _source_ — a place in the request it's pulled _from_ — a response property has a _destination_, a place in the response it's pushed _to_. By default that destination is the JSON body, but a property can instead be lifted to response metadata (the status code or a header).
-
-## Define and return a response
-
-Extend `Response`, declare typed public properties, and return the object from your controller. Roma serializes it to a JSON response:
-
-```php
-use BYanelli\Roma\Response\Response;
-
-class UserResponse extends Response {
-    public function __construct(
-        public string $name,
-        public int $age,
-    ) {}
-}
-
-class ShowUserController {
-    public function __invoke(): UserResponse {
-        return new UserResponse('Bill', 40);
-    }
-}
-```
-
-If a class already extends something else, use the traits directly instead of the base class: `IsResponsable` (adds `toResponse()` and, transitively, `toArray()`) for a full HTTP response, or `IsArrayable` alone (adds `toArray()`) for a nested value that only needs to serialize:
-
-```php
-use BYanelli\Roma\Response\IsArrayable;
-use Illuminate\Contracts\Support\Arrayable;
-
-class AddressResponse implements Arrayable {
-    use IsArrayable;
-
-    public function __construct(
-        public string $city,
-        public string $zip,
-    ) {}
-}
-```
-
-## Value conversion
-
-Property values are converted to their JSON form on the way out, recursively:
-
-```php
-use BYanelli\Roma\Response\Response;
-
-enum Status: string { case Active = 'active'; }
-enum Rank { case Gold; }
-
-class ProfileResponse extends Response {
-    public function __construct(
-        public Status $status,             // backed enum -> { name: "Active", value: "active" }
-        public Rank $rank,                 // unit enum -> its name: "Gold"
-        public \DateTimeInterface $createdAt, // DateTimeInterface -> ISO-8601 (ATOM) string
-        public AddressResponse $address,   // nested response object -> recurses
-        /** @var array<AddressResponse> */
-        public array $addresses,           // arrays recurse element by element
-    ) {}
-}
-```
-
-## Omit unset properties with `#[Optional]`
-
-A response property has no implicit default: leaving it unset — nullable or not — makes serialization throw, surfacing a field you forgot to populate. Mark it `#[Optional]` to omit it from the output when unset instead, or give it an explicit default to serialize that value:
-
-```php
-use BYanelli\Roma\Response\Attributes\Optional;
-use BYanelli\Roma\Response\Response;
-
-class ContactResponse extends Response {
-    public string $name;
-
-    #[Optional]
-    public ?string $nickname; // omitted from the output entirely when unset
-
-    public ?string $note = null; // an explicit default serializes as null
-}
-```
-
-## Set the status code with `#[Status]`
-
-Mark an `int` property `#[Status]` and its value becomes the HTTP status code. The property is lifted out of the body:
-
-```php
-use BYanelli\Roma\Response\Attributes\Status;
-use BYanelli\Roma\Response\Response;
-
-class CreatedResponse extends Response {
-    public string $name = 'Bill';
-
-    #[Status]
-    public int $status = 201; // response is 201; body is just {"name":"Bill"}
-}
-```
-
-Without a `#[Status]` property the response defaults to 200.
-
-## Emit headers with `#[Header]`
-
-Mark a property `#[Header('Name')]` and its value becomes that response header, lifted out of the body. This is the same attribute name as the request-side `#[Header]`, in the opposite direction — request `#[Header]` sources a property _from_ a request header; response `#[Header]` sends a property _to_ a response header. Response header names are emitted verbatim:
-
-```php
-use BYanelli\Roma\Response\Attributes\Header;
-use BYanelli\Roma\Response\Response;
-
-class CachedResponse extends Response {
-    public string $name = 'Bill';
-
-    #[Header('Cache-Control')]
-    public string $cacheControl = 'max-age=3600'; // becomes the Cache-Control header
-}
-```
-
-## Format dates with `#[DateFormat]`
-
-`DateTimeInterface` values serialize as ISO-8601 (ATOM) by default. Apply `#[DateFormat]` to a property to format that date differently; other date properties are unaffected:
-
-```php
-use BYanelli\Roma\Response\Attributes\DateFormat;
-use BYanelli\Roma\Response\Response;
-
-class TimestampsResponse extends Response {
-    #[DateFormat('Y-m-d')]
-    public \DateTimeInterface $createdAt; // "2024-01-02"
-
-    public \DateTimeInterface $updatedAt; // "2024-01-02T03:04:05+00:00" (ATOM)
-}
-```
-
-## Dynamic status, headers, and date format
-
-Status, headers, and per-property date format each also have an overridable `protected` method for cases that can't be expressed as a fixed attribute: `responseStatus(): int`, `responseHeaders(): array`, and `dateFormat(ReflectionProperty $property): string`. Override the one you need when the value has to be computed at runtime.
-
-# TypeScript generation
-
-Roma generates TypeScript definitions for your request and response objects, so the frontend and backend share one source of truth. Run:
-
-```
-php artisan roma:typescript
-```
-
-It writes a `.d.ts` file (default `resources/js/roma.d.ts`, overridable with `--output` or config) containing an interface for every request and response.
-
-## What gets generated
-
-A request is split into up to three interfaces — one per HTTP location its properties come from — named `{Name}Body`, `{Name}Query`, and `{Name}Headers`; empty ones are dropped. A response produces a `{Name}Body`, plus a `{Name}Headers` when it emits `#[Header]`s. Fields are keyed by their **wire key** (the source key, or a `#[Key]`/header name) rather than the PHP property name, and optional properties get a `?`.
-
-```php
-#[Request]
-readonly class SearchRequest {
-    public function __construct(
-        public string $note,                          // default (input) -> Body
-        #[Query] public int $page = 1,                // -> Query (optional: has a default)
-        #[Header('X-Api-Key')] public string $apiKey, // -> Headers
-    ) {}
-}
-```
-
-generates:
-
-```typescript
-export interface SearchRequestBody {
-  note: string;
-}
-
-export interface SearchRequestHeaders {
-  'X-Api-Key': string;
-}
-
-export interface SearchRequestQuery {
-  page?: number;
-}
-```
-
-Enums become a named `const` of `{ name, value }` objects plus a union type over them, emitted ahead of the interfaces that use them:
-
-```php
-enum Plan: int { case Free = 1; case Pro = 2; }
-
-class SubscriptionResponse extends Response {
-    public function __construct(
-        public string $title,
-        public Plan $plan,
-    ) {}
-}
-```
-
-```typescript
-export const Plan = {
-  Free: { name: 'Free', value: 1 },
-  Pro: { name: 'Pro', value: 2 },
-} as const;
-
-export type Plan = typeof Plan[keyof typeof Plan];
-
-export interface SubscriptionResponseBody {
-  title: string;
-  plan: Plan;
-}
-```
-
-## Auto-detection
-
-Classes are discovered automatically by scanning the directories in `roma.typescript.discover` (default `app/`) — there is no list to maintain by hand:
-
-* a **request** is any class marked with a class-level `#[Request]` attribute;
-* a **response** is any class extending `Response` or using the `IsResponsable` trait.
-
-```php
-// config/roma.php
-'typescript' => [
-
-    // Where the generated .d.ts file is written.
-    'output' => resource_path('js/roma.d.ts'),
-
-    // Directories scanned to auto-detect request and response classes.
-    'discover' => [app_path()],
-
-    // Additional classes to include beyond what discovery finds.
-    'requests' => [],
-    'responses' => [],
-],
-```
-
-The `requests` and `responses` lists are an additive escape hatch for classes that live outside the scanned directories; discovered and listed classes are merged.
-
-## Rename a type with `#[TypeScriptName]`
-
-A generated type takes its short class name by default. Override it with `#[TypeScriptName]` — handy when the short name would collide with another generated type or a hand-written one:
-
-```php
-use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
-
-#[TypeScriptName('PlatformTypeEnum')] // avoids clashing with a hand-written PlatformType
-enum PlatformType: int { case YouTube = 1; case Web = 2; }
-```
-
-## Put an `#[Input]` property in the Query interface
-
-An `#[Input]` property (the default source) reads from both the body and the query string, so the generator can't tell which interface it belongs to and defaults it to `Body`. Force it into the `Query` interface with `#[InputMapsToTypeScriptQuery]` — this only affects generation, not mapping:
-
-```php
-use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
-
-readonly class SearchRequest {
-    #[InputMapsToTypeScriptQuery]
-    public string $q; // appears in SearchRequestQuery instead of SearchRequestBody
-}
-```
+The MIT License (MIT). Please see the [License File](LICENSE.md) for more information.
