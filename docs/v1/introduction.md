@@ -59,3 +59,10 @@ class CreateContactController {
 
 The rest of these docs walk through defining requests, the sources a property can bind to,
 headers and request metadata, nested objects, response objects, and TypeScript generation.
+
+## These docs as Markdown
+
+Prefer plain text? The entire documentation is served as a single Markdown file at
+[yanelli.dev/docs/roma.md](/docs/roma.md) — hand it to an AI coding assistant, or just read
+everything in one place. Each version has its own too (e.g.
+[/docs/roma/v1.md](/docs/roma/v1.md)).
