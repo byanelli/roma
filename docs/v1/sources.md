@@ -32,6 +32,34 @@ readonly class SearchRequest {
 }
 ```
 
+### The QUERY method
+
+`QUERY` ([RFC 10008](https://www.rfc-editor.org/info/rfc10008/)) is a safe, idempotent
+method that carries its input in the request content instead of the URI — "GET with a
+body". Roma treats that content as the body, so `#[Body]` and the default input source
+both read it, and `#[Query]` still means the query string:
+
+```php
+use BYanelli\Roma\Request\Attributes\Query;
+use BYanelli\Roma\Request\Enums\Method;
+
+// QUERY /search?page=3  with  {"term": "roma"}
+readonly class SearchRequest {
+    public string $term;  // from the QUERY body
+
+    #[Query]
+    public int $page;     // from the query string
+
+    public Method $method; // Method::Query
+}
+```
+
+Laravel's `Route::any()` predates the method, so register a QUERY route explicitly:
+
+```php
+Route::match(['QUERY'], '/search', SearchController::class);
+```
+
 ## Route parameters
 
 Bind to a route parameter with `#[RouteParameter]`. The property name is the parameter name

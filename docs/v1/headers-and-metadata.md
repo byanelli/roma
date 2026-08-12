@@ -67,7 +67,7 @@ use BYanelli\Roma\Request\Enums\Method;
 use BYanelli\Roma\Request\Enums\Scheme;
 
 readonly class MetadataEnumRequest {
-    public Method $method;           // Method::Get, Method::Post, ...
+    public Method $method;           // Method::Get, Method::Post, Method::Query, ...
     public ContentType $contentType; // ContentType::Json, ... (params stripped before matching)
     public Scheme $scheme;           // Scheme::Http | Https
 }

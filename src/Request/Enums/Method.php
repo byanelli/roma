@@ -14,6 +14,11 @@ enum Method: string implements HasRequestSource
     case Put = 'PUT';
     case Patch = 'PATCH';
     case Delete = 'DELETE';
+    // "GET with a body": safe and idempotent, but the query travels in the
+    // request content instead of the URI (RFC 10008). Laravel reads that
+    // content as the body bag, so #[Body] and the default input source both
+    // see it.
+    case Query = 'QUERY';
     case Head = 'HEAD';
     case Options = 'OPTIONS';
     case Trace = 'TRACE';

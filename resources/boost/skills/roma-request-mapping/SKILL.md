@@ -72,7 +72,7 @@ use BYanelli\Roma\Request\Enums\{Method, ContentType, Scheme};
 
 readonly class ApiRequest {
     public Authorization $auth; // parses the Authorization header; self-locates
-    public Method $method;      // Method::Get, ... (metadata enum, self-sourcing)
+    public Method $method;      // Method::Get, Method::Query, ... (metadata enum, self-sourcing)
     public ContentType $type;   // from Content-Type; params stripped before matching
 }
 ```
