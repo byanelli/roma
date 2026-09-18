@@ -46,6 +46,11 @@ Property values are converted to their JSON form on the way out, recursively —
 become `{ name, value }`, unit enums their name, `DateTimeInterface` an ISO-8601 string,
 nested response objects and arrays recurse element by element.
 
+Conversion works on the value, not the declared type, so a property typed as an interface
+or an abstract class serializes whatever concrete object it holds, exactly as a nested
+response object does. (The generated TypeScript describes those implementations as a
+union, found by scanning — see [TypeScript generation](/docs/roma/v1/typescript).)
+
 ## Omit unset properties with `#[Optional]`
 
 A response property has no implicit default: leaving it unset makes serialization throw,

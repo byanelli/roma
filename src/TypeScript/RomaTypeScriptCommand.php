@@ -31,7 +31,7 @@ class RomaTypeScriptCommand extends Command
         $output = $this->option('output')
             ?: config('roma.typescript.output', base_path('resources/js/roma.d.ts'));
 
-        $typescript = new TypeScriptGenerator($requests, $responses)->generate();
+        $typescript = new TypeScriptGenerator($requests, $responses, discovered: $discovered)->generate();
 
         $directory = dirname($output);
 

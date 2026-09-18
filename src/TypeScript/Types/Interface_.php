@@ -44,6 +44,14 @@ readonly class Interface_ extends Type
             if ($property->type instanceof self) {
                 $nested[] = $property->type->flatten($seen);
             }
+
+            // A union's members are interfaces in their own right: each is
+            // emitted at the top level and referenced by name.
+            if ($property->type instanceof Union) {
+                foreach ($property->type->members as $member) {
+                    $nested[] = $member->flatten($seen);
+                }
+            }
         }
 
         return [$this, ...array_merge(...$nested)];

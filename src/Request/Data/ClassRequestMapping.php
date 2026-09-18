@@ -331,6 +331,13 @@ class ClassRequestMapping
                 continue;
             }
 
+            // A contract can't be instantiated from request data, and the error
+            // shouldn't wait for a client to send the key: reject it whether or
+            // not the value is present.
+            if ($type instanceof Types\Polymorphic) {
+                throw new RuntimeException($this->polymorphicTypeMessage($type));
+            }
+
             if (! $this->dataHas($this->data, $keySegments)) {
                 continue;
             }
@@ -369,8 +376,21 @@ class ClassRequestMapping
             $type instanceof Class_ => $this->castObjectValue($property, $type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
+            $type instanceof Types\Polymorphic => throw new RuntimeException($this->polymorphicTypeMessage($type)),
             default => throw new RuntimeException('Unsupported type: '.$type::class),
         };
+    }
+
+    /**
+     * A request property (or array member) typed as an interface or abstract
+     * class has no class to build. This is a mistake in the request object, not
+     * bad input, so it is not a CoercionException: it must reach the developer
+     * rather than be turned into a validation message.
+     */
+    private function polymorphicTypeMessage(Types\Polymorphic $type): string
+    {
+        return "Cannot map request data into {$type->class}: it is an interface or abstract class. "
+            .'Type the property with a concrete class.';
     }
 
     private function addRequestObjectValuesToData(): void

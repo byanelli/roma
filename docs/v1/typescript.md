@@ -58,6 +58,54 @@ export interface SearchRequestQuery {
 Enums become a named `const` of `{ name, value }` objects plus a union type, emitted ahead
 of the interfaces that use them.
 
+## Interfaces and abstract classes
+
+A property typed as an interface (or an abstract class) names a contract, not a shape. Roma
+looks for the concrete classes that satisfy it among the classes in the `discover`
+directories, and types the property as the union of them — each emitted as its own
+interface, sorted by name and emitted once however many properties reference it:
+
+```php
+class EpisodeResponse extends Response {
+    public ?ThumbnailSource $thumbnail = null;
+
+    public function __construct(public string $title) {}
+}
+```
+
+With `RemoteImageThumbnail` and `GeneratedCoverThumbnail` implementing `ThumbnailSource`
+somewhere under a scanned directory, that generates:
+
+```typescript
+export interface EpisodeResponseBody {
+  title: string;
+  thumbnail: GeneratedCoverThumbnail | RemoteImageThumbnail | null;
+}
+
+export interface GeneratedCoverThumbnail {
+  prompt: string;
+}
+
+export interface RemoteImageThumbnail {
+  url: string;
+  width: number;
+}
+```
+
+Nothing lists the implementations: write a third one, re-run the generator, and it joins
+the union. An interface stays the open contract it is meant to be.
+
+The trade is that Roma only knows what it scanned. An implementation living outside the
+`discover` directories is not found, and so is not in the union; add its directory to the
+list to bring it in. Abstract implementations are skipped — they are contracts too, not
+values.
+
+When nothing implements the contract, there is nothing to describe: it is emitted as an
+empty interface — `export interface ThumbnailSource {}` — which the property is typed as.
+
+This is a response-side feature. A request property cannot be typed as an interface or
+abstract class: there is no class for the mapper to build, so mapping such a request throws.
+
 ## Auto-detection
 
 Classes are discovered by scanning the directories in `roma.typescript.discover` (default

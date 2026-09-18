@@ -322,6 +322,11 @@ readonly class ClassDefinitionBuilder
                 // has no concrete target class; a concrete class carries its own.
                 is_a($name, \DateTimeInterface::class, true) => new Types\Date(interface_exists($name) ? null : $name),
                 enum_exists($name) => new Types\Enum($name),
+                // A contract — an interface, or an abstract class — names a
+                // shape without being one, so there is no class to descend
+                // into. Which concrete classes satisfy it is left open here;
+                // the TypeScript generator discovers them.
+                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => new Types\Polymorphic($name),
                 class_exists($name) => (new ClassDefinitionBuilder(new PropertySource($parent, $key)))->buildClassDefinition($name),
                 default => throw new RuntimeException("Unsupported type $name"),
             },

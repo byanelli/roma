@@ -265,3 +265,40 @@ it('formats a date property with its #[DateFormat] and leaves others ATOM', func
         'updatedAt' => '2024-01-02T03:04:05+00:00',
     ]);
 });
+
+// --- Interface-typed properties ---
+
+interface TestThumbnailSource {}
+
+class TestRemoteImageThumbnail implements Arrayable, TestThumbnailSource
+{
+    use IsArrayable;
+
+    public function __construct(public string $url) {}
+}
+
+class TestThumbnailResponse extends Response
+{
+    public ?TestThumbnailSource $thumbnail = null;
+
+    public function __construct(public string $title) {}
+}
+
+it('serializes the concrete implementation held in an interface-typed property', function () {
+    // Serialization works on the runtime value, so a contract-typed property is
+    // no different from any other nested response object.
+    $response = new TestThumbnailResponse('Episode 1');
+    $response->thumbnail = new TestRemoteImageThumbnail('https://example.com/a.png');
+
+    expect($response->toArray())->toBe([
+        'thumbnail' => ['url' => 'https://example.com/a.png'],
+        'title' => 'Episode 1',
+    ]);
+});
+
+it('serializes an unset interface-typed property as null', function () {
+    expect(new TestThumbnailResponse('Episode 2')->toArray())->toBe([
+        'thumbnail' => null,
+        'title' => 'Episode 2',
+    ]);
+});

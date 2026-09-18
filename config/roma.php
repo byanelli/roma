@@ -51,6 +51,11 @@ return [
     | The `requests` and `responses` lists add classes that live outside those
     | directories.
     |
+    | The `discover` directories also decide which implementations an
+    | interface- or abstract-class-typed property can name: its generated type
+    | is the union of the concrete implementations found there, so one living
+    | outside them is not seen.
+    |
     */
 
     'typescript' => [
