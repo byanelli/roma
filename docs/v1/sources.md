@@ -131,3 +131,10 @@ class OrderRequest {
     public array $itemIds;                 // ["1","2"] -> [1, 2]
 }
 ```
+
+An `array` property or constructor parameter needs its element type in PHPDoc: `@var` on a
+property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list<T>` (and
+`non-empty-array<T>` / `non-empty-list<T>`), where `T` is a scalar, an enum, or a class
+written as a fully-qualified name or a short name in the declaring class's namespace. A
+`list<T>` also validates that the input keys are sequential (Laravel's `list` rule). Keyed
+forms such as `array<string, T>` are not supported.

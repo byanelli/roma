@@ -304,6 +304,16 @@ readonly class ClassDefinitionBuilder
         ];
     }
 
+    private function getArrayType(Source $parent, string $key, ReflectionParameter|ReflectionProperty $obj): Types\Array_
+    {
+        $arrayType = $this->phpDocTypeParser->getArrayType($obj);
+
+        return new Types\Array_(
+            $this->getTypeByName($parent, $key, $obj, $arrayType['elementTypeName']),
+            $arrayType['isList'],
+        );
+    }
+
     private function getTypeByName(
         Source $parent,
         string $key,
@@ -315,7 +325,7 @@ readonly class ClassDefinitionBuilder
             'int' => new Types\Integer,
             'bool' => new Types\Boolean,
             'float' => new Types\Float_,
-            'array' => new Types\Array_($this->getTypeByName($parent, $key, $obj, $this->phpDocTypeParser->getArrayElementTypeName($obj))),
+            'array' => $this->getArrayType($parent, $key, $obj),
             UploadedFile::class, SymfonyUploadedFile::class => new Types\File,
             default => match (true) {
                 // Any DateTimeInterface implementor is a date. The bare interface

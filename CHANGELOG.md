@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `list<T>` array element types in `@var` and `@param`, alongside `array<T>`. A `list<T>`
+  property also validates with Laravel's `list` rule, so input with non-sequential keys is
+  rejected.
 - `#[Content]` accessor: maps the request body exactly as sent, for signatures computed over
   the raw bytes.
 - Interface- and abstract-class-typed response properties: the generated TypeScript is a

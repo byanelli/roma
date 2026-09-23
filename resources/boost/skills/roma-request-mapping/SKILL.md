@@ -51,6 +51,9 @@ class CreateContactController {
   as an integer without an `integer` rule.
 - Required = non-nullable with no default. Optional = has a default OR is nullable (`?T`).
 - `#[Present]` on a nullable property requires the key to appear but allows `null`.
+- An `array` property needs its element type in PHPDoc (`@var` on a property, `@param` on
+  a constructor parameter): `array<T>` or `list<T>`. `list<T>` also requires sequential keys.
+  Keyed forms such as `array<string, T>` are not supported.
 
 ## Sources
 

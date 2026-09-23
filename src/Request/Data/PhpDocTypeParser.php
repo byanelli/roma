@@ -5,7 +5,11 @@ namespace BYanelli\Roma\Request\Data;
 use PHPStan\PhpDocParser\Ast\PhpDoc\ParamTagValueNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\PhpDocNode;
 use PHPStan\PhpDocParser\Ast\PhpDoc\VarTagValueNode;
+use PHPStan\PhpDocParser\Ast\Type\GenericTypeNode;
+use PHPStan\PhpDocParser\Ast\Type\IdentifierTypeNode;
+use PHPStan\PhpDocParser\Ast\Type\NullableTypeNode;
 use PHPStan\PhpDocParser\Ast\Type\TypeNode;
+use PHPStan\PhpDocParser\Ast\Type\UnionTypeNode;
 use PHPStan\PhpDocParser\Lexer\Lexer;
 use PHPStan\PhpDocParser\Parser\ConstExprParser;
 use PHPStan\PhpDocParser\Parser\PhpDocParser;
@@ -72,25 +76,63 @@ class PhpDocTypeParser
         }
     }
 
-    private function parseArrayElementTypeNameFromPhpDocNode(TypeNode $node): string
+    /**
+     * @return array{elementTypeName: string, isList: bool}
+     */
+    private function parseArrayTypeFromPhpDocNode(TypeNode $node): array
     {
-        // Allow FQCNs (backslashes), tolerating a leading backslash which we
-        // strip below; a bare scalar/short name matches too.
-        preg_match(
-            pattern: '/array<\\\\?([\w\\\\]+)>/',
-            subject: $node->__toString(),
-            matches: $matches,
-            flags: PREG_OFFSET_CAPTURE
-        );
+        $generic = $this->findArrayGenericNode($node);
+        $elementType = $generic?->genericTypes[0] ?? null;
 
-        return ltrim($matches[1][0] ?? throw new RuntimeException("Error parsing array element type from type declaration: $node"), '\\');
+        if ($generic === null || count($generic->genericTypes) !== 1 || ! $elementType instanceof IdentifierTypeNode) {
+            throw new RuntimeException("Error parsing array element type from type declaration: $node");
+        }
+
+        return [
+            'elementTypeName' => ltrim($elementType->name, '\\'),
+            'isList' => in_array($generic->type->name, ['list', 'non-empty-list'], true),
+        ];
     }
 
-    public function getArrayElementTypeName(ReflectionParameter|ReflectionProperty $obj): string
+    /**
+     * Accepts `array<T>` and `list<T>` (and their non-empty- forms), also when
+     * nullable or in a union such as `list<T>|null`.
+     */
+    private function findArrayGenericNode(TypeNode $node): ?GenericTypeNode
     {
-        $name = $this->parseArrayElementTypeNameFromPhpDocNode($this->getArrayTypePhpDocNode($obj));
+        if ($node instanceof NullableTypeNode) {
+            return $this->findArrayGenericNode($node->type);
+        }
 
-        return $this->resolveTypeName($name, $obj);
+        if ($node instanceof UnionTypeNode) {
+            foreach ($node->types as $member) {
+                if ($found = $this->findArrayGenericNode($member)) {
+                    return $found;
+                }
+            }
+
+            return null;
+        }
+
+        if ($node instanceof GenericTypeNode
+            && in_array($node->type->name, ['array', 'non-empty-array', 'list', 'non-empty-list'], true)) {
+            return $node;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{elementTypeName: string, isList: bool}
+     */
+    public function getArrayType(ReflectionParameter|ReflectionProperty $obj): array
+    {
+        $parsed = $this->parseArrayTypeFromPhpDocNode($this->getArrayTypePhpDocNode($obj));
+
+        return [
+            'elementTypeName' => $this->resolveTypeName($parsed['elementTypeName'], $obj),
+            'isList' => $parsed['isList'],
+        ];
     }
 
     /**

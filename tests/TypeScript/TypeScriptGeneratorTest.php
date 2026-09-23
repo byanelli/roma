@@ -38,6 +38,7 @@ class TsCreateUserRequest
 {
     /**
      * @param  array<string>  $tags
+     * @param  list<TsRole>  $roles
      */
     public function __construct(
         public string $name,
@@ -47,6 +48,7 @@ class TsCreateUserRequest
         #[InputMapsToTypeScriptQuery] public string $search,
         public TsRole $role,
         public array $tags,
+        public array $roles,
         public TsAddressRequest $address,
         public ?int $age = null,
         public TsPriority $priority = TsPriority::Low,
@@ -94,6 +96,7 @@ it('splits a request into Body, Query and Headers interfaces keyed by wire key',
           active: boolean;
           role: TsRole;
           tags: string[];
+          roles: TsRole[];
           address: TsAddressRequest;
           age?: number | null;
           priority?: TsPriority;

@@ -87,7 +87,7 @@ readonly class ValidationRules
             $type instanceof Types\Float_ => ['numeric'],
             $type instanceof Types\Date => ['date'],
             $type instanceof Types\String_ => ['string'],
-            $type instanceof Types\Array_ => ['array'],
+            $type instanceof Types\Array_ => $type->isList ? ['array', 'list'] : ['array'],
             $type instanceof Types\Enum => [Rule::enum($type->class)],
             default => [],
         };
