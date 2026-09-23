@@ -4,6 +4,8 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Content]` accessor: maps the request body exactly as sent, for signatures computed over
+  the raw bytes.
 - Interface- and abstract-class-typed response properties: the generated TypeScript is a
   union of every concrete implementation found in the `roma.typescript.discover`
   directories, each emitted as its own interface — nothing is declared in PHP, so adding

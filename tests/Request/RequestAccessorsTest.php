@@ -2,6 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Request\Attributes\Accessors\Content;
 use BYanelli\Roma\Request\Attributes\Accessors\Host;
 use BYanelli\Roma\Request\Attributes\Accessors\Ips;
 use BYanelli\Roma\Request\Attributes\Accessors\IsJson;
@@ -111,4 +112,27 @@ it('fails mustBe on a boolean accessor when not satisfied', function () {
     }
 
     $this->assertTrue(false, 'Exception was not thrown');
+});
+
+readonly class TestContentAccessor
+{
+    #[Content]
+    public string $content;
+
+    public string $name;
+}
+
+it('maps the body exactly as sent alongside the parsed input', function () {
+    /** @var TestCase $this */
+    // Spacing and key order that re-encoding the parsed JSON would not reproduce.
+    $body = "{\"name\":  \"Ada\",\n \"z\": 1, \"a\": 2}";
+
+    $this->app->bind('request', fn () => Request::create(
+        'http://example.com/hook', 'POST', server: ['CONTENT_TYPE' => 'application/json'], content: $body,
+    ));
+
+    $request = $this->mapRequest(TestContentAccessor::class);
+
+    $this->assertSame($body, $request->content);
+    $this->assertSame('Ada', $request->name);
 });

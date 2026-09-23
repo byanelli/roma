@@ -84,7 +84,8 @@ $request->auth->basic()?->username;   // base64-decoded Basic creds; null if not
 ```
 
 Do not hand-parse a header Roma already models. Accessor attributes cover the rest of the
-request surface (`#[Ip]`, `#[UserAgent]`, `#[Segments]`, `#[Ajax]`, `#[Secure]`, …); boolean
+request surface (`#[Ip]`, `#[UserAgent]`, `#[Segments]`, `#[Ajax]`, `#[Secure]`, `#[Content]` for the
+raw body, …); boolean
 accessors take `mustBe:` to become a constraint (`#[Secure(mustBe: true)]`).
 
 ## Nested objects

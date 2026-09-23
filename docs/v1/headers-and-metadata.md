@@ -96,8 +96,27 @@ readonly class RequestInfo {
 ```
 
 * **Booleans:** `#[Ajax]`, `#[Secure]`, `#[Pjax]`, `#[Prefetch]`, `#[IsJson]`, `#[ExpectsJson]`, `#[WantsJson]`
-* **Strings:** `#[Method]`, `#[Ip]`, `#[UserAgent]`, `#[Url]`, `#[FullUrl]`, `#[Path]`, `#[DecodedPath]`, `#[Root]`, `#[Host]`, `#[SchemeAndHttpHost]`, `#[BearerToken]`, `#[Format]`
+* **Strings:** `#[Method]`, `#[Ip]`, `#[UserAgent]`, `#[Url]`, `#[FullUrl]`, `#[Path]`, `#[DecodedPath]`, `#[Root]`, `#[Host]`, `#[SchemeAndHttpHost]`, `#[BearerToken]`, `#[Format]`, `#[Content]`
 * **Arrays:** `#[Ips]`, `#[Segments]`
 
 Every boolean accessor accepts `mustBe` to become a constraint: `#[Secure(mustBe: true)]`
 requires HTTPS, `#[Ajax(mustBe: false)]` requires a non-AJAX request.
+
+## The raw body
+
+`#[Content]` maps the request body exactly as it was sent. Use it when something is computed
+over the raw bytes, such as a webhook signature. Re-encoding the parsed input would not
+reproduce the original spacing or key order. The parsed fields can be mapped in the same
+class:
+
+```php
+use BYanelli\Roma\Request\Attributes\Accessors\Content;
+
+readonly class WebhookRequest {
+    #[Content]
+    public string $payload;   // the body, byte for byte
+
+    public string $type;      // parsed from the same JSON body
+}
+```
+
