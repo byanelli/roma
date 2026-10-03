@@ -244,3 +244,52 @@ it('marks a response field optional only when #[Optional], not when it has a def
         }
         TS);
 });
+
+class TsChapterLink
+{
+    public function __construct(
+        public string $url,
+    ) {}
+}
+
+class TsChapter
+{
+    /**
+     * @param  array<TsChapterLink>  $links
+     */
+    public function __construct(
+        public string $title,
+        public array $links,
+    ) {}
+}
+
+class TsChaptersResponse extends Response
+{
+    /**
+     * @param  list<TsChapter>  $chapters
+     */
+    public function __construct(
+        public array $chapters,
+    ) {}
+}
+
+it('emits interfaces for classes referenced only as array items, at any depth', function () {
+    $ts = new TypeScriptGenerator([], [TsChaptersResponse::class])->generate();
+
+    expect($ts)->toContain(<<<'TS'
+        export interface TsChaptersResponseBody {
+          chapters: TsChapter[];
+        }
+        TS)
+        ->toContain(<<<'TS'
+        export interface TsChapter {
+          title: string;
+          links: TsChapterLink[];
+        }
+        TS)
+        ->toContain(<<<'TS'
+        export interface TsChapterLink {
+          url: string;
+        }
+        TS);
+});

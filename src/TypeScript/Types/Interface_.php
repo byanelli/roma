@@ -41,19 +41,28 @@ readonly class Interface_ extends Type
         $nested = [[]];
 
         foreach ($this->properties as $property) {
-            if ($property->type instanceof self) {
-                $nested[] = $property->type->flatten($seen);
-            }
-
-            // A union's members are interfaces in their own right: each is
-            // emitted at the top level and referenced by name.
-            if ($property->type instanceof Union) {
-                foreach ($property->type->members as $member) {
-                    $nested[] = $member->flatten($seen);
-                }
+            foreach (self::referencedBy($property->type) as $interface) {
+                $nested[] = $interface->flatten($seen);
             }
         }
 
         return [$this, ...array_merge(...$nested)];
+    }
+
+    /**
+     * The interfaces a property type refers to by name, looking through arrays.
+     * A union's members are interfaces in their own right: each is emitted at
+     * the top level and referenced by name.
+     *
+     * @return list<Interface_>
+     */
+    private static function referencedBy(Type $type): array
+    {
+        return match (true) {
+            $type instanceof self => [$type],
+            $type instanceof Union => $type->members,
+            $type instanceof Array_ => self::referencedBy($type->memberType),
+            default => [],
+        };
     }
 }
