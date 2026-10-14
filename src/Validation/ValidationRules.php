@@ -10,6 +10,7 @@ use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Values\HasValidationRules;
 use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
+use BYanelli\Roma\Validation\Rules\RejectBlankString;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use Illuminate\Validation\Rule;
 
@@ -178,9 +179,15 @@ readonly class ValidationRules
             ]];
         }
 
+        $typeRules = $this->getTypeValidationRules($type);
+
+        if ($type instanceof Types\Boolean && ! $this->hasPresenceRule($rules)) {
+            $typeRules[] = new RejectBlankString('validation.boolean');
+        }
+
         $entry = [
             'keySegments' => $keySegments,
-            'rules' => [...$rules, ...$this->getTypeValidationRules($type)],
+            'rules' => [...$rules, ...$typeRules],
             'name' => $name,
         ];
 
@@ -190,6 +197,20 @@ readonly class ValidationRules
             $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, [...$keySegments, '*'], "$name.*", [])],
             default => [$entry],
         };
+    }
+
+    /**
+     * @param  list<mixed>  $rules
+     */
+    private function hasPresenceRule(array $rules): bool
+    {
+        foreach ($rules as $rule) {
+            if ($rule === 'required' || $rule instanceof RequiredWithinObject) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

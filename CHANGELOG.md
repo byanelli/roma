@@ -22,6 +22,9 @@ All notable changes to `roma` will be documented in this file.
   Breaking: `responseStatus()` and `responseHeaders()` are public and take the `Serialized`
   result, and `CustomizesSerialization::dateFormat()` replaces the protected
   `IsArrayable::dateFormat()` override.
+- Booleans accept `true`, `1`, `"true"`, `"1"`, `"yes"`, `"on"` and `false`, `0`, `"false"`,
+  `"0"`, `"no"`, `"off"`, ignoring case, in every source. Any other value, including an empty
+  string, fails validation with Laravel's boolean message.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's

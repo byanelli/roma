@@ -113,13 +113,17 @@ class ClassMapping
             return $val;
         }
 
+        if ($val === 0 || $val === 1) {
+            return $val === 1;
+        }
+
         if (! is_string($val)) {
             throw new CoercionException('Expected boolean, got '.get_debug_type($val));
         }
 
-        return match ($val) {
-            'true' => true,
-            'false' => false,
+        return match (strtolower($val)) {
+            'true', '1', 'yes', 'on' => true,
+            'false', '0', 'no', 'off' => false,
             default => throw new CoercionException("Invalid boolean: $val"),
         };
     }

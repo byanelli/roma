@@ -123,7 +123,7 @@ string-backed, integer-backed, and unit enums automatically:
 ```php
 class OrderRequest {
     public float $price;                   // "9.99" -> 9.99
-    public bool $isGift;                   // "true" -> true
+    public bool $isGift;                   // "yes" -> true
     public \DateTimeInterface $deliverBy;  // "2024-01-01" -> DateTime
     public Status $status;                 // "complete" -> Status::Complete (string enum)
 
@@ -131,6 +131,10 @@ class OrderRequest {
     public array $itemIds;                 // ["1","2"] -> [1, 2]
 }
 ```
+
+A `bool` accepts `true`, `1`, `"true"`, `"1"`, `"yes"` and `"on"` as true, and `false`, `0`,
+`"false"`, `"0"`, `"no"` and `"off"` as false, ignoring case. Any other value, including an
+empty string such as `?flag=`, fails validation with Laravel's boolean message.
 
 An `array` property or constructor parameter needs its element type in PHPDoc: `@var` on a
 property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list<T>` (and
