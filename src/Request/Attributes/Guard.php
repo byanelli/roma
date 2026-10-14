@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Request\Attributes;
 
 use Attribute;
+use BYanelli\Roma\Data\Attributes\GuardAttribute;
 
 /**
  * Marks a request method to run after the request validates successfully. The
@@ -13,4 +14,4 @@ use Attribute;
  * declaration order.
  */
 #[Attribute(Attribute::TARGET_METHOD)]
-class Guard {}
+class Guard implements GuardAttribute {}

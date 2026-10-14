@@ -4,7 +4,6 @@ namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Data\Sources\Property as PropertySource;
 use Closure;
-use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -49,8 +48,8 @@ readonly class Property
 
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).
-        $this->default = ($nullable && $default instanceof MissingValue) ? null : $default;
-        $this->isRequired = $this->default instanceof MissingValue;
+        $this->default = ($nullable && $default instanceof NoDefault) ? null : $default;
+        $this->isRequired = $this->default instanceof NoDefault;
         $this->source = new PropertySource($parent, $parent->normalizeKey($key));
 
         // The client-facing name shown in validation errors. Plain fields reuse

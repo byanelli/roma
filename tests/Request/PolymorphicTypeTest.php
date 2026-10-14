@@ -29,7 +29,7 @@ it('refuses to map request data into an interface-typed property', function () {
     expect(fn () => $this->mapRequest(ContractRequest::class))
         ->toThrow(
             RuntimeException::class,
-            'Cannot map request data into MappedThumbnailSource: it is an interface or abstract class.'
+            'Cannot map data into MappedThumbnailSource: it is an interface or abstract class.'
         );
 });
 

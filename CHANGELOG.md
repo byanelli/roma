@@ -4,6 +4,13 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- The mapping core no longer depends on HTTP. It is in `BYanelli\Roma\Data` (`ObjectMapper`,
+  `ClassMapping`, `ClassDefinitionBuilder`, `Payload`, `SourcePolicy`) and
+  `BYanelli\Roma\Validation`; `RequestMapper` wraps it with `RequestPayload` and
+  `RequestSourcePolicy`. Breaking: the attribute interfaces (`SourceAttribute`, `KeyAttribute`,
+  `RulesAttribute`, etc.) moved to `BYanelli\Roma\Data\Attributes`, `ParsesStringValue` and
+  `HasValidationRules` to `BYanelli\Roma\Data\Values`, and `NormalizesRawValue` to
+  `BYanelli\Roma\Data\Enums`. The public attributes are unchanged.
 - `list<T>` array element types in `@var` and `@param`, alongside `array<T>`. A `list<T>`
   property also validates with Laravel's `list` rule, so input with non-sequential keys is
   rejected.

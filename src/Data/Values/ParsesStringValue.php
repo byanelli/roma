@@ -3,8 +3,8 @@
 namespace BYanelli\Roma\Data\Values;
 
 /**
- * Implemented by value-object classes that hydrate from a single raw request
- * string (e.g. an Authorization or Accept header) rather than from an array.
+ * Implemented by value-object classes that hydrate from a single raw string
+ * (e.g. an Authorization or Accept header) rather than from an array.
  * The returned array is keyed by the object's own property names and is then
  * hydrated through the ordinary nested-object pipeline.
  *

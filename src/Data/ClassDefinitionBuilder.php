@@ -14,7 +14,6 @@ use BYanelli\Roma\Data\Sources\Property as PropertySource;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use Closure;
-use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Http\UploadedFile;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -101,8 +100,8 @@ readonly class ClassDefinitionBuilder
     private function getDefault(ReflectionParameter|ReflectionProperty $obj): mixed
     {
         return $obj instanceof ReflectionParameter
-            ? ($obj->isOptional() ? $obj->getDefaultValue() : new MissingValue)
-            : ($obj->hasDefaultValue() ? $obj->getDefaultValue() : new MissingValue);
+            ? ($obj->isOptional() ? $obj->getDefaultValue() : new NoDefault)
+            : ($obj->hasDefaultValue() ? $obj->getDefaultValue() : new NoDefault);
     }
 
     /**
@@ -410,7 +409,7 @@ readonly class ClassDefinitionBuilder
                 wireKey: $this->getWireKey($attributes) ?: $attr->getKey(),
                 type: $attr->getType(),
                 role: Role::ValidationOnly,
-                default: new MissingValue,
+                default: new NoDefault,
                 parent: $attr->getSource(),
                 accessor: ($attr instanceof AccessorAttribute)
                     ? $attr->getAccessor()

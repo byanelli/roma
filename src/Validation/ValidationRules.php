@@ -15,6 +15,11 @@ use Illuminate\Validation\Rule;
 readonly class ValidationRules
 {
     /**
+     * The private top-level key that validation-only values are copied under.
+     */
+    public const string VALIDATION_ONLY_KEY = '__validation_only';
+
+    /**
      * @var array<string, mixed>
      */
     private array $rules;
@@ -130,16 +135,17 @@ readonly class ValidationRules
 
         $keySegments = $property->getKeySegments();
 
-        // Validation-only values are copied under a private "__request" bucket
-        // so they don't collide with real request keys.
+        // Validation-only values are copied under a private key so they don't
+        // collide with mapped keys.
         if ($property->role == Role::ValidationOnly) {
-            $keySegments = ['__request', ...$keySegments];
+            $keySegments = [self::VALIDATION_ONLY_KEY, ...$keySegments];
         }
 
         // A value object that parses from a raw string and vets it with its own
-        // rule is validated as a leaf string at its own key — the client sends
-        // one header value, not a structured sub-object, so the object's shape is
-        // not exposed to the validator and its fields are not recursed into.
+        // rule is validated as a leaf string at its own key — the input is one
+        // string (e.g. a header value), not a structured sub-object, so the
+        // object's shape is not exposed to the validator and its fields are not
+        // recursed into.
         if ($type instanceof Class_ && $this->validatesAsString($type->class)) {
             return [[
                 'keySegments' => $keySegments,
@@ -227,8 +233,8 @@ readonly class ValidationRules
     {
         return array_values(
             collect($properties)
-                // A virtual (computed) property is not a request input, so it
-                // gets no rules — otherwise it would validate as required.
+                // A virtual (computed) property is not an input, so it gets no
+                // rules — otherwise it would validate as required.
                 ->reject(fn (Property $property) => $property->isVirtual)
                 ->flatMap(fn (Property $property) => $this->entryFromProperty($property, $objectKeySegments))
                 ->all()

@@ -5,27 +5,16 @@ namespace BYanelli\Roma\Data;
 use BackedEnum;
 use BYanelli\Roma\Data\Enums\NormalizesRawValue;
 use BYanelli\Roma\Data\Types\Class_;
-use BYanelli\Roma\Request\Sources\Body;
-use BYanelli\Roma\Request\Sources\Cookie;
-use BYanelli\Roma\Request\Sources\File;
-use BYanelli\Roma\Request\Sources\Header;
-use BYanelli\Roma\Request\Sources\Input;
-use BYanelli\Roma\Request\Sources\Query;
-use BYanelli\Roma\Request\Sources\RequestObject_;
-use BYanelli\Roma\Request\Sources\RouteParameter;
 use BYanelli\Roma\Validation\ValidationRules;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
-use Illuminate\Http\Request;
-use Illuminate\Routing\Route;
 use Illuminate\Support\Arr;
 use Illuminate\Support\DateFactory;
 use Illuminate\Support\ItemNotFoundException;
-use Illuminate\Support\Str;
 use RuntimeException;
 use UnitEnum;
 
-class ClassRequestMapping
+class ClassMapping
 {
     /**
      * @var array<string, mixed>
@@ -35,68 +24,29 @@ class ClassRequestMapping
     private ?ValidationRules $validationRules = null;
 
     /**
-     * @param  array<string, mixed>|null  $data
+     * `$source` is the location of a nested object, and null at the top level,
+     * where `$data` is keyed by root source.
+     *
+     * @param  array<string, mixed>  $data
      */
-    public function __construct(
+    private function __construct(
         private readonly Class_ $class,
-        private readonly Request $request,
-        private readonly ?Source $source = null,
-        ?array $data = null,
-        private readonly DateFactory $dateFactory = new DateFactory,
+        array $data,
+        private readonly ?Source $source,
+        private readonly DateFactory $dateFactory,
     ) {
-        if ($data == null) {
-            $this->data = $this->flattenRequest();
-            $this->addRequestObjectValuesToData();
+        $this->data = $data;
+
+        if ($source === null) {
             $this->addValidationOnlyValuesToData();
-        } else {
-            $this->data = $data;
         }
 
         $this->castData();
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function flattenRequest(): array
+    public static function fromPayload(Class_ $class, Payload $payload, DateFactory $dateFactory = new DateFactory): self
     {
-        return [
-            (new Input)->getKey() => $this->request->input(),
-            (new Query)->getKey() => $this->request->query->all(),
-            (new Header)->getKey() => collect($this->request->server->getHeaders())
-                ->mapWithKeys(fn ($val, $key) => [Str::lower($key) => $val])
-                ->all(),
-            (new Body)->getKey() => $this->request->isJson()
-                ? $this->request->json()->all()
-                : $this->request->request->all(),
-            (new File)->getKey() => $this->request->files->all(),
-            (new RouteParameter)->getKey() => $this->routeParameters(),
-            (new Cookie)->getKey() => $this->request->cookies->all(),
-        ];
-    }
-
-    /**
-     * The bound route's parameters, or an empty bucket when no route is bound.
-     * A request may have no route resolver (route() returns null) or a route
-     * that has not yet been bound (parameters() throws); either way a missing
-     * route param should surface as a clean "required" validation error rather
-     * than crash the mapping.
-     *
-     * @return array<string, mixed>
-     */
-    private function routeParameters(): array
-    {
-        $route = $this->request->route();
-
-        if (! $route instanceof Route) {
-            return [];
-        }
-
-        try {
-            return $route->parameters();
-        } catch (\LogicException) {
-            return [];
-        }
+        return new self($class, $payload->data($class), null, $dateFactory);
     }
 
     /**
@@ -331,9 +281,8 @@ class ClassRequestMapping
                 continue;
             }
 
-            // A contract can't be instantiated from request data, and the error
-            // shouldn't wait for a client to send the key: reject it whether or
-            // not the value is present.
+            // A contract can't be instantiated from raw data, and the error
+            // shouldn't wait for the key to be present: reject it either way.
             if ($type instanceof Types\Polymorphic) {
                 throw new RuntimeException($this->polymorphicTypeMessage($type));
             }
@@ -382,30 +331,15 @@ class ClassRequestMapping
     }
 
     /**
-     * A request property (or array member) typed as an interface or abstract
-     * class has no class to build. This is a mistake in the request object, not
-     * bad input, so it is not a CoercionException: it must reach the developer
-     * rather than be turned into a validation message.
+     * A property (or array member) typed as an interface or abstract class has
+     * no class to build. This is a mistake in the mapped class, not bad input,
+     * so it is not a CoercionException: it must reach the developer rather than
+     * be turned into a validation message.
      */
     private function polymorphicTypeMessage(Types\Polymorphic $type): string
     {
-        return "Cannot map request data into {$type->class}: it is an interface or abstract class. "
+        return "Cannot map data into {$type->class}: it is an interface or abstract class. "
             .'Type the property with a concrete class.';
-    }
-
-    private function addRequestObjectValuesToData(): void
-    {
-        foreach ($this->class->properties as $property) {
-            $parent = $property->source->parent;
-
-            if ($parent === null || get_class($parent) != RequestObject_::class) {
-                continue;
-            }
-
-            $value = call_user_func($property->accessor, $this->request);
-
-            $this->dataSet($this->data, $property->getKeySegments(), $value);
-        }
     }
 
     private function addValidationOnlyValuesToData(): void
@@ -415,7 +349,7 @@ class ClassRequestMapping
 
             $this->dataSet(
                 $this->data,
-                ['__request', ...$keySegments],
+                [ValidationRules::VALIDATION_ONLY_KEY, ...$keySegments],
                 $this->dataGet($this->data, $keySegments),
             );
         }
@@ -536,7 +470,7 @@ class ClassRequestMapping
     }
 
     /**
-     * Recursively convert nested ClassRequestMapping instances (including
+     * Recursively convert nested ClassMapping instances (including
      * those nested inside arrays) back to plain arrays, so the validator can
      * traverse the whole structure with dotted / "key.*" rules.
      *
@@ -553,7 +487,7 @@ class ClassRequestMapping
     private function normalizeValue(mixed $val): mixed
     {
         return match (true) {
-            $val instanceof ClassRequestMapping => $val->toArray(),
+            $val instanceof ClassMapping => $val->toArray(),
             is_array($val) => $this->normalizeData($val),
             default => $val,
         };
@@ -590,18 +524,9 @@ class ClassRequestMapping
     /**
      * @param  array<string, mixed>  $data
      */
-    private function toNestedClass(
-        Property $property,
-        Class_ $class_,
-        array $data
-    ): ClassRequestMapping {
-        return new ClassRequestMapping(
-            $class_,
-            $this->request,
-            $property->source,
-            $data,
-            $this->dateFactory
-        );
+    private function toNestedClass(Property $property, Class_ $class_, array $data): ClassMapping
+    {
+        return new ClassMapping($class_, $data, $property->source, $this->dateFactory);
     }
 
     /**
