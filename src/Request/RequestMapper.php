@@ -27,7 +27,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
         private Contracts\RequestResolver $requestResolver,
         private ValidatorFactory $validatorFactory,
         private Container $container,
-        private ClassDefinitionBuilder $classDefinitionBuilder = new ClassDefinitionBuilder,
+        private ClassDefinitionBuilder $classDefinitionBuilder = new ClassDefinitionBuilder(new RequestSourcePolicy),
         private PrecognitiveRuleFilter $precognitiveRuleFilter = new PrecognitiveRuleFilter,
         private ClientDataKeys $clientDataKeys = new ClientDataKeys,
     ) {}

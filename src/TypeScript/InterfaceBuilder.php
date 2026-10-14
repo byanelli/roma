@@ -5,6 +5,7 @@ namespace BYanelli\Roma\TypeScript;
 use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
 use BYanelli\Roma\Data\Property as PhpProperty;
 use BYanelli\Roma\Data\Role as PhpRole;
+use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Data\Type as PhpType;
 use BYanelli\Roma\Data\Types\Array_ as PhpArray;
 use BYanelli\Roma\Data\Types\Boolean as PhpBoolean;
@@ -50,9 +51,12 @@ readonly class InterfaceBuilder
     private Closure $implementationsOf;
 
     /**
+     * `$policy` is the policy the class definitions were built under, used
+     * again for the implementations of a polymorphic type.
+     *
      * @param  ?Closure(class-string): list<class-string>  $implementationsOf
      */
-    public function __construct(?Closure $implementationsOf = null)
+    public function __construct(private SourcePolicy $policy, ?Closure $implementationsOf = null)
     {
         $this->implementationsOf = $implementationsOf ?? fn () => [];
     }
@@ -128,7 +132,7 @@ readonly class InterfaceBuilder
 
         // Each implementation is defined under the same source as the property
         // holding it, exactly as a nested concrete class would be.
-        $definitions = new PhpClassDefinitionBuilder($property?->source);
+        $definitions = new PhpClassDefinitionBuilder($this->policy, $property?->source);
 
         // TODO: emit a discriminator. A polymorphic value is serialised without
         // one, so TypeScript narrows this union by shape. If two implementations

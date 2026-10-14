@@ -5,6 +5,7 @@ namespace BYanelli\Roma\TypeScript;
 use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
 use BYanelli\Roma\Data\Property as PhpProperty;
 use BYanelli\Roma\Discovery\DiscoveredClasses;
+use BYanelli\Roma\Request\RequestSourcePolicy;
 use BYanelli\Roma\Request\Sources;
 use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
 use BYanelli\Roma\Response\Attributes\Optional as ResponseOptional;
@@ -101,8 +102,11 @@ readonly class TypeScriptGenerator
      */
     private function collectInterfaces(): array
     {
-        $phpClassDefinitionBuilder = new PhpClassDefinitionBuilder;
-        $tsInterfaceBuilder = new InterfaceBuilder($this->discovered->implementationsOf(...));
+        // Response classes use the request policy as well; response
+        // interfaces don't depend on sources.
+        $policy = new RequestSourcePolicy;
+        $phpClassDefinitionBuilder = new PhpClassDefinitionBuilder($policy);
+        $tsInterfaceBuilder = new InterfaceBuilder($policy, $this->discovered->implementationsOf(...));
 
         $interfaces = [];
 

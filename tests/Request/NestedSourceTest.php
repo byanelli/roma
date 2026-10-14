@@ -25,7 +25,7 @@ it('throws when a nested property declares an explicit source attribute', functi
     expect(fn () => $this->mapRequest(TestNestedQuerySourceRequest::class))
         ->toThrow(
             RuntimeException::class,
-            'TestNestedQuerySourceChild::$value" is inside a nested request object and cannot declare its own source',
+            'TestNestedQuerySourceChild::$value" is inside a nested object and cannot declare its own source',
         );
 });
 
@@ -46,7 +46,7 @@ it('throws when a nested property is typed as a self-sourcing metadata enum', fu
     expect(fn () => $this->mapRequest(TestNestedMetadataEnumRequest::class))
         ->toThrow(
             RuntimeException::class,
-            'TestNestedMetadataEnumChild::$method" is inside a nested request object and cannot declare its own source',
+            'TestNestedMetadataEnumChild::$method" is inside a nested object and cannot declare its own source',
         );
 });
 

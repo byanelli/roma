@@ -9,17 +9,10 @@ use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
+use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
 use BYanelli\Roma\Data\Sources\Property as PropertySource;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
-use BYanelli\Roma\Request\Attributes\Header as HeaderAttribute;
-use BYanelli\Roma\Request\Attributes\Key;
-use BYanelli\Roma\Request\Enums\HasRequestSource;
-use BYanelli\Roma\Request\Sources\File;
-use BYanelli\Roma\Request\Sources\Header;
-use BYanelli\Roma\Request\Sources\Input;
-use BYanelli\Roma\Response\Attributes\Header as ResponseHeaderAttribute;
-use BYanelli\Roma\Response\Attributes\Key as ResponseKey;
 use Closure;
 use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Http\UploadedFile;
@@ -34,6 +27,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 readonly class ClassDefinitionBuilder
 {
     public function __construct(
+        private SourcePolicy $policy,
         private ?Source $parentSource = null,
         private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser,
     ) {}
@@ -46,13 +40,22 @@ readonly class ClassDefinitionBuilder
         return collect($attributes)
             ->whereInstanceOf(SourceAttribute::class)
             ->map(fn (SourceAttribute $attr) => $attr->getSource())
-            ->first() ?: new Input;
+            ->first() ?: $this->policy->defaultSource();
     }
 
     /**
-     * The explicit request key an attribute declares, if any. A KeyAttribute
-     * (header/accessor) always supplies one; an ExplicitKeyAttribute (Body /
-     * Query / Input) may supply one or leave it null to use the property name.
+     * @param  array<int, object>  $attributes
+     */
+    private function hasSourceAttribute(array $attributes): bool
+    {
+        return collect($attributes)->whereInstanceOf(SourceAttribute::class)->isNotEmpty();
+    }
+
+    /**
+     * The explicit key an attribute declares, if any. A KeyAttribute (e.g. a
+     * header or accessor) always supplies one; an ExplicitKeyAttribute (e.g. a
+     * source attribute or #[Key]) may supply one or leave it null to use the
+     * property name.
      *
      * @param  array<int, object>  $attributes
      */
@@ -134,69 +137,57 @@ readonly class ClassDefinitionBuilder
 
         $type = $obj->getType();
         $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
+        $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
+
+        $typeAttributes = $typeName !== null ? $this->policy->attributesForType($typeName) : [];
+        $typeSource = $typeName !== null ? $this->policy->sourceForType($typeName) : null;
 
         // A nested object always inherits its location from the parent, so a
-        // property inside one cannot declare its own source: a source attribute
-        // (query/body/input/header/route/cookie/accessor) or a self-sourcing
-        // metadata type would silently relocate it, surfacing as a baffling
-        // "required" validation error. To override a nested property's key
-        // (e.g. a literal dotted key) use #[Key] instead.
-        $declaresOwnSource = collect($attributes)->whereInstanceOf(SourceAttribute::class)->isNotEmpty()
-            || ($typeName !== null && (enum_exists($typeName) || class_exists($typeName)) && is_a($typeName, HasRequestSource::class, true));
-
-        // Reject a source on a nested property up front with an actionable
-        // message rather than let it silently misbehave.
-        if ($this->parentSource !== null && $declaresOwnSource) {
-            $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
-
+        // property inside one cannot declare its own source: it would silently
+        // relocate the property and fail validation as "required". To override
+        // a nested property's key (e.g. a literal dotted key) use #[Key] instead.
+        if ($this->parentSource !== null
+            && ($this->hasSourceAttribute($attributes) || $this->hasSourceAttribute($typeAttributes))) {
             throw new RuntimeException(
-                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested request object and "
-                .'cannot declare its own source; sources (query/body/input/header/route/cookie/accessors and '
-                .'metadata enums) are only available on top-level request classes. To override a nested '
-                .'property\'s key (e.g. a key containing a literal dot) use #[Key] instead.'
+                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested object and "
+                .'cannot declare its own source; source attributes and types that imply a source are only '
+                .'available on top-level classes. To override a nested property\'s key (e.g. a key containing '
+                .'a literal dot) use #[Key] instead.'
             );
         }
 
-        // #[Key] is the inverse: it overrides a key only inside a nested object.
-        // On a top-level property there is no inherited location to override, so
-        // reject it and point at the source attribute's key argument.
-        if ($this->parentSource === null && collect($attributes)->contains(fn (object $attr) => $attr instanceof Key)) {
-            $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
+        // A key attribute with no source (#[Key]) only overrides a key inside a
+        // nested object; a top-level property has no inherited location to override.
+        $keyWithoutSource = collect($attributes)->contains(
+            fn (object $attr) => $attr instanceof ExplicitKeyAttribute && ! $attr instanceof SourceAttribute
+        );
 
+        if ($this->parentSource === null && $keyWithoutSource) {
             throw new RuntimeException(
-                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is on a top-level request class, where "
+                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is on a top-level class, where "
                 .'#[Key] does not apply; pass the key to the source attribute instead, e.g. #[Input(\'a.b\')].'
             );
         }
 
-        // Nested file uploads are not supported for 1.0: the file-source
-        // override conflicts with the parent's key-path slicing, so the array
-        // slice would be assigned straight to the UploadedFile property and
-        // TypeError. Reject up front with an actionable message.
-        if ($this->parentSource !== null && in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class])) {
-            $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
-
+        // A type-implied source would replace the parent's key path, so the
+        // property would receive the whole slice of its parent's data.
+        if ($this->parentSource !== null && $typeSource !== null) {
             throw new RuntimeException(
-                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is a file upload inside a nested request "
-                .'object, which is not supported; declare the UploadedFile property on the top-level request class.'
+                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested object, but its "
+                ."type {$typeName} always maps from the \"{$typeSource->getKey()}\" source, which is not supported "
+                .'there; declare the property on the top-level class.'
             );
         }
 
-        // Self-sourcing metadata types: a property typed as one of these (a
-        // metadata enum like Method/ContentType, or a value object like
-        // Authorization) with no explicit source attribute infers its source
-        // from the type, exactly as if the equivalent source attribute had been
-        // written.
-        if ($typeName !== null
-            && collect($attributes)->whereInstanceOf(SourceAttribute::class)->isEmpty()
-            && (enum_exists($typeName) || class_exists($typeName))
-            && is_a($typeName, HasRequestSource::class, true)) {
-            $attributes = [...$attributes, $typeName::requestSourceAttribute()];
+        if (! $this->hasSourceAttribute($attributes)) {
+            $attributes = [...$attributes, ...$typeAttributes];
         }
 
-        $parent = in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class])
-            ? new File
-            : ($this->parentSource ?: $this->getSourceFromAttributes($attributes));
+        $parent = $typeSource ?? $this->parentSource ?? $this->getSourceFromAttributes($attributes);
+
+        if ($this->parentSource === null) {
+            $this->assertSourceAllowed($parent, "property \"{$declaringClass}::\${$obj->getName()}\"");
+        }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
 
@@ -213,36 +204,34 @@ readonly class ClassDefinitionBuilder
             nullable: $obj->getType()?->allowsNull() ?? true,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
             rawAttributes: $attributes,
-            // A virtual (hooked, backing-less) property is a computed value, not
-            // a stored one. On the request side it is never a mappable input; the
-            // request mapper, validator and request TypeScript all skip it.
+            // A virtual (hooked, backing-less) property is a computed value with
+            // no backing store. The mapper, validator and request TypeScript skip it.
             isVirtual: $obj instanceof ReflectionProperty && $obj->isVirtual(),
         );
     }
 
     /**
-     * The key a property appears under on the wire, when an attribute relocates
-     * it off its property name. A request #[Header] normalizes its lookup key
-     * (e.g. "X-Api-Key" -> "x_api_key"), but the client sends the original
-     * header name, so emit that; a response #[Header] likewise emits its real
-     * header name, and a response #[Key] renames the serialized key. Everything
-     * else uses the property's own key.
-     *
      * @param  list<object>  $attributes
      */
     private function getWireKey(array $attributes): ?string
     {
         foreach ($attributes as $attribute) {
-            if ($attribute instanceof HeaderAttribute || $attribute instanceof ResponseHeaderAttribute) {
-                return $attribute->name;
-            }
-
-            if ($attribute instanceof ResponseKey) {
-                return $attribute->key;
+            if ($attribute instanceof WireKeyAttribute) {
+                return $attribute->getWireKey();
             }
         }
 
         return null;
+    }
+
+    private function assertSourceAllowed(Source $source, string $subject): void
+    {
+        if (! $this->policy->allowsSource($source)) {
+            throw new RuntimeException(
+                "Roma {$subject} maps from the \"{$source->getKey()}\" source, which "
+                .class_basename($this->policy).' does not allow.'
+            );
+        }
     }
 
     /**
@@ -337,7 +326,8 @@ readonly class ClassDefinitionBuilder
                 // into. Which concrete classes satisfy it is left open here;
                 // the TypeScript generator discovers them.
                 interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => new Types\Polymorphic($name),
-                class_exists($name) => (new ClassDefinitionBuilder(new PropertySource($parent, $key)))->buildClassDefinition($name),
+                class_exists($name) => new ClassDefinitionBuilder($this->policy, new PropertySource($parent, $key), $this->phpDocTypeParser)
+                    ->buildClassDefinition($name),
                 default => throw new RuntimeException("Unsupported type $name"),
             },
         };
@@ -365,17 +355,19 @@ readonly class ClassDefinitionBuilder
         $className = $class->getName();
 
         // Tier-1 cache: a top-level definition is reflected and PHPDoc-parsed
-        // once per class per process. Only top-level builds are cached — a
-        // nested definition bakes its parent's key path into every property
-        // source, so it is only valid inside that parent tree (and is cached as
-        // part of it). Class_ definitions are immutable, so reuse is safe.
-        // (A method-static, not a static property, because a readonly class may
-        // not declare one.)
-        /** @var array<class-string, Class_> $cache */
+        // once per class and policy per process. Only top-level builds are
+        // cached — a nested definition bakes its parent's key path into every
+        // property source, so it is only valid inside that parent tree (and is
+        // cached as part of it). Class_ definitions are immutable, so reuse is
+        // safe. (A method-static, not a static property, because a readonly
+        // class may not declare one.)
+        /** @var array<string, array<class-string, Class_>> $cache */
         static $cache = [];
 
-        if ($this->parentSource === null && isset($cache[$className])) {
-            return $cache[$className];
+        $policyKey = $this->policy->cacheKey();
+
+        if ($this->parentSource === null && isset($cache[$policyKey][$className])) {
+            return $cache[$policyKey][$className];
         }
 
         $definition = new Class_(
@@ -387,7 +379,7 @@ readonly class ClassDefinitionBuilder
         );
 
         if ($this->parentSource === null) {
-            $cache[$className] = $definition;
+            $cache[$policyKey][$className] = $definition;
         }
 
         return $definition;
@@ -409,6 +401,8 @@ readonly class ClassDefinitionBuilder
                 && $attr instanceof SourceAttribute)) {
                 continue;
             }
+
+            $this->assertSourceAllowed($attr->getSource(), 'attribute #['.class_basename($attr)."] on {$class->getShortName()}");
 
             $result[] = new Property(
                 name: $attr->getKey(),

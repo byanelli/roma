@@ -3,7 +3,6 @@
 namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Data\Sources\Property as PropertySource;
-use BYanelli\Roma\Request\Sources\Header;
 use Closure;
 use Illuminate\Http\Resources\MissingValue;
 use Illuminate\Support\Str;
@@ -45,26 +44,19 @@ readonly class Property
         // silently mis-map. (Property names can't contain these; the realistic
         // culprit is a header/key attribute given such a name.)
         if (Str::contains($key, '*')) {
-            throw new RuntimeException("Roma request key \"$key\" (property \"$name\") may not contain '*'.");
+            throw new RuntimeException("Roma key \"$key\" (property \"$name\") may not contain '*'.");
         }
 
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).
         $this->default = ($nullable && $default instanceof MissingValue) ? null : $default;
         $this->isRequired = $this->default instanceof MissingValue;
-        $this->source = new PropertySource($parent, $this->normalizeKey($parent, $key));
+        $this->source = new PropertySource($parent, $parent->normalizeKey($key));
 
         // The client-facing name shown in validation errors. Plain fields reuse
         // their source-prefixed path; attributes (headers, accessors) can supply
         // a friendlier one via ErrorKeyAttribute.
         $this->errorKey = $errorKey ?? $this->getFullKey();
-    }
-
-    private function normalizeKey(Source $parent, string $key): string
-    {
-        return (get_class($parent) == Header::class)
-            ? Str::of($key)->camel()->snake()->toString()
-            : $key;
     }
 
     public function getFullKey(): string

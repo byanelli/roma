@@ -211,7 +211,7 @@ it('rejects a file upload inside a nested object', function () {
     );
 
     expect(fn () => $this->mapRequest(TestNestedFileRequest::class))
-        ->toThrow(RuntimeException::class, 'file upload inside a nested request object, which is not supported');
+        ->toThrow(RuntimeException::class, 'always maps from the "file" source, which is not supported there');
 });
 
 enum ContentTypeEnum: string

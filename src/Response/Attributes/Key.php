@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Response\Attributes;
 
 use Attribute;
+use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
 
 /**
  * Remaps a response property to a different key in the serialized body. Without
@@ -10,7 +11,12 @@ use Attribute;
  * attributes' key argument, which maps an incoming key onto a property.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
-class Key
+class Key implements WireKeyAttribute
 {
     public function __construct(public string $key) {}
+
+    public function getWireKey(): string
+    {
+        return $this->key;
+    }
 }

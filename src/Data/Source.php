@@ -8,6 +8,14 @@ abstract readonly class Source
 
     abstract public function getOwnKey(): string;
 
+    /**
+     * The lookup key for a property placed directly under this source.
+     */
+    public function normalizeKey(string $key): string
+    {
+        return $key;
+    }
+
     public function getKey(): string
     {
         $parentKey = $this->parent?->getKey() ?? '';
