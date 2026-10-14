@@ -79,6 +79,7 @@ class UserResponse extends Response {
 ```
 
 `#[Key]` together with `#[Header('Name')]` throws, since the header name is already the key.
+`#[Key]` together with `#[Status]` throws too, since the status has no key.
 
 ## Omit unset properties with `#[Optional]`
 
@@ -124,7 +125,8 @@ class CreatedResponse extends Response {
 }
 ```
 
-Without a `#[Status]` property the response defaults to 200. For values computed at
+A property can have only one of `#[Status]` and `#[Header]`. Without a `#[Status]` property
+the response defaults to 200. For values computed at
 runtime, override the public `responseStatus()` or `responseHeaders()` methods. Both receive
 the serialized object, which contains the attribute values:
 

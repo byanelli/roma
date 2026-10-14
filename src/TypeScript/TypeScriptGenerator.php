@@ -155,6 +155,10 @@ readonly class TypeScriptGenerator
         foreach ($this->requests as $request) {
             $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($request);
 
+            foreach ($phpClass->properties as $property) {
+                $tsInterfaceBuilder->assertBucketAttribute($request, $property, $property->getRootSource() instanceof Sources\Input);
+            }
+
             foreach ([Bucket::Body, Bucket::Query, Bucket::Headers] as $bucket) {
                 $interfaces[] = $tsInterfaceBuilder->buildInterface(
                     $phpClass,
@@ -168,6 +172,10 @@ readonly class TypeScriptGenerator
 
         foreach ($this->responses as $response) {
             $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($response);
+
+            foreach ($phpClass->properties as $property) {
+                $tsInterfaceBuilder->assertBucketAttribute($response, $property, false);
+            }
 
             foreach ([Bucket::Body, Bucket::Headers] as $bucket) {
                 $interfaces[] = $tsInterfaceBuilder->buildInterface(

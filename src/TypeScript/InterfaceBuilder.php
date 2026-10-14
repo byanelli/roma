@@ -19,6 +19,8 @@ use BYanelli\Roma\Data\Types\Shape as PhpShape;
 use BYanelli\Roma\Data\Types\ShapeItem as PhpShapeItem;
 use BYanelli\Roma\Data\Types\String_ as PhpString;
 use BYanelli\Roma\Data\Types\Union as PhpUnion;
+use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptBody;
+use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
 use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;
 use BYanelli\Roma\TypeScript\Types\Boolean;
@@ -33,6 +35,7 @@ use BYanelli\Roma\TypeScript\Types\Record_;
 use BYanelli\Roma\TypeScript\Types\String_;
 use BYanelli\Roma\TypeScript\Types\Union;
 use Closure;
+use RuntimeException;
 
 /**
  * Builds one TypeScript interface from a PHP class definition. This is pure
@@ -83,6 +86,10 @@ readonly class InterfaceBuilder
         $properties = [];
 
         foreach ($class->properties as $property) {
+            if ($ancestors !== []) {
+                $this->assertBucketAttribute($class->class, $property, false);
+            }
+
             if ($property->role === PhpRole::ValidationOnly || $property->type instanceof PhpFile) {
                 continue;
             }
@@ -105,6 +112,31 @@ readonly class InterfaceBuilder
             properties: $properties,
             phpFqcn: $class->class,
             description: Description::ofClass($class->class),
+        );
+    }
+
+    /**
+     * #[InputMapsToTypeScriptBody] and #[InputMapsToTypeScriptQuery] apply only to an #[Input]
+     * property of a top-level request class.
+     *
+     * @param  class-string  $class
+     */
+    public function assertBucketAttribute(string $class, PhpProperty $property, bool $isRequestInput): void
+    {
+        $attributes = array_values(array_filter(
+            $property->rawAttributes,
+            fn (object $attribute) => $attribute instanceof InputMapsToTypeScriptBody || $attribute instanceof InputMapsToTypeScriptQuery,
+        ));
+
+        if ($attributes === [] || ($isRequestInput && count($attributes) === 1)) {
+            return;
+        }
+
+        $subject = class_basename($class).'::$'.$property->name;
+
+        throw new RuntimeException(count($attributes) > 1
+            ? "Roma property \"{$subject}\" has both #[InputMapsToTypeScriptBody] and #[InputMapsToTypeScriptQuery]. Remove one of them."
+            : "Roma property \"{$subject}\" has #[".class_basename($attributes[0]).'], which applies only to an #[Input] property of a top-level request class. Remove it.'
         );
     }
 

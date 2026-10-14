@@ -9,6 +9,7 @@ use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\PhpDocTypeParser;
+use BYanelli\Roma\Data\PropertyAttributes;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\UnresolvableClassName;
@@ -322,17 +323,11 @@ class Serializer
                 continue;
             }
 
+            $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
+            PropertyAttributes::assertCombinable($this->checkedAttributes($property), $subject);
+
             $destination = $this->attribute($property, DestinationAttribute::class);
             $key = $this->attribute($property, Key::class)?->key;
-
-            if ($destination?->destinationKey() !== null && $key !== null) {
-                throw new RuntimeException(sprintf(
-                    'Roma property "%s::$%s" gets a key from both #[%s] and #[Key]. Give the key in only one of them.',
-                    $property->getDeclaringClass()->getShortName(),
-                    $property->getName(),
-                    class_basename($destination),
-                ));
-            }
 
             $plan[] = new PropertyPlan(
                 reflection: $property,
@@ -466,6 +461,29 @@ class Serializer
         }
 
         return $property;
+    }
+
+    /**
+     * Instances of the attributes PropertyAttributes checks. Other attributes are left
+     * uninstantiated, since their classes may not be loadable.
+     *
+     * @return list<object>
+     */
+    private function checkedAttributes(ReflectionProperty $property): array
+    {
+        $attributes = [];
+
+        foreach ($property->getAttributes() as $attribute) {
+            foreach (PropertyAttributes::CHECKED as $class) {
+                if (is_a($attribute->getName(), $class, true)) {
+                    $attributes[] = $attribute->newInstance();
+
+                    break;
+                }
+            }
+        }
+
+        return $attributes;
     }
 
     /**

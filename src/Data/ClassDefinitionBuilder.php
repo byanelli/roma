@@ -8,7 +8,6 @@ use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
-use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
@@ -66,48 +65,17 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * The key an attribute declares, if any. A KeyAttribute (e.g. a header or accessor) always
-     * declares one; an ExplicitKeyAttribute (e.g. a source attribute or #[Key]) may leave it
-     * null to use the property name.
-     */
-    private function declaredKey(object $attribute): ?string
-    {
-        $key = match (true) {
-            $attribute instanceof KeyAttribute => $attribute->getKey(),
-            $attribute instanceof ExplicitKeyAttribute => $attribute->getKey(),
-            default => null,
-        };
-
-        return $key === '' ? null : $key;
-    }
-
-    /**
      * @param  array<int, object>  $attributes
      */
     private function getKeyFromAttributes(array $attributes): ?string
     {
         foreach ($attributes as $attribute) {
-            if (($key = $this->declaredKey($attribute)) !== null) {
+            if (($key = PropertyAttributes::declaredKey($attribute)) !== null) {
                 return $key;
             }
         }
 
         return null;
-    }
-
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function assertSingleKey(array $attributes, string $subject): void
-    {
-        $keyed = array_values(array_filter($attributes, fn (object $attribute) => $this->declaredKey($attribute) !== null));
-
-        if (count($keyed) > 1) {
-            throw new RuntimeException(
-                "Roma property \"{$subject}\" gets a key from both #[".class_basename($keyed[0]).'] and #['
-                .class_basename($keyed[1]).']. Give the key in only one of them.'
-            );
-        }
     }
 
     /**
@@ -199,11 +167,20 @@ class ClassDefinitionBuilder
             );
         }
 
+        $sourceAttribute = collect($attributes)->whereInstanceOf(SourceAttribute::class)->first();
+
+        if ($typeSource !== null && $sourceAttribute !== null) {
+            throw new RuntimeException(
+                "Roma property \"{$this->subject($obj)}\" is typed as {$typeName}, which always maps from the "
+                ."\"{$typeSource->getKey()}\" source, so #[".class_basename($sourceAttribute).'] has no effect. Remove it.'
+            );
+        }
+
         if (! $this->hasSourceAttribute($attributes)) {
             $attributes = [...$attributes, ...$typeAttributes];
         }
 
-        $this->assertSingleKey($attributes, "{$declaringClass}::\${$obj->getName()}");
+        PropertyAttributes::assertCombinable($attributes, $this->subject($obj));
 
         if ($this->nested) {
             $parent = new Nested;

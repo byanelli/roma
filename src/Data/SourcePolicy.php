@@ -26,7 +26,7 @@ interface SourcePolicy
     public function attributesForType(string $typeName): array;
 
     /**
-     * The source a property of this type always maps from, whatever its attributes say.
+     * The source a property of this type always maps from. A source attribute on one throws.
      */
     public function sourceForType(string $typeName): ?Source;
 

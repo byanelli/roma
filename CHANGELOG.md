@@ -4,6 +4,13 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: attribute combinations with no meaning throw when the definition is built and
+  when serializing, instead of being ignored: `#[Key]` with `#[Status]`, `#[Status]` with
+  `#[Header]`, two source attributes such as `#[Query]` with `#[Body]`, and `#[Optional]` with
+  `#[Present]`. A source attribute on an `UploadedFile` property, which always maps from the
+  files, throws when the definition is built. `#[InputMapsToTypeScriptBody]` and
+  `#[InputMapsToTypeScriptQuery]` throw in TypeScript generation unless they are alone on an
+  `#[Input]` property of a top-level request class.
 - `#[AutoDiscriminated(key: 'type')]` on an interface or abstract class makes a
   discriminated union of every concrete class that extends or implements it in the
   `roma.discover` directories, sorted by class name. Values, `#[DiscriminatorValue]`,

@@ -53,7 +53,9 @@ readonly class SearchRequest {
 
 A property may get its key from only one attribute: `#[Query('page_num')]` together with
 `#[Key('page')]`, or `#[Header('X-Foo')]` with `#[Key('foo')]`, throws when the class
-definition is built.
+definition is built. So does a property with two source attributes, such as `#[Query]` with
+`#[Body]`, and a source attribute on an `UploadedFile` property, which always maps from the
+uploaded files.
 
 ### The QUERY method
 

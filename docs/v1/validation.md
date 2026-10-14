@@ -186,3 +186,6 @@ readonly class UpdateNoteRequest {
     public ?string $note; // must be sent, but may be null
 }
 ```
+
+`#[Present]` together with `#[Optional]` throws, since one requires the key and the other
+allows it to be absent.

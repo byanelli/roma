@@ -202,6 +202,9 @@ keys (front-end helper shape); passing → empty `204`.
   mapped action.
 - Don't hand-parse headers Roma models (`Authorization`, `ContentType`).
 - Don't put a source attribute or `UploadedFile` on a nested-object property.
+- Don't combine attributes that contradict or override each other: two sources, two keys,
+  `#[Key]` with `#[Status]`, `#[Status]` with `#[Header]`, `#[Optional]` with `#[Present]`, or
+  a source attribute on an `UploadedFile`. Each throws when the definition is built.
 - Don't type a property as an interface, abstract class or union of classes without
   `#[Discriminated]`; it throws.
 - Don't emit bare (non-source-prefixed) error keys outside precognitive responses.

@@ -112,4 +112,6 @@ outside the scanned directories.
 A generated type takes its short class name by default. Override it with `#[TypeScriptName]`
 when the short name would collide. An `#[Input]` property defaults to the `Body` interface
 (it reads from both body and query); force it into `Query` with
-`#[InputMapsToTypeScriptQuery]`.
+`#[InputMapsToTypeScriptQuery]`. `#[InputMapsToTypeScriptBody]` and
+`#[InputMapsToTypeScriptQuery]` apply only to an `#[Input]` property of a top-level request
+class; elsewhere, or together, they throw.
