@@ -25,10 +25,21 @@ All notable changes to `roma` will be documented in this file.
 - Booleans accept `true`, `1`, `"true"`, `"1"`, `"yes"`, `"on"` and `false`, `0`, `"false"`,
   `"0"`, `"no"`, `"off"`, ignoring case, in every source. Any other value, including an empty
   string, fails validation with Laravel's boolean message.
-- Breaking: a property typed as an interface or an abstract class throws when its class
-  definition is built, in mapping and in TypeScript generation. The TypeScript union of
+- Breaking: a property typed as an interface or an abstract class without `#[Discriminated]`
+  throws when its class definition is built, in mapping and in TypeScript generation. The TypeScript union of
   implementations found by scanning the `discover` directories is removed, along with
   `DiscoveredClasses::$classes` and `implementationsOf()`.
+- Discriminated unions. `#[Discriminated([Card::class, BankAccount::class], key: 'type')]` on
+  an interface or abstract class, or on a property, lists the classes a value can be; it is
+  required on a native union type such as `Card|Voucher`, and a property-level attribute
+  replaces the class-level one. The value under the key (default `type`) selects the class:
+  the member's short class name, or `#[DiscriminatorValue('bank')]`. Mapping reads the key and
+  maps the rest of the object into the member; an unknown or missing value is a validation
+  error at the key ("must be one of: Card, bank"). Validation rules for arrays that contain a
+  union are built per element (`fallbacks.0.last4`). The class list, duplicate values and
+  member properties under the key are checked when the definition is built. `list<A|B>`
+  PHPDoc element types are accepted with a property-level attribute.
+- An invalid array element or shape item no longer leaves the other elements uncoerced.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's

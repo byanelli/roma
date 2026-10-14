@@ -20,7 +20,8 @@ it('refuses to map request data into an interface-typed property', function () {
     expect(fn () => $this->mapRequest(ContractRequest::class))
         ->toThrow(
             RuntimeException::class,
-            'Roma property "ContractRequest::$thumbnail" is typed as MappedThumbnailSource, an interface or abstract class',
+            'Roma property "ContractRequest::$thumbnail" is typed as MappedThumbnailSource, an interface or abstract class. '
+            .'Add #[Discriminated] to MappedThumbnailSource or to the property, or type the property with a concrete class.',
         );
 });
 

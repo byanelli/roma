@@ -9,6 +9,7 @@ use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Values\HasValidationRules;
 use BYanelli\Roma\Data\Values\ParsesStringValue;
+use BYanelli\Roma\Validation\Rules\DiscriminatorIn;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\RejectBlankString;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
@@ -38,7 +39,13 @@ readonly class ValidationRules
      */
     private array $attributeNames;
 
-    public function __construct(Class_ $class)
+    /**
+     * `$data` is the coerced data being validated. The rules for a union depend on its
+     * discriminator, so an array that contains a union gets rules per element.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    public function __construct(Class_ $class, private array $data)
     {
         $rules = [];
         $names = [];
@@ -102,7 +109,7 @@ readonly class ValidationRules
                 $type->keyType instanceof Types\Integer => ['array', new IntegerKeys],
                 default => ['array'],
             },
-            $type instanceof Class_, $type instanceof Types\Shape => ['array'],
+            $type instanceof Class_, $type instanceof Types\Shape, $type instanceof Types\Union => ['array'],
             $type instanceof Types\Enum => [Rule::enum($type->class)],
             default => [],
         };
@@ -194,9 +201,84 @@ readonly class ValidationRules
         return match (true) {
             $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $keySegments, $name)],
             $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $keySegments, $name)],
+            $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $keySegments, $name)],
+            $type instanceof Types\Array_ && $this->containsUnion($type->memberType) => [$entry, ...$this->elementEntries($type, $keySegments, $name)],
             $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, [...$keySegments, '*'], "$name.*", [])],
             default => [$entry],
         };
+    }
+
+    /**
+     * The discriminator entry, followed by the entries of the member it selects.
+     *
+     * @param  list<string>  $keySegments
+     * @return list<Entry>
+     */
+    private function unionEntries(Types\Union $union, array $keySegments, string $name): array
+    {
+        $object = $this->valueAt($keySegments);
+        $member = is_array($object) ? $union->memberFor($object[$union->key] ?? null) : null;
+
+        return [
+            [
+                'keySegments' => [...$keySegments, $union->key],
+                'rules' => [new DiscriminatorIn($keySegments, $union->values())],
+                'name' => "$name.$union->key",
+            ],
+            ...($member !== null ? $this->objectMemberEntries($member, $keySegments, $name) : []),
+        ];
+    }
+
+    /**
+     * Entries for each element present in the data, under its own key.
+     *
+     * @param  list<string>  $keySegments
+     * @return list<Entry>
+     */
+    private function elementEntries(Types\Array_ $array, array $keySegments, string $name): array
+    {
+        $elements = $this->valueAt($keySegments);
+
+        if (! is_array($elements)) {
+            return [];
+        }
+
+        $entries = [];
+
+        foreach (array_keys($elements) as $key) {
+            $entries = [...$entries, ...$this->valueEntries($array->memberType, [...$keySegments, (string) $key], "$name.$key", [])];
+        }
+
+        return $entries;
+    }
+
+    private function containsUnion(Type $type): bool
+    {
+        return match (true) {
+            $type instanceof Types\Union => true,
+            $type instanceof Types\Array_ => $this->containsUnion($type->memberType),
+            $type instanceof Types\Shape => collect($type->items)->contains(fn (Types\ShapeItem $item) => $this->containsUnion($item->type)),
+            $type instanceof Class_ => collect($type->properties)->contains(fn (Property $property) => $this->containsUnion($property->type)),
+            default => false,
+        };
+    }
+
+    /**
+     * @param  list<string>  $keySegments
+     */
+    private function valueAt(array $keySegments): mixed
+    {
+        $value = $this->data;
+
+        foreach ($keySegments as $keySegment) {
+            if (! is_array($value) || ! array_key_exists($keySegment, $value)) {
+                return null;
+            }
+
+            $value = $value[$keySegment];
+        }
+
+        return $value;
     }
 
     /**

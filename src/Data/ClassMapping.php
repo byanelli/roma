@@ -204,7 +204,20 @@ class ClassMapping
             throw new CoercionException('Expected array, got '.get_debug_type($rawValue));
         }
 
-        return Arr::map($rawValue, fn ($value) => $this->castValue($property, $type->memberType, $value));
+        return Arr::map($rawValue, fn ($value) => $this->castOrKeep($property, $type->memberType, $value));
+    }
+
+    /**
+     * Coerces one array element or shape item, keeping the raw value when it is invalid so
+     * that validation reports it without leaving the other elements uncoerced.
+     */
+    private function castOrKeep(Property $property, Type $type, mixed $rawValue): mixed
+    {
+        try {
+            return $this->castValue($property, $type, $rawValue);
+        } catch (CoercionException) {
+            return $rawValue;
+        }
     }
 
     /**
@@ -225,7 +238,7 @@ class ClassMapping
 
             $value = $rawValue[$item->key];
 
-            $result[$item->key] = $value === null ? null : $this->castValue($property, $item->type, $value);
+            $result[$item->key] = $value === null ? null : $this->castOrKeep($property, $item->type, $value);
         }
 
         return $result;
@@ -346,6 +359,7 @@ class ClassMapping
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
             $type instanceof Types\Shape => $this->toShape($property, $type, $rawValue),
             $type instanceof Class_ => $this->castObjectValue($property, $type, $rawValue),
+            $type instanceof Types\Union => $this->toUnionMember($property, $type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),
@@ -532,6 +546,22 @@ class ClassMapping
     }
 
     /**
+     * The member's mapping keeps the discriminator in its data for validation; the member
+     * class has no property under that key, so the value is not passed to it.
+     */
+    private function toUnionMember(Property $property, Types\Union $type, mixed $rawValue): ClassMapping
+    {
+        if (! is_array($rawValue)) {
+            throw new CoercionException('Expected object, got '.get_debug_type($rawValue));
+        }
+
+        $member = $type->memberFor($rawValue[$type->key] ?? null)
+            ?? throw new CoercionException("Unknown or missing discriminator \"{$type->key}\"");
+
+        return $this->toNestedClass($property, $member, $rawValue);
+    }
+
+    /**
      * @param  array<string, mixed>  $data
      */
     private function toNestedClass(Property $property, Class_ $class_, array $data): ClassMapping
@@ -567,7 +597,7 @@ class ClassMapping
 
     private function validationRules(): ValidationRules
     {
-        return $this->validationRules ??= new ValidationRules($this->class);
+        return $this->validationRules ??= new ValidationRules($this->class, $this->toArray());
     }
 
     /**

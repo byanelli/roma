@@ -84,9 +84,10 @@ class PhpDocTypeParser
 
     /**
      * The type of an array-typed property or constructor parameter, read from its PHPDoc.
-     * `$namedType` returns the type for a resolved scalar or class name.
+     * `$namedType` returns the type for a resolved scalar or class name, or for the
+     * resolved names of a union such as `Card|Voucher`.
      *
-     * @param  Closure(string): Type  $namedType
+     * @param  Closure(list<string>): Type  $namedType
      */
     public function getArrayType(ReflectionParameter|ReflectionProperty $obj, Closure $namedType): Types\Array_|Types\Shape
     {
@@ -129,22 +130,37 @@ class PhpDocTypeParser
     }
 
     /**
-     * @param  Closure(string): Type  $namedType
+     * @param  Closure(list<string>): Type  $namedType
      */
     private function typeFromNode(TypeNode $node, ReflectionParameter|ReflectionProperty $obj, Closure $namedType): Type
     {
         return match (true) {
             $node instanceof ArrayShapeNode => $this->shape($node, $obj, $namedType),
             $node instanceof GenericTypeNode && in_array($node->type->name, self::ARRAY_TYPES, true) => $this->array($node, $obj, $namedType),
-            $node instanceof IdentifierTypeNode && ! in_array($node->name, [...self::ARRAY_TYPES, 'iterable'], true) => $namedType($this->resolveTypeName(ltrim($node->name, '\\'), $obj)),
+            $node instanceof IdentifierTypeNode && ! in_array($node->name, [...self::ARRAY_TYPES, 'iterable'], true) => $namedType([$this->resolveTypeName(ltrim($node->name, '\\'), $obj)]),
+            $node instanceof UnionTypeNode && $this->isUnionOfNames($node) => $namedType(array_values(array_map(
+                fn (TypeNode $member) => $this->resolveTypeName(ltrim((string) $member, '\\'), $obj),
+                $node->types,
+            ))),
             default => throw new RuntimeException("Unsupported array element type: $node"),
         };
+    }
+
+    private function isUnionOfNames(UnionTypeNode $node): bool
+    {
+        foreach ($node->types as $member) {
+            if (! $member instanceof IdentifierTypeNode || strtolower($member->name) === 'null') {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
      * `array<T>`, `list<T>` or `array<K, T>`.
      *
-     * @param  Closure(string): Type  $namedType
+     * @param  Closure(list<string>): Type  $namedType
      */
     private function array(GenericTypeNode $node, ReflectionParameter|ReflectionProperty $obj, Closure $namedType): Types\Array_
     {
@@ -172,7 +188,7 @@ class PhpDocTypeParser
     }
 
     /**
-     * @param  Closure(string): Type  $namedType
+     * @param  Closure(list<string>): Type  $namedType
      */
     private function shape(ArrayShapeNode $node, ReflectionParameter|ReflectionProperty $obj, Closure $namedType): Types\Shape
     {

@@ -61,7 +61,7 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
      * Walk the object's key keySegments with exact-key access so a literal dot in
      * a key segment isn't mistaken for structural nesting.
      */
-    private function containingObject(string $attribute): mixed
+    protected function containingObject(string $attribute): mixed
     {
         $keySegments = in_array('*', $this->objectKeySegments, true)
             ? $this->resolveWildcards($attribute)

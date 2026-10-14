@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
@@ -20,6 +21,7 @@ use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
+use ReflectionUnionType;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 
@@ -194,7 +196,7 @@ readonly class ClassDefinitionBuilder
             name: $obj->getName(),
             key: $key,
             wireKey: $this->getWireKey($attributes) ?: $key,
-            type: $this->getTypeFromReflectionObject($parent, $key, $obj),
+            type: $this->getTypeFromReflectionObject($parent, $key, $obj, $this->getDiscriminated($attributes)),
             role: $this->getRole($obj),
             default: $this->getDefault($obj),
             parent: $parent,
@@ -292,11 +294,26 @@ readonly class ClassDefinitionBuilder
         ];
     }
 
-    private function getArrayType(Source $parent, string $key, ReflectionParameter|ReflectionProperty $obj): Types\Array_|Types\Shape
+    /**
+     * @param  array<int, object>  $attributes
+     */
+    private function getDiscriminated(array $attributes): ?Discriminated
     {
+        return collect($attributes)->whereInstanceOf(Discriminated::class)->first();
+    }
+
+    private function getArrayType(
+        Source $parent,
+        string $key,
+        ReflectionParameter|ReflectionProperty $obj,
+        ?Discriminated $discriminated,
+    ): Types\Array_|Types\Shape {
         return $this->phpDocTypeParser->getArrayType(
             $obj,
-            fn (string $name) => $this->getTypeByName($parent, $key, $obj, $name),
+            fn (array $names) => count($names) === 1
+                ? $this->getTypeByName($parent, $key, $obj, $names[0], $discriminated)
+                : $this->getUnionType($parent, $key, $obj, $names, $discriminated)
+                    ?? throw new RuntimeException('Unsupported array element type: '.implode('|', $names)),
         );
     }
 
@@ -305,6 +322,7 @@ readonly class ClassDefinitionBuilder
         string $key,
         ReflectionParameter|ReflectionProperty $obj,
         string $name,
+        ?Discriminated $discriminated = null,
     ): Type {
         return match ($name) {
             'string' => new Types\String_,
@@ -312,22 +330,115 @@ readonly class ClassDefinitionBuilder
             'bool' => new Types\Boolean,
             'float' => new Types\Float_,
             'mixed' => new Mixed_,
-            'array' => $this->getArrayType($parent, $key, $obj),
+            'array' => $this->getArrayType($parent, $key, $obj, $discriminated),
             UploadedFile::class, SymfonyUploadedFile::class => new Types\File,
             default => match (true) {
                 // Any DateTimeInterface implementor is a date. The bare interface
                 // has no concrete target class; a concrete class carries its own.
                 is_a($name, \DateTimeInterface::class, true) => new Types\Date(interface_exists($name) ? null : $name),
                 enum_exists($name) => new Types\Enum($name),
-                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => throw new RuntimeException(
-                    "Roma property \"{$this->subject($obj)}\" is typed as {$name}, an interface or abstract class, "
-                    .'which has no class to map into. Type the property with a concrete class.'
-                ),
-                class_exists($name) => new ClassDefinitionBuilder($this->policy, new PropertySource($parent, $key), $this->phpDocTypeParser)
-                    ->buildClassDefinition($name),
+                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => $this->getContractType($parent, $key, $obj, $name, $discriminated),
+                class_exists($name) => $this->nestedBuilder($parent, $key)->buildClassDefinition($name),
                 default => throw new RuntimeException("Unsupported type $name"),
             },
         };
+    }
+
+    private function nestedBuilder(Source $parent, string $key): self
+    {
+        return new ClassDefinitionBuilder($this->policy, new PropertySource($parent, $key), $this->phpDocTypeParser);
+    }
+
+    /**
+     * @param  class-string  $contract
+     */
+    private function getContractType(
+        Source $parent,
+        string $key,
+        ReflectionParameter|ReflectionProperty $obj,
+        string $contract,
+        ?Discriminated $discriminated,
+    ): Types\Union {
+        if ($discriminated !== null) {
+            $discriminator = Discriminator::fromAttribute($discriminated, $this->subject($obj), $contract);
+
+            return $this->buildUnion($parent, $key, $discriminator, null);
+        }
+
+        $classLevel = Discriminator::attributeOf($contract) ?? throw new RuntimeException(
+            "Roma property \"{$this->subject($obj)}\" is typed as {$contract}, an interface or abstract class. "
+            ."Add #[Discriminated] to {$contract} or to the property, or type the property with a concrete class."
+        );
+
+        return $this->buildUnion($parent, $key, Discriminator::fromAttribute($classLevel, $contract, $contract), $contract);
+    }
+
+    /**
+     * The union for a native or PHPDoc union of classes such as `Card|Voucher`, or null when
+     * the union has a member that is not mapped as an object, such as `int|string`.
+     *
+     * @param  list<string>  $names
+     */
+    private function getUnionType(
+        Source $parent,
+        string $key,
+        ReflectionParameter|ReflectionProperty $obj,
+        array $names,
+        ?Discriminated $discriminated,
+    ): ?Types\Union {
+        $classes = [];
+
+        foreach ($names as $name) {
+            if (! $this->isObjectTypeName($name)) {
+                return null;
+            }
+
+            $classes[] = $name;
+        }
+
+        $discriminated ??= throw new RuntimeException(
+            "Roma property \"{$this->subject($obj)}\" is typed as the union ".implode('|', $names).'. '
+            .'Add #[Discriminated(['.implode(', ', array_map(fn (string $c) => class_basename($c).'::class', $names)).'])] to the property.'
+        );
+
+        return $this->buildUnion($parent, $key, Discriminator::fromAttribute($discriminated, $this->subject($obj), union: $classes), null);
+    }
+
+    /**
+     * @phpstan-assert-if-true class-string $name
+     */
+    private function isObjectTypeName(string $name): bool
+    {
+        return (class_exists($name) || interface_exists($name))
+            && ! enum_exists($name)
+            && ! is_a($name, \DateTimeInterface::class, true)
+            && ! is_a($name, SymfonyUploadedFile::class, true);
+    }
+
+    /**
+     * @param  ?class-string  $contract
+     */
+    private function buildUnion(Source $parent, string $key, Discriminator $discriminator, ?string $contract): Types\Union
+    {
+        $builder = $this->nestedBuilder($parent, $key);
+        $members = [];
+
+        foreach ($discriminator->classes as $value => $class) {
+            $definition = $builder->buildClassDefinition($class);
+
+            foreach ($definition->properties as $property) {
+                if (in_array($discriminator->key, [$property->source->getOwnKey(), $property->wireKey], true)) {
+                    throw new RuntimeException(
+                        'Roma property "'.class_basename($class)."::\${$property->name}\" uses the key \"{$discriminator->key}\", "
+                        .'which is the discriminator key of a union the class belongs to.'
+                    );
+                }
+            }
+
+            $members[$value] = $definition;
+        }
+
+        return new Types\Union($discriminator->key, $members, $contract);
     }
 
     private function subject(ReflectionParameter|ReflectionProperty $obj): string
@@ -339,10 +450,57 @@ readonly class ClassDefinitionBuilder
         Source $parent,
         string $key,
         ReflectionParameter|ReflectionProperty $obj,
+        ?Discriminated $discriminated = null,
     ): Type {
-        return ($obj->getType() instanceof ReflectionNamedType)
-            ? $this->getTypeByName($parent, $key, $obj, $obj->getType()->getName())
-            : new Mixed_;
+        $declared = $obj->getType();
+
+        $type = match (true) {
+            $declared instanceof ReflectionNamedType => $this->getTypeByName($parent, $key, $obj, $declared->getName(), $discriminated),
+            $declared instanceof ReflectionUnionType => $this->getUnionType($parent, $key, $obj, $this->unionMemberNames($declared), $discriminated) ?? new Mixed_,
+            default => new Mixed_,
+        };
+
+        if ($discriminated !== null && ! $this->appliesDiscriminator($type)) {
+            throw new RuntimeException(
+                "Roma #[Discriminated] on \"{$this->subject($obj)}\" applies only to a property typed as an interface, "
+                .'an abstract class or a union of classes, or an array of one.'
+            );
+        }
+
+        return $type;
+    }
+
+    /**
+     * The names of a union type's members other than null, or an empty list when a member
+     * is an intersection type.
+     *
+     * @return list<string>
+     */
+    private function unionMemberNames(ReflectionUnionType $type): array
+    {
+        $names = [];
+
+        foreach ($type->getTypes() as $member) {
+            if (! $member instanceof ReflectionNamedType) {
+                return [];
+            }
+
+            if ($member->getName() !== 'null') {
+                $names[] = $member->getName();
+            }
+        }
+
+        return $names;
+    }
+
+    private function appliesDiscriminator(Type $type): bool
+    {
+        return match (true) {
+            $type instanceof Types\Union => true,
+            $type instanceof Types\Array_ => $this->appliesDiscriminator($type->memberType),
+            $type instanceof Types\Shape => collect($type->items)->contains(fn (Types\ShapeItem $item) => $this->appliesDiscriminator($item->type)),
+            default => false,
+        };
     }
 
     /**
