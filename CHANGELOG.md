@@ -41,6 +41,10 @@ All notable changes to `roma` will be documented in this file.
   PHPDoc element types are accepted with a property-level attribute. TypeScript emits
   `({ type: 'Card' } & Card) | ({ type: 'bank' } & BankAccount)`, as a named type alias
   (`export type PaymentMethod = ...`) when the attribute is on an interface or abstract class.
+  The serializer writes the key, first, for a value serialized through a discriminated
+  property or an array, map or shape element of one, and not for a member serialized directly
+  or through a property typed as its class. `Profile::storage()` output maps back to an equal
+  object.
 - An invalid array element or shape item no longer leaves the other elements uncoerced.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values

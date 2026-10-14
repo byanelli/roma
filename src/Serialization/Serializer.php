@@ -3,6 +3,11 @@
 namespace BYanelli\Roma\Serialization;
 
 use BackedEnum;
+use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Data\Discriminator;
+use BYanelli\Roma\Data\PhpDocTypeParser;
+use BYanelli\Roma\Data\Type;
+use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Response\Attributes\DateFormat;
 use BYanelli\Roma\Response\Attributes\Key;
 use BYanelli\Roma\Response\Attributes\Optional;
@@ -13,7 +18,10 @@ use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionNamedType;
+use ReflectionParameter;
 use ReflectionProperty;
+use ReflectionUnionType;
 use RuntimeException;
 use stdClass;
 use Stringable;
@@ -25,6 +33,8 @@ use UnitEnum;
  */
 class Serializer
 {
+    public function __construct(private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser) {}
+
     /**
      * @var array<class-string, list<PropertyPlan>>
      */
@@ -46,11 +56,11 @@ class Serializer
             $key = $property->key;
 
             match ($property->destination) {
-                Destination::Body => $body[$key] = $this->normalize($value, $profile, $dateFormat),
+                Destination::Body => $body[$key] = $this->normalize($value, $profile, $dateFormat, $property->discriminated),
                 Destination::Header => $headers[$key] = $this->headerValue($value, $dateFormat),
                 Destination::Status => $status = (int) $value,
-                Destination::Query => $query[$key] = $this->queryValue($this->normalize($value, $profile, $dateFormat), $profile),
-                Destination::Path => $path[$key] = $this->normalize($value, $profile, $dateFormat),
+                Destination::Query => $query[$key] = $this->queryValue($this->normalize($value, $profile, $dateFormat, $property->discriminated), $profile),
+                Destination::Path => $path[$key] = $this->normalize($value, $profile, $dateFormat, $property->discriminated),
             };
         }
 
@@ -76,7 +86,7 @@ class Serializer
 
         foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
             if ($property->destination === Destination::Body) {
-                $body[$property->key] = $this->normalize($value, $profile, $dateFormat);
+                $body[$property->key] = $this->normalize($value, $profile, $dateFormat, $property->discriminated);
             }
         }
 
@@ -120,8 +130,19 @@ class Serializer
         }
     }
 
-    private function normalize(mixed $value, Profile $profile, string $dateFormat): mixed
+    /**
+     * `$discriminated` is the part of the declared type that applies to `$value`.
+     */
+    private function normalize(mixed $value, Profile $profile, string $dateFormat, ?Type $discriminated = null): mixed
     {
+        if ($discriminated instanceof DiscriminatedValue && is_object($value)) {
+            return $this->withDiscriminator($value, $discriminated, $profile, $dateFormat);
+        }
+
+        if (is_array($value) && ($discriminated instanceof Types\Array_ || $discriminated instanceof Types\Shape)) {
+            return $this->normalizeElements($value, $profile, $dateFormat, $discriminated);
+        }
+
         return match (true) {
             $value instanceof UnitEnum => $this->enumValue($value, $profile->enums),
             $value instanceof DateTimeInterface => $value->format($dateFormat),
@@ -135,6 +156,54 @@ class Serializer
             $value instanceof stdClass => $this->normalize(get_object_vars($value), $profile, $dateFormat),
             default => $this->body($value, $profile),
         };
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    private function normalizeElements(array $value, Profile $profile, string $dateFormat, Types\Array_|Types\Shape $type): array
+    {
+        $items = $type instanceof Types\Shape
+            ? collect($type->items)->mapWithKeys(fn (Types\ShapeItem $item) => [$item->key => $item->type])->all()
+            : [];
+
+        $result = [];
+
+        foreach ($value as $key => $item) {
+            $itemType = $type instanceof Types\Array_ ? $type->memberType : ($items[$key] ?? null);
+
+            $result[$key] = $this->normalize($item, $profile, $dateFormat, $itemType);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function withDiscriminator(object $value, DiscriminatedValue $type, Profile $profile, string $dateFormat): array
+    {
+        $discriminator = $type->discriminator;
+
+        $tag = $discriminator->valueFor($value) ?? throw new RuntimeException(sprintf(
+            'Cannot serialize %s through %s: it is not a member of the discriminated union.',
+            $value::class,
+            $type->subject,
+        ));
+
+        $body = $this->normalize($value, $profile, $dateFormat);
+
+        if (! is_array($body) || array_key_exists($discriminator->key, $body)) {
+            throw new RuntimeException(sprintf(
+                'Cannot serialize %s through %s: its output must be an object without a "%s" key.',
+                $value::class,
+                $type->subject,
+                $discriminator->key,
+            ));
+        }
+
+        return [$discriminator->key => $tag, ...$body];
     }
 
     private function enumValue(UnitEnum $enum, EnumStyle $style): mixed
@@ -204,10 +273,130 @@ class Serializer
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $this->attribute($property, DateFormat::class)?->format,
                 optional: $this->attribute($property, Optional::class) !== null,
+                discriminated: $this->discriminatedType($property),
             );
         }
 
         return $plan;
+    }
+
+    /**
+     * Where the property's declared type is a discriminated union. Unlike mapping, an
+     * interface without #[Discriminated] or an undocumented array is serialized without
+     * a discriminator rather than rejected.
+     */
+    private function discriminatedType(ReflectionProperty $property): ?Type
+    {
+        $attribute = $this->attribute($property, Discriminated::class);
+        $declared = $property->getType();
+        $subject = class_basename($property->getDeclaringClass()->getName()).'::$'.$property->getName();
+
+        if ($declared instanceof ReflectionUnionType) {
+            $names = array_values(array_filter(
+                array_map(fn ($type) => $type instanceof ReflectionNamedType ? $type->getName() : '', $declared->getTypes()),
+                fn (string $name) => $name !== 'null',
+            ));
+
+            return $this->discriminatedValue($names, $attribute, $subject);
+        }
+
+        if (! $declared instanceof ReflectionNamedType) {
+            return null;
+        }
+
+        if ($declared->getName() !== 'array') {
+            return $this->discriminatedValue([$declared->getName()], $attribute, $subject);
+        }
+
+        $error = null;
+        $found = false;
+
+        try {
+            $type = $this->phpDocTypeParser->getArrayType(
+                $this->documentedProperty($property),
+                function (array $names) use ($attribute, $subject, &$error, &$found): Type {
+                    try {
+                        $value = $this->discriminatedValue($names, $attribute, $subject);
+                    } catch (RuntimeException $e) {
+                        $error = $e;
+                    }
+
+                    $found = $found || isset($value);
+
+                    return $value ?? new Types\Mixed_;
+                },
+            );
+        } catch (RuntimeException) {
+            // Mapping requires a supported PHPDoc type on an array; serialization doesn't.
+            return null;
+        }
+
+        if ($error !== null) {
+            throw $error;
+        }
+
+        return $found ? $type : null;
+    }
+
+    /**
+     * @param  list<string>  $names
+     */
+    private function discriminatedValue(array $names, ?Discriminated $attribute, string $subject): ?DiscriminatedValue
+    {
+        if (count($names) > 1) {
+            return $attribute === null ? null : new DiscriminatedValue(
+                Discriminator::fromAttribute($attribute, $subject, union: $this->classNames($names, $subject)),
+                $subject,
+            );
+        }
+
+        $name = $names[0] ?? '';
+
+        if (! interface_exists($name) && ! (class_exists($name) && new ReflectionClass($name)->isAbstract())) {
+            return null;
+        }
+
+        if ($attribute !== null) {
+            return new DiscriminatedValue(Discriminator::fromAttribute($attribute, $subject, $name), $subject);
+        }
+
+        $classLevel = Discriminator::attributeOf($name);
+
+        return $classLevel === null ? null : new DiscriminatedValue(Discriminator::fromAttribute($classLevel, $name, $name), $subject);
+    }
+
+    /**
+     * @param  list<string>  $names
+     * @return list<class-string>
+     */
+    private function classNames(array $names, string $subject): array
+    {
+        foreach ($names as $name) {
+            if (! class_exists($name)) {
+                throw new RuntimeException("Roma #[Discriminated] on {$subject} applies only to a union of classes.");
+            }
+        }
+
+        /** @var list<class-string> $names */
+        return $names;
+    }
+
+    /**
+     * A promoted property's PHPDoc is the constructor's @param tag.
+     */
+    private function documentedProperty(ReflectionProperty $property): ReflectionProperty|ReflectionParameter
+    {
+        if (! $property->isPromoted()) {
+            return $property;
+        }
+
+        foreach ($property->getDeclaringClass()->getConstructor()?->getParameters() ?? [] as $parameter) {
+            if ($parameter->getName() === $property->getName()) {
+                return $parameter;
+            }
+        }
+
+        return $property;
     }
 
     /**
