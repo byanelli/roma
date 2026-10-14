@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
@@ -216,7 +217,10 @@ class ClassDefinitionBuilder
             name: $obj->getName(),
             key: $key,
             wireKey: $this->getWireKey($attributes) ?: $key,
-            type: $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes)),
+            type: $this->withDateFormat(
+                $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes)),
+                collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format,
+            ),
             role: $this->getRole($obj),
             default: $this->getDefault($obj),
             parent: $parent,
@@ -229,6 +233,24 @@ class ClassDefinitionBuilder
             // no backing store. The mapper, validator and request TypeScript skip it.
             isVirtual: $obj instanceof ReflectionProperty && $obj->isVirtual(),
         );
+    }
+
+    /**
+     * Applies #[DateFormat] to a date, or to the dates in an array or shape. A nested object's
+     * dates keep their own formats.
+     */
+    private function withDateFormat(Type $type, ?string $format): Type
+    {
+        return match (true) {
+            $format === null => $type,
+            $type instanceof Types\Date => new Types\Date($type->class, $format),
+            $type instanceof Types\Array_ => new Types\Array_($this->withDateFormat($type->memberType, $format), $type->isList, $type->keyType),
+            $type instanceof Types\Shape => new Types\Shape(
+                array_map(fn (Types\ShapeItem $item) => new Types\ShapeItem($item->key, $this->withDateFormat($item->type, $format), $item->optional, $item->nullable), $type->items),
+                $type->sealed,
+            ),
+            default => $type,
+        };
     }
 
     /**

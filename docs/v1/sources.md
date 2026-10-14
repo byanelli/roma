@@ -155,6 +155,21 @@ class OrderRequest {
 }
 ```
 
+A date property accepts anything Laravel's `date` rule does. With `#[DateFormat('Y-m-d')]`
+it must match that format instead, validated by `date_format:Y-m-d`, and is parsed with
+`createFromFormat` into the declared class. Fields the format doesn't contain are zero, so
+`Y-m-d` gives midnight. The serializer writes the date in the same format, and the attribute
+also applies to the dates in an array property such as `list<DateTimeImmutable>`:
+
+```php
+use BYanelli\Roma\Attributes\DateFormat;
+
+class BookingRequest {
+    #[DateFormat('Y-m-d')]
+    public CarbonImmutable $checkIn;   // "2024-03-05" -> 2024-03-05 00:00:00
+}
+```
+
 A `bool` accepts `true`, `1`, `"true"`, `"1"`, `"yes"` and `"on"` as true, and `false`, `0`,
 `"false"`, `"0"`, `"no"` and `"off"` as false, ignoring case. Any other value, including an
 empty string such as `?flag=`, fails validation with Laravel's boolean message.

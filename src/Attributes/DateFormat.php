@@ -5,9 +5,10 @@ namespace BYanelli\Roma\Attributes;
 use Attribute;
 
 /**
- * Formats a DateTimeInterface property's value with the given format string
- * when serializing. Applies to that property (and dates nested within its
- * value). Without it, dates serialize as DateTimeInterface::ATOM.
+ * The format of a date. Mapping requires the input to match it exactly (Laravel's date_format
+ * rule) and parses it with createFromFormat; fields the format lacks are zero. This applies to
+ * the property and to dates in an array or shape it contains. Serializing writes the property,
+ * and dates nested within its value, in this format instead of DateTimeInterface::ATOM.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class DateFormat

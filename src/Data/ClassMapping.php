@@ -160,12 +160,16 @@ class ClassMapping
     private function toDate(Types\Date $type, mixed $val): DateTimeInterface
     {
         try {
-            $date = $this->dateFactory->parse($val);
+            $date = $type->format !== null
+                ? $this->dateFactory->createFromFormat($this->exactFormat($type->format), $val)
+                : $this->dateFactory->parse($val);
         } catch (\Throwable $e) {
             // Any failure to parse a date is bad input, not a bug. The broad
             // catch is deliberate: larastan's Carbon stub declares no @throws.
             throw new CoercionException('Invalid date: '.get_debug_type($val), previous: $e);
         }
+
+        $date ?? throw new CoercionException('Invalid date: '.get_debug_type($val));
 
         $class = $type->class;
 
@@ -188,10 +192,59 @@ class ClassMapping
         // An exotic Carbon subclass the factory doesn't produce: reparse through
         // the target itself so the hydrated value matches the declared type.
         if (is_a($class, CarbonInterface::class, true)) {
-            return $class::parse($val);
+            return ($type->format !== null ? $class::createFromFormat($this->exactFormat($type->format), $val) : $class::parse($val))
+                ?? throw new CoercionException('Invalid date: '.get_debug_type($val));
         }
 
         throw new CoercionException('Cannot coerce date to '.$class);
+    }
+
+    /**
+     * Fields the format doesn't contain are zero rather than the current time, as in Laravel's
+     * date_format rule.
+     */
+    private function exactFormat(string $format): string
+    {
+        return str_contains($format, '!') || str_contains($format, '|') ? $format : "!{$format}";
+    }
+
+    /**
+     * A date with a format stays a string until validation, since the date_format rule checks
+     * the string.
+     */
+    private function parsesAfterValidation(Type $type): bool
+    {
+        return match (true) {
+            $type instanceof Types\Date => $type->format !== null,
+            $type instanceof Types\Array_ => $this->parsesAfterValidation($type->memberType),
+            $type instanceof Types\Shape => collect($type->items)->contains(fn (Types\ShapeItem $item) => $this->parsesAfterValidation($item->type)),
+            default => false,
+        };
+    }
+
+    private function parseValidated(Type $type, mixed $value): mixed
+    {
+        return match (true) {
+            $type instanceof Types\Date && is_string($value) => $this->toDate($type, $value),
+            $type instanceof Types\Array_ && is_array($value) => array_map(fn (mixed $item) => $this->parseValidated($type->memberType, $item), $value),
+            $type instanceof Types\Shape && is_array($value) => $this->parseValidatedShape($type, $value),
+            default => $value,
+        };
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    private function parseValidatedShape(Types\Shape $type, array $value): array
+    {
+        foreach ($type->items as $item) {
+            if (array_key_exists($item->key, $value)) {
+                $value[$item->key] = $this->parseValidated($item->type, $value[$item->key]);
+            }
+        }
+
+        return $value;
     }
 
     /**
@@ -352,7 +405,7 @@ class ClassMapping
             $type instanceof Types\Boolean => $this->toBoolean($rawValue),
             $type instanceof Types\Integer => $this->toInteger($rawValue),
             $type instanceof Types\Float_ => $this->toFloat($rawValue),
-            $type instanceof Types\Date => $this->toDate($type, $rawValue),
+            $type instanceof Types\Date => $type->format !== null ? $rawValue : $this->toDate($type, $rawValue),
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($type, $rawValue),
@@ -460,6 +513,10 @@ class ClassMapping
             && is_string($value)
             && $property->type->defersStringParsing()) {
             return $this->toNestedClass($property->type, $property->type->class::parseString($value));
+        }
+
+        if ($this->parsesAfterValidation($property->type)) {
+            return $this->parseValidated($property->type, $value);
         }
 
         return $value;

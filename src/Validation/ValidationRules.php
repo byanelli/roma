@@ -117,7 +117,7 @@ readonly class ValidationRules
             $type instanceof Types\Boolean => ['boolean'],
             $type instanceof Types\Integer => ['integer'],
             $type instanceof Types\Float_ => ['numeric'],
-            $type instanceof Types\Date => ['date'],
+            $type instanceof Types\Date => [$type->format !== null ? "date_format:{$type->format}" : 'date'],
             $type instanceof Types\String_ => ['string'],
             $type instanceof Types\Array_ => match (true) {
                 $type->isList => ['array', 'list'],

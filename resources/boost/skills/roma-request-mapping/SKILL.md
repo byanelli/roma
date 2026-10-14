@@ -62,6 +62,8 @@ class CreateContactController {
   as an integer without an `integer` rule.
 - Required = non-nullable with no default. Optional = has a default OR is nullable (`?T`).
 - `#[Present]` on a nullable property requires the key to appear but allows `null`.
+- `#[DateFormat('Y-m-d')]` on a date property requires input in that format (`date_format`
+  rule), parses it with `createFromFormat`, and serializes it in the same format.
 - An `array` property needs its element type in PHPDoc (`@var` on a property, `@param` on
   a constructor parameter): `array<T>`, `list<T>`, `array<string, T>` / `array<int, T>`, or
   an array shape such as `array{min: int, max?: int}`. `list<T>` also requires sequential

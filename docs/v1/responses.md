@@ -185,7 +185,9 @@ returns exactly what the override returns.
 
 ## Date formats
 
-Dates use `DateTimeInterface::ATOM` unless the property has `#[DateFormat('Y-m-d')]`. To
+Dates use `DateTimeInterface::ATOM` unless the property has `#[DateFormat('Y-m-d')]`, which
+also sets the format input must have when the class is mapped (see
+[Sources](/docs/roma/v1/sources#type-coercion-and-enums)). To
 choose a format at runtime, implement `CustomizesSerialization`. Returning null falls back to
 `#[DateFormat]` or the default:
 

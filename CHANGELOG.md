@@ -4,6 +4,12 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[DateFormat('Y-m-d')]` applies when mapping: the input must match the format, validated
+  with Laravel's `date_format` rule in place of `date`, and is parsed with `createFromFormat`
+  into the declared class (`Carbon`, `CarbonImmutable`, `DateTimeImmutable`, …). Fields the
+  format doesn't contain are zero. It also applies to the dates in an array or shape
+  property. Serialization is unchanged, so a mapped object serializes back to the same
+  strings.
 - Breaking: `#[RouteParameter]` is renamed `#[Path]` (`BYanelli\Roma\Http\Attributes\Path`),
   and its source key and error-key prefix change from `route.` to `path.`, so a missing
   parameter reports `path.id`. The accessor that returns the request path is renamed
