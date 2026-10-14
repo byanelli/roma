@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: the request and response `#[Header]` attributes are merged into one class that is
+  both a mapping source and a serialization destination, so a class mapped from a request
+  header writes the property back to the same header.
 - Breaking: the request and response `#[Key]` attributes are merged into
   `BYanelli\Roma\Attributes\Key`, which mapping and serialization both read, so a renamed
   property maps and serializes under the same key. `#[Key]` on a top-level property sets the

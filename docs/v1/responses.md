@@ -106,7 +106,7 @@ Mark an `int` property `#[Status]` to make its value the HTTP status code, or a 
 `#[Header('Name')]` to emit it as a response header. Both are lifted out of the body:
 
 ```php
-use BYanelli\Roma\Response\Attributes\Header;
+use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\Response;
 

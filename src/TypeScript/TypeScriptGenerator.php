@@ -4,9 +4,9 @@ namespace BYanelli\Roma\TypeScript;
 
 use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
 use BYanelli\Roma\Data\Property as PhpProperty;
+use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\RequestSourcePolicy;
 use BYanelli\Roma\Request\Sources;
-use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
 use BYanelli\Roma\Response\Attributes\Optional as ResponseOptional;
 use BYanelli\Roma\Response\Attributes\Status as ResponseStatus;
 use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
@@ -226,8 +226,8 @@ readonly class TypeScriptGenerator
     {
         return match (true) {
             (! $property->hasAttribute(ResponseStatus::class)
-                && ! $property->hasAttribute(ResponseHeader::class)) => Bucket::Body,
-            $property->hasAttribute(ResponseHeader::class) => Bucket::Headers,
+                && ! $property->hasAttribute(Header::class)) => Bucket::Body,
+            $property->hasAttribute(Header::class) => Bucket::Headers,
             default => null,
         };
     }

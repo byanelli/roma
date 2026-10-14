@@ -2,8 +2,8 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Response\Attributes\DateFormat;
-use BYanelli\Roma\Response\Attributes\Header;
 use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\IsArrayable;

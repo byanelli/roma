@@ -10,7 +10,6 @@ use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Attributes\Input;
 use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 
@@ -78,7 +77,7 @@ it('rejects a property that gets a key from two attributes', function (string $c
 
 class TestResponseHeaderAndKey
 {
-    #[ResponseHeader('X-Foo'), Key('foo')]
+    #[Header('X-Foo'), Key('foo')]
     public string $foo = 'bar';
 }
 
@@ -109,4 +108,22 @@ it('maps and serializes a renamed property under the same key', function () {
     expect($mapped->id)->toBe(42)
         ->and($mapped->address->street)->toBe('Main St')
         ->and(Serializer::toArray($mapped))->toBe($data);
+});
+
+class TestHeaderRoundTrip
+{
+    public function __construct(
+        #[Header('X-Request-Id')] public string $requestId,
+        public string $name,
+    ) {}
+}
+
+it('reads #[Header] from a request and writes it to a header', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['name' => 'Bill'], headers: ['X-Request-Id' => 'abc']);
+
+    $serialized = Serializer::serialize($this->mapRequest(TestHeaderRoundTrip::class));
+
+    expect($serialized->headers)->toBe(['X-Request-Id' => 'abc'])
+        ->and($serialized->body)->toBe(['name' => 'Bill']);
 });

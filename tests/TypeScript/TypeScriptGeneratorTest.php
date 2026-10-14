@@ -6,7 +6,6 @@ use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Request\Attributes\Body;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
 use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\Response;
@@ -71,7 +70,7 @@ class TsUserResponse extends Response
         public TsAddressResponse $address,
         #[Optional] public ?string $nickname = null,
         #[Status] public int $status = 200,
-        #[ResponseHeader('X-Rate-Limit')] public int $rateLimit = 60,
+        #[Header('X-Rate-Limit')] public int $rateLimit = 60,
     ) {}
 }
 

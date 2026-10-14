@@ -3,7 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Facades\Serializer;
-use BYanelli\Roma\Response\Attributes\Header;
+use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\IsArrayable;
 use BYanelli\Roma\Response\Response;
