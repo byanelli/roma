@@ -36,6 +36,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Discovery
+    |--------------------------------------------------------------------------
+    |
+    | Directories scanned for Roma classes: the requests and responses that
+    | `roma:typescript` generates, and the members of each interface or
+    | abstract class with #[AutoDiscriminated]. `php artisan roma:cache`, which
+    | `php artisan optimize` runs, saves the members to bootstrap/cache/roma.php.
+    | While that file exists it is the only source, so run it again after
+    | adding a member class.
+    |
+    */
+
+    'discover' => [
+        app_path(),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | TypeScript Generation
     |--------------------------------------------------------------------------
     |
@@ -48,7 +66,7 @@ return [
     | Classes are auto-detected by scanning the `discover` directories: a
     | request is any class marked with a class-level #[Request] attribute, a
     | response is any class extending Response or using the IsResponsable trait.
-    | The `requests` and `responses` lists add classes that live outside those
+    | The `requests` and `responses` lists add classes that are outside those
     | directories.
     |
     */
@@ -57,11 +75,6 @@ return [
 
         // Where the generated .d.ts file is written.
         'output' => resource_path('js/roma.d.ts'),
-
-        // Directories scanned to auto-detect request and response classes.
-        'discover' => [
-            app_path(),
-        ],
 
         // Additional request classes to generate interfaces for.
         'requests' => [

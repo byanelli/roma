@@ -14,7 +14,7 @@ class RomaTypeScriptCommand extends Command
     public function handle(RomaClassDiscovery $discovery): int
     {
         /** @var list<string> $paths */
-        $paths = config('roma.typescript.discover', []);
+        $paths = config('roma.discover', []);
         $discovered = $discovery->discover($paths);
 
         /** @var list<class-string> $requests */
@@ -23,7 +23,7 @@ class RomaTypeScriptCommand extends Command
         $responses = $this->merge(config('roma.typescript.responses', []), $discovered->responses);
 
         if ($requests === [] && $responses === []) {
-            $this->warn('No request or response classes found. Mark requests with #[Request], extend Response (or use IsResponsable), and check roma.typescript.discover. Nothing to generate.');
+            $this->warn('No request or response classes found. Mark requests with #[Request], extend Response (or use IsResponsable), and check roma.discover. Nothing to generate.');
 
             return self::SUCCESS;
         }

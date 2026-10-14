@@ -21,3 +21,7 @@ arch('the generic attributes do not depend on HTTP')
 arch('the JSON Schema builder does not depend on HTTP')
     ->expect('BYanelli\Roma\JsonSchema')
     ->not->toUse($http);
+
+arch('union member discovery does not depend on HTTP')
+    ->expect(['BYanelli\Roma\Discovery\DiscriminatedMembers', 'BYanelli\Roma\Discovery\ClassFinder'])
+    ->not->toUse($http);

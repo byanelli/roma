@@ -2,6 +2,9 @@
 
 namespace BYanelli\Roma;
 
+use BYanelli\Roma\Console\RomaCacheCommand;
+use BYanelli\Roma\Console\RomaClearCommand;
+use BYanelli\Roma\Discovery\DiscriminatedMembers;
 use BYanelli\Roma\Http\Request\Contracts;
 use BYanelli\Roma\Http\Request\Injection\Request;
 use BYanelli\Roma\Http\Request\RequestMapper;
@@ -18,16 +21,19 @@ class RomaServiceProvider extends PackageServiceProvider
     {
         $package->name('roma')
             ->hasConfigFile()
-            ->hasCommand(RomaTypeScriptCommand::class);
+            ->hasCommands([RomaTypeScriptCommand::class, RomaCacheCommand::class, RomaClearCommand::class]);
 
         $this->app->bind(Contracts\RequestResolver::class, fn () => $this->app->make(RequestResolver::class));
         $this->app->bind(Contracts\RequestMapper::class, fn () => $this->app->make(RequestMapper::class));
         $this->app->singleton(Serializer::class);
+        $this->app->singleton(DiscriminatedMembers::class);
     }
 
     public function packageBooted(): void
     {
         $this->registerRequestAutoResolution();
+
+        $this->optimizes(optimize: 'roma:cache', clear: 'roma:clear', key: 'roma');
     }
 
     /**

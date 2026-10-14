@@ -98,7 +98,7 @@ generation throw.
 
 ## Auto-detection
 
-Classes are discovered by scanning the directories in `roma.typescript.discover` (default
+Classes are discovered by scanning the directories in `roma.discover` (default
 `app/`) — there is no list to maintain by hand:
 
 * a **request** is any class marked with a class-level `#[Request]` attribute;

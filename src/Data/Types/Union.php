@@ -11,8 +11,8 @@ final readonly class Union extends Type
 {
     /**
      * @param  array<string, Class_>  $members  keyed by discriminator value
-     * @param  ?class-string  $contract  the interface or abstract class whose class-level
-     *                                   #[Discriminated] defines the union; null for a property-level one
+     * @param  ?class-string  $contract  the interface or abstract class whose class-level #[Discriminated]
+     *                                   or #[AutoDiscriminated] defines the union; null for a property-level one
      */
     public function __construct(
         public string $key,

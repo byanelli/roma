@@ -2,8 +2,11 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\DiscriminatorValue;
+use BYanelli\Roma\Discovery\DiscriminatedMembers;
+use Illuminate\Container\Container;
 use ReflectionAttribute;
 use ReflectionClass;
 use RuntimeException;
@@ -22,15 +25,51 @@ final readonly class Discriminator
     ) {}
 
     /**
-     * The class-level attribute of an interface or abstract class.
+     * The union a class-level #[Discriminated] or #[AutoDiscriminated] on an interface or
+     * abstract class defines, or null when it has neither.
      *
      * @param  class-string  $contract
      */
-    public static function attributeOf(string $contract): ?Discriminated
+    public static function ofContract(string $contract): ?self
     {
-        $attribute = new ReflectionClass($contract)->getAttributes(Discriminated::class)[0] ?? null;
+        $reflection = new ReflectionClass($contract);
+        $listed = ($reflection->getAttributes(Discriminated::class)[0] ?? null)?->newInstance();
+        $auto = ($reflection->getAttributes(AutoDiscriminated::class)[0] ?? null)?->newInstance();
 
-        return $attribute?->newInstance();
+        if ($listed !== null && $auto !== null) {
+            throw new RuntimeException("Roma {$contract} has both #[Discriminated] and #[AutoDiscriminated]. Remove one of them.");
+        }
+
+        return match (true) {
+            $listed !== null => self::fromAttribute($listed, $contract, $contract),
+            $auto !== null => self::discovered($auto, $contract),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  class-string  $contract
+     */
+    private static function discovered(AutoDiscriminated $attribute, string $contract): self
+    {
+        $members = Container::getInstance()->make(DiscriminatedMembers::class);
+        $hint = $members->isCached()
+            ? " The members are read from {$members->cachePath()}; if you added or removed an implementation, run php artisan roma:cache."
+            : '';
+        $classes = $members->of($contract);
+
+        if ($classes === []) {
+            throw new RuntimeException(
+                "Roma #[AutoDiscriminated] on {$contract} found no concrete class that extends or implements it "
+                ."in the roma.discover directories.{$hint}"
+            );
+        }
+
+        try {
+            return self::fromAttribute(new Discriminated($classes, $attribute->key), $contract, $contract, attributeName: 'AutoDiscriminated');
+        } catch (RuntimeException $e) {
+            throw new RuntimeException($e->getMessage().$hint, previous: $e);
+        }
     }
 
     /**
@@ -44,8 +83,9 @@ final readonly class Discriminator
         string $subject,
         ?string $contract = null,
         ?array $union = null,
+        string $attributeName = 'Discriminated',
     ): self {
-        $prefix = "Roma #[Discriminated] on {$subject}";
+        $prefix = "Roma #[{$attributeName}] on {$subject}";
 
         if ($attribute->key === '') {
             throw new RuntimeException("{$prefix} has an empty key.");

@@ -4,6 +4,19 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[AutoDiscriminated(key: 'type')]` on an interface or abstract class makes a
+  discriminated union of every concrete class that extends or implements it in the
+  `roma.discover` directories, sorted by class name. Values, `#[DiscriminatorValue]`,
+  duplicate checks, mapping, validation, serialization, TypeScript and JSON Schema are the
+  same as for `#[Discriminated]`. It is class-level only. `php artisan roma:cache` writes the
+  members to `bootstrap/cache/roma.php` and `roma:clear` deletes it; both are registered with
+  `optimizes()`, so `optimize` and `optimize:clear` run them. While the file exists it is the
+  only source, even if stale, and definition errors for these unions say to run
+  `roma:cache`; without it the directories are scanned once per process. A production
+  deploy must run `optimize` or `roma:cache` after a member is added.
+- Breaking: `roma.typescript.discover` moves to `roma.discover`, which both TypeScript
+  generation and `#[AutoDiscriminated]` use. `Discriminator::attributeOf()` is replaced by
+  `Discriminator::ofContract()`, which returns the union for either attribute.
 - JSON Schema from class definitions. `BYanelli\Roma\JsonSchema\ClassSchema::properties($class)`
   returns `array<string, Illuminate\JsonSchema\Types\Type>`, the shape an MCP or AI SDK
   tool's `schema()` returns, and `ClassSchema::object($class)` returns one `ObjectType`. Both

@@ -149,3 +149,33 @@ readonly class CheckoutRequest {
   two classes may not have the same value. A property typed as an interface, an abstract
   class or a union of classes without `#[Discriminated]` throws. A union of scalars such as
   `int|string` is not affected.
+
+### Discovered members
+
+`#[AutoDiscriminated]` on an interface or abstract class makes every concrete class that
+extends or implements it a member, without a list. Roma finds the members by scanning the
+directories in `roma.discover` (default `app/`). Values, `#[DiscriminatorValue]`, the key
+(`key: 'kind'`), validation, serialization, TypeScript and JSON Schema work as for
+`#[Discriminated]`.
+
+```php
+use BYanelli\Roma\Attributes\AutoDiscriminated;
+
+#[AutoDiscriminated]
+interface Notification {}
+
+readonly class EmailNotification implements Notification { /* ... */ }
+readonly class SmsNotification implements Notification { /* ... */ }
+```
+
+**In production, run `php artisan optimize` or `php artisan roma:cache` on every deploy.**
+`roma:cache` writes the members to `bootstrap/cache/roma.php`, and `optimize` runs it. While
+that file exists, Roma reads the members only from it, even when it is out of date, as
+Laravel does with `config:cache`. A class added since the cache was written is not a member,
+so its value fails validation as unknown. `php artisan roma:clear` (also run by
+`optimize:clear`) deletes the file, and without it Roma scans the directories once per
+process.
+
+The attribute goes only on the interface or abstract class, not on a property. A contract
+with no members, or with both `#[Discriminated]` and `#[AutoDiscriminated]`, throws when the
+definition is built; while the cache file exists, the message says to run `roma:cache`.

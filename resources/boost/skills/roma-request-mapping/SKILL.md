@@ -26,7 +26,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
@@ -131,6 +131,13 @@ short class name or `#[DiscriminatorValue('bank')]`; member classes must not dec
 property under the key. Unknown values fail validation at `input.payment.type`. The
 serializer writes the key only through a discriminated property, and TypeScript emits
 `({ type: 'Card' } & Card) | ...`.
+
+`#[AutoDiscriminated]` (class-level only) on an interface or abstract class makes every
+concrete implementation in the `roma.discover` directories a member, with the same rules.
+Members come from discovery, so a production deploy must run `php artisan optimize` or
+`php artisan roma:cache` after a member is added: while `bootstrap/cache/roma.php` exists it
+is the only source, even if stale. `roma:clear` deletes it. Prefer `#[Discriminated]` with
+an explicit list unless the member list changes often.
 
 ## Validation extras
 

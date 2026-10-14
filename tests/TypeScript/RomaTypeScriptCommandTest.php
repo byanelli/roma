@@ -15,7 +15,7 @@ class CmdPingResponse extends Response
 beforeEach(function () {
     // Keep these tests deterministic: opt out of directory scanning unless a
     // test sets it explicitly.
-    config()->set('roma.typescript.discover', []);
+    config()->set('roma.discover', []);
 });
 
 it('writes generated TypeScript to the configured output path', function () {
@@ -37,7 +37,7 @@ it('writes generated TypeScript to the configured output path', function () {
 it('auto-detects request and response classes in the discover paths', function () {
     $output = sys_get_temp_dir().'/roma_ts_'.uniqid().'.d.ts';
 
-    config()->set('roma.typescript.discover', [dirname(__DIR__).'/Fixtures/Discovery']);
+    config()->set('roma.discover', [dirname(__DIR__).'/Fixtures/Discovery']);
     config()->set('roma.typescript.output', $output);
 
     $this->artisan('roma:typescript')->assertSuccessful();

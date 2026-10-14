@@ -5,8 +5,6 @@ namespace BYanelli\Roma\Discovery;
 use BYanelli\Roma\Http\Request\Injection\Request;
 use BYanelli\Roma\Http\Response\IsResponsable;
 use BYanelli\Roma\Http\Response\Response;
-use ReflectionClass;
-use Spatie\StructureDiscoverer\Discover;
 
 /**
  * Classifies the classes under a set of directories into Roma requests and
@@ -15,33 +13,21 @@ use Spatie\StructureDiscoverer\Discover;
  * A request is any concrete class carrying a class-level #[Request] attribute.
  * A response is any concrete class extending Response or using IsResponsable.
  *
- * spatie/php-structure-discoverer finds the classes on disk; this class only
- * classifies them.
+ * ClassFinder finds the classes on disk; this class only classifies them.
  */
 class RomaClassDiscovery
 {
+    public function __construct(private readonly ClassFinder $finder = new ClassFinder) {}
+
     /**
      * @param  list<string>  $paths
      */
     public function discover(array $paths): DiscoveredClasses
     {
-        $directories = array_values(array_filter($paths, 'is_dir'));
-
-        if ($directories === []) {
-            return new DiscoveredClasses;
-        }
-
         $requests = [];
         $responses = [];
 
-        /** @var list<class-string> $classes */
-        $classes = Discover::in(...$directories)->classes()->get();
-
-        foreach ($classes as $class) {
-            if (! $this->isConcrete($class)) {
-                continue;
-            }
-
+        foreach ($this->finder->concreteClasses($paths) as $class) {
             if ($this->isRequest($class)) {
                 $requests[] = $class;
             } elseif ($this->isResponse($class)) {
@@ -67,18 +53,6 @@ class RomaClassDiscovery
     {
         return is_a($class, Response::class, true)
             || in_array(IsResponsable::class, $this->traitsUsedBy($class), true);
-    }
-
-    /**
-     * @param  class-string  $class
-     */
-    private function isConcrete(string $class): bool
-    {
-        $reflection = new ReflectionClass($class);
-
-        return ! $reflection->isAbstract()
-            && ! $reflection->isInterface()
-            && ! $reflection->isEnum();
     }
 
     /**

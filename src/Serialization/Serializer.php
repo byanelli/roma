@@ -429,9 +429,9 @@ class Serializer
             return new DiscriminatedValue(Discriminator::fromAttribute($attribute, $subject, $name), $subject);
         }
 
-        $classLevel = Discriminator::attributeOf($name);
+        $classLevel = Discriminator::ofContract($name);
 
-        return $classLevel === null ? null : new DiscriminatedValue(Discriminator::fromAttribute($classLevel, $name, $name), $subject);
+        return $classLevel === null ? null : new DiscriminatedValue($classLevel, $subject);
     }
 
     /**

@@ -464,12 +464,13 @@ class ClassDefinitionBuilder
             return $this->buildUnion($discriminator, null);
         }
 
-        $classLevel = Discriminator::attributeOf($contract) ?? throw new RuntimeException(
+        $classLevel = Discriminator::ofContract($contract) ?? throw new RuntimeException(
             "Roma property \"{$this->subject($obj)}\" is typed as {$contract}, an interface or abstract class. "
-            ."Add #[Discriminated] to {$contract} or to the property, or type the property with a concrete class."
+            ."Add #[Discriminated] or #[AutoDiscriminated] to {$contract}, add #[Discriminated] to the property, "
+            .'or type the property with a concrete class.'
         );
 
-        return $this->buildUnion(Discriminator::fromAttribute($classLevel, $contract, $contract), $contract);
+        return $this->buildUnion($classLevel, $contract);
     }
 
     /**
