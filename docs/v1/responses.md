@@ -53,7 +53,11 @@ becomes its string.
 
 Conversion works on the value, not the declared type, so a property typed as an interface
 or an abstract class serializes whatever concrete object it holds, exactly as a nested
-response object does.
+response object does. When the property is a
+[discriminated union](/docs/roma/v1/nested-objects#discriminated-unions), or an array, map or
+shape of one, the output starts with the discriminator: `{"type": "Card", "last4": "4242"}`.
+The same object serialized directly, or through a property typed as `Card`, has no `type`
+key. The value must be one of the union's classes.
 
 `Response` implements `JsonSerializable`, and `IsArrayable` provides `jsonSerialize()`, so
 `json_encode($response)` produces the same output as `toArray()`.

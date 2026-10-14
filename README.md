@@ -55,8 +55,8 @@ class CreateContactController {
   parameters, or cookies with `#[Body]`, `#[Query]`, `#[Header]`, `#[RouteParameter]`,
   `#[Cookie]`; the default is the merged input bag.
 - **Typed and validated.** Automatic coercion (strings → `int` / `float` / `bool` / enum /
-  date / `UploadedFile`), validation via `#[Rule]`, nested objects, and `#[Guard]`
-  authorization methods.
+  date / `UploadedFile`), validation via `#[Rule]`, nested objects, discriminated unions
+  (`#[Discriminated]`), and `#[Guard]` authorization methods.
 - **Header value objects.** Type a property as `Authorization` to get the scheme +
   credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
   / `Scheme` / `ContentType` metadata enums.

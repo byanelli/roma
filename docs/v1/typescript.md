@@ -60,10 +60,30 @@ of the interfaces that use them. A map such as `array<string, T>` becomes `Recor
 (`Record<number, T>` for `int` keys), and an array shape becomes an inline object type such
 as `{ input: number; output?: number }`.
 
-## Interfaces and abstract classes
+## Discriminated unions
 
-A property typed as an interface or an abstract class has no single shape to describe, so
-generation throws for it. Type the property with a concrete class.
+A [discriminated union](/docs/roma/v1/nested-objects#discriminated-unions) becomes a union of
+its member interfaces, each combined with its discriminator value. A union declared on an
+interface or abstract class is emitted once as a type alias named after it:
+
+```typescript
+export type PaymentMethod = ({ type: 'Card' } & Card) | ({ type: 'bank' } & BankAccount);
+
+export interface CheckoutRequestBody {
+  payment: PaymentMethod;
+  fallbacks?: PaymentMethod[];
+  refundTo?: ({ type: 'Card' } & Card) | ({ type: 'Voucher' } & Voucher) | null;
+}
+
+export interface Card {
+  last4: string;
+}
+```
+
+A union declared on the property is written inline. The member interfaces don't contain the
+key, since a property typed as the member class is serialized without it. A property typed
+as an interface, an abstract class or a union of classes without `#[Discriminated]` makes
+generation throw.
 
 ## Auto-detection
 

@@ -99,6 +99,15 @@ its location from the parent — **source attributes and metadata enums are top-
 declaring one on a nested property throws. Use `#[Key]` (nested-only) to override a nested
 key, e.g. one containing a literal dot.
 
+A property that can be one of several classes is a discriminated union: type it as an
+interface, an abstract class or a native union, and list the classes with
+`#[Discriminated([Card::class, BankAccount::class])]` on the interface/abstract class or on
+the property (required for `Card|Voucher`). The wire value under `type` (or `key:`) is the
+short class name or `#[DiscriminatorValue('bank')]`; member classes must not declare a
+property under the key. Unknown values fail validation at `input.payment.type`. The
+serializer writes the key only through a discriminated property, and TypeScript emits
+`({ type: 'Card' } & Card) | ...`.
+
 ## Validation extras
 
 - **Dynamic rules:** pass a first-class-callable to `#[Rule]`; Roma resolves it through the
@@ -146,4 +155,6 @@ keys (front-end helper shape); passing → empty `204`.
   mapped action.
 - Don't hand-parse headers Roma models (`Authorization`, `ContentType`).
 - Don't put a source attribute or `UploadedFile` on a nested-object property.
+- Don't type a property as an interface, abstract class or union of classes without
+  `#[Discriminated]`; it throws.
 - Don't emit bare (non-source-prefixed) error keys outside precognitive responses.
