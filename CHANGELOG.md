@@ -25,6 +25,10 @@ All notable changes to `roma` will be documented in this file.
 - Booleans accept `true`, `1`, `"true"`, `"1"`, `"yes"`, `"on"` and `false`, `0`, `"false"`,
   `"0"`, `"no"`, `"off"`, ignoring case, in every source. Any other value, including an empty
   string, fails validation with Laravel's boolean message.
+- Breaking: a property typed as an interface or an abstract class throws when its class
+  definition is built, in mapping and in TypeScript generation. The TypeScript union of
+  implementations found by scanning the `discover` directories is removed, along with
+  `DiscoveredClasses::$classes` and `implementationsOf()`.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's
@@ -38,12 +42,4 @@ All notable changes to `roma` will be documented in this file.
   rejected.
 - `#[Content]` accessor: maps the request body exactly as sent, for signatures computed over
   the raw bytes.
-- Interface- and abstract-class-typed response properties: the generated TypeScript is a
-  union of every concrete implementation found in the `roma.typescript.discover`
-  directories, each emitted as its own interface — nothing is declared in PHP, so adding
-  an implementation and re-running the generator widens the union. With none found the
-  contract is emitted as an empty interface. Mapping a request into such a property now
-  fails with a clear message instead of an "Unsupported type" error at generation time.
-- Planned: a wire discriminator for polymorphic values, so a union of implementations that
-  share a shape still narrows in TypeScript.
 - Initial development toward the 1.0 release.

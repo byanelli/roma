@@ -14,12 +14,9 @@ use Spatie\StructureDiscoverer\Discover;
  *
  * A request is any concrete class carrying a class-level #[Request] attribute.
  * A response is any concrete class extending Response or using IsResponsable.
- * Every concrete class found is kept as well, whether or not it is either of
- * those: that list is how the generator works out which classes implement an
- * interface-typed property's contract.
  *
- * Locating the classes on disk is delegated to spatie/php-structure-discoverer;
- * this class owns only the request/response classification.
+ * spatie/php-structure-discoverer finds the classes on disk; this class only
+ * classifies them.
  */
 class RomaClassDiscovery
 {
@@ -36,7 +33,6 @@ class RomaClassDiscovery
 
         $requests = [];
         $responses = [];
-        $concrete = [];
 
         /** @var list<class-string> $classes */
         $classes = Discover::in(...$directories)->classes()->get();
@@ -46,8 +42,6 @@ class RomaClassDiscovery
                 continue;
             }
 
-            $concrete[] = $class;
-
             if ($this->isRequest($class)) {
                 $requests[] = $class;
             } elseif ($this->isResponse($class)) {
@@ -55,7 +49,7 @@ class RomaClassDiscovery
             }
         }
 
-        return new DiscoveredClasses($requests, $responses, $concrete);
+        return new DiscoveredClasses($requests, $responses);
     }
 
     /**

@@ -4,7 +4,6 @@ namespace BYanelli\Roma\TypeScript;
 
 use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
 use BYanelli\Roma\Data\Property as PhpProperty;
-use BYanelli\Roma\Discovery\DiscoveredClasses;
 use BYanelli\Roma\Request\RequestSourcePolicy;
 use BYanelli\Roma\Request\Sources;
 use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
@@ -31,11 +30,6 @@ use BYanelli\Roma\TypeScript\Types\Record_;
 readonly class TypeScriptGenerator
 {
     /**
-     * `$discovered` is what the scan of the configured directories turned up.
-     * It is only consulted for interface- and abstract-class-typed properties,
-     * whose implementations it names; the default finds none, so a generator
-     * built from explicit class lists alone still works.
-     *
      * @param  list<class-string>  $requests
      * @param  list<class-string>  $responses
      */
@@ -43,7 +37,6 @@ readonly class TypeScriptGenerator
         private array $requests = [],
         private array $responses = [],
         private TypeScriptRenderer $renderer = new TypeScriptRenderer,
-        private DiscoveredClasses $discovered = new DiscoveredClasses,
     ) {}
 
     public function generate(): string
@@ -114,7 +107,7 @@ readonly class TypeScriptGenerator
         // interfaces don't depend on sources.
         $policy = new RequestSourcePolicy;
         $phpClassDefinitionBuilder = new PhpClassDefinitionBuilder($policy);
-        $tsInterfaceBuilder = new InterfaceBuilder($policy, $this->discovered->implementationsOf(...));
+        $tsInterfaceBuilder = new InterfaceBuilder;
 
         $interfaces = [];
 

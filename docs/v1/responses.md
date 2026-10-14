@@ -53,8 +53,7 @@ becomes its string.
 
 Conversion works on the value, not the declared type, so a property typed as an interface
 or an abstract class serializes whatever concrete object it holds, exactly as a nested
-response object does. (The generated TypeScript describes those implementations as a
-union, found by scanning — see [TypeScript generation](/docs/roma/v1/typescript).)
+response object does.
 
 `Response` implements `JsonSerializable`, and `IsArrayable` provides `jsonSerialize()`, so
 `json_encode($response)` produces the same output as `toArray()`.

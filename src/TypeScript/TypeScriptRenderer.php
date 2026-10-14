@@ -22,8 +22,6 @@ readonly class TypeScriptRenderer
             $interface->properties,
         );
 
-        // A contract with no known implementations has no fields; render it as
-        // an empty body rather than a body containing a blank line.
         if ($properties === []) {
             return "export interface $name {}";
         }
@@ -59,7 +57,6 @@ readonly class TypeScriptRenderer
             $type instanceof Types\Record_ => 'Record<'.$this->renderType($type->keyType).', '.$this->renderType($type->valueType).'>',
             $type instanceof Types\Object_ => $this->renderObjectType($type),
             $type instanceof Interface_ => $this->namesBag->nameFor($type),
-            $type instanceof Types\Union => $this->renderUnionType($type),
             $type instanceof Types\File => 'Blob',
             default => 'unknown', // Mixed_ and any future type
         };
@@ -79,15 +76,6 @@ readonly class TypeScriptRenderer
         $properties = array_map(fn (Property $p) => rtrim($this->renderProperty($p), ';'), $type->properties);
 
         return '{ '.implode('; ', $properties).' }';
-    }
-
-    /**
-     * A union of interfaces reads as `A | B`; the members are already sorted by
-     * name, and each is emitted as its own interface.
-     */
-    private function renderUnionType(Types\Union $type): string
-    {
-        return implode(' | ', array_map($this->namesBag->nameFor(...), $type->members));
     }
 
     /**
