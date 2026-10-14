@@ -61,7 +61,8 @@ class CreateContactController {
   credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
   / `Scheme` / `ContentType` metadata enums.
 - **Response objects.** Return a typed `Response` object and Roma serializes it to JSON,
-  with properties liftable to the status code or headers.
+  with properties liftable to the status code or headers. The `Roma` facade serializes any
+  object, with profiles for responses, outgoing requests and storage.
 - **TypeScript generation.** `php artisan roma:typescript` emits an interface for every
   request and response — one source of truth for your frontend (great with Inertia).
 - **Laravel Precognition.** Works out of the box.

@@ -44,12 +44,20 @@ full HTTP response, or `IsArrayable` alone for a nested value that only needs to
 
 Property values are converted to their JSON form on the way out, recursively — backed enums
 become `{ name, value }`, unit enums their name, `DateTimeInterface` an ISO-8601 string,
-nested response objects and arrays recurse element by element.
+nested objects and arrays recurse element by element.
+
+A nested object doesn't need the `IsArrayable` trait: a plain class with public properties
+is serialized the same way. A third-party `Arrayable` is converted with its own `toArray()`,
+a `JsonSerializable` object is left for `json_encode`, and any other `Stringable` object
+becomes its string.
 
 Conversion works on the value, not the declared type, so a property typed as an interface
 or an abstract class serializes whatever concrete object it holds, exactly as a nested
 response object does. (The generated TypeScript describes those implementations as a
 union, found by scanning — see [TypeScript generation](/docs/roma/v1/typescript).)
+
+`Response` implements `JsonSerializable`, and `IsArrayable` provides `jsonSerialize()`, so
+`json_encode($response)` produces the same output as `toArray()`.
 
 ## Omit unset properties with `#[Optional]`
 
@@ -92,6 +100,59 @@ class CreatedResponse extends Response {
 }
 ```
 
-Without a `#[Status]` property the response defaults to 200. Date formatting can be
-customized per property with `#[DateFormat]`. For values computed at runtime, override the
-`responseStatus()`, `responseHeaders()`, or `dateFormat()` methods.
+Without a `#[Status]` property the response defaults to 200. For values computed at
+runtime, override the public `responseStatus()` or `responseHeaders()` methods. Both receive
+the serialized object, which contains the attribute values:
+
+```php
+use BYanelli\Roma\Serialization\Serialized;
+
+class TeapotResponse extends Response {
+    public function responseStatus(Serialized $serialized): int {
+        return 418;
+    }
+}
+```
+
+## Date formats
+
+Dates use `DateTimeInterface::ATOM` unless the property has `#[DateFormat('Y-m-d')]`. To
+choose a format at runtime, implement `CustomizesSerialization`. Returning null falls back to
+`#[DateFormat]` or the default:
+
+```php
+use BYanelli\Roma\Serialization\CustomizesSerialization;
+use BYanelli\Roma\Serialization\Profile;
+
+class EventResponse extends Response implements CustomizesSerialization {
+    public function __construct(public DateTimeImmutable $startsAt, public bool $allDay) {}
+
+    public function dateFormat(ReflectionProperty $property, Profile $profile): ?string {
+        return $this->allDay ? 'Y-m-d' : null;
+    }
+}
+```
+
+## Serializing without a response
+
+The `Roma` facade serializes any object, with or without the traits:
+
+```php
+use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Serialization\Profile;
+
+Roma::toArray($object);                      // the body, as a response would send it
+Roma::serialize($object);                    // body, headers, status, query and path
+Roma::toArray($object, Profile::storage());  // output ObjectMapper can map back
+```
+
+A `Profile` sets the enum style, the default date format and which destinations are allowed:
+
+| Profile                    | Backed enums       | Destinations                 |
+| -------------------------- | ------------------ | ---------------------------- |
+| `Profile::response()`      | `{ name, value }`  | body, header, status         |
+| `Profile::clientRequest()` | value              | body, query, path, header    |
+| `Profile::storage()`       | value              | body                         |
+
+The profile applies to nested objects too. A property whose destination the profile doesn't
+allow, such as `#[Status]` under `Profile::storage()`, throws.

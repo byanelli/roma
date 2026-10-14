@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Response;
 
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Responsable;
+use JsonSerializable;
 
 /**
  * Base class for response objects: define typed public properties, return it
@@ -13,7 +14,7 @@ use Illuminate\Contracts\Support\Responsable;
  *
  * @implements Arrayable<string, mixed>
  */
-abstract class Response implements Arrayable, Responsable
+abstract class Response implements Arrayable, JsonSerializable, Responsable
 {
     use IsResponsable;
 }

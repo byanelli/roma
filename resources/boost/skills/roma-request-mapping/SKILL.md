@@ -120,7 +120,11 @@ Extend `Response`, declare typed properties, return it — Roma serializes to JS
 (recursively; enums → `{name,value}` / name, dates → ISO-8601). A property has no implicit
 default: unset throws unless marked `#[Optional]` (omit) or given a default. Lift a property
 out of the body with `#[Status]` (int → HTTP status) or `#[Header('Name')]`. Use
-`IsResponsable` / `IsArrayable` traits when the class can't extend `Response`.
+`IsResponsable` / `IsArrayable` traits when the class can't extend `Response`. Nested plain
+objects don't need the traits. For runtime values, override the public
+`responseStatus(Serialized $serialized)` / `responseHeaders(Serialized $serialized)`, or
+implement `CustomizesSerialization` for date formats. `Roma::toArray($obj, $profile)` /
+`Roma::serialize()` serialize any object outside a response.
 
 ## TypeScript
 

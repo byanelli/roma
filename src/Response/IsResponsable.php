@@ -2,11 +2,9 @@
 
 namespace BYanelli\Roma\Response;
 
-use BYanelli\Roma\Response\Attributes\Header;
-use BYanelli\Roma\Response\Attributes\Status;
+use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Serialization\Serialized;
 use Illuminate\Http\JsonResponse;
-use ReflectionObject;
-use ReflectionProperty;
 
 /**
  * Turns a response object into a JSON response of its array form. Use on a
@@ -18,49 +16,26 @@ trait IsResponsable
 
     public function toResponse(mixed $request): JsonResponse
     {
-        return new JsonResponse($this->toArray(), $this->responseStatus(), $this->responseHeaders());
+        $serialized = Roma::serialize($this);
+
+        return new JsonResponse($serialized->body, $this->responseStatus($serialized), $this->responseHeaders($serialized));
     }
 
     /**
-     * The HTTP status code for the response. Defaults to the value of the
-     * property marked #[Status], else 200. Override for a dynamic status.
+     * The value of the #[Status] property, else 200.
      */
-    protected function responseStatus(): int
+    public function responseStatus(Serialized $serialized): int
     {
-        foreach (new ReflectionObject($this)->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            if ($property->getAttributes(Status::class) !== []) {
-                $this->requireInitialized($property);
-
-                return (int) $property->getValue($this);
-            }
-        }
-
-        return 200;
+        return $serialized->status ?? 200;
     }
 
     /**
-     * The response headers, collected from properties marked #[Header] using
-     * each attribute's name and the property's value. Override for dynamic
-     * headers.
+     * The values of the #[Header] properties, keyed by header name.
      *
      * @return array<string, string>
      */
-    protected function responseHeaders(): array
+    public function responseHeaders(Serialized $serialized): array
     {
-        $headers = [];
-
-        foreach (new ReflectionObject($this)->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
-            $attributes = $property->getAttributes(Header::class);
-
-            if ($attributes === []) {
-                continue;
-            }
-
-            $this->requireInitialized($property);
-
-            $headers[$attributes[0]->newInstance()->name] = (string) $property->getValue($this);
-        }
-
-        return $headers;
+        return $serialized->headers;
     }
 }

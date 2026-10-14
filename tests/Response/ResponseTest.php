@@ -8,6 +8,7 @@ use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\IsArrayable;
 use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Serialization\Serialized;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -189,7 +190,7 @@ class TestDynamicStatusResponse extends Response
 {
     public string $name = 'Bill';
 
-    protected function responseStatus(): int
+    public function responseStatus(Serialized $serialized): int
     {
         return 418;
     }

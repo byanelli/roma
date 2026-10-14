@@ -11,6 +11,17 @@ All notable changes to `roma` will be documented in this file.
   `RulesAttribute`, etc.) moved to `BYanelli\Roma\Data\Attributes`, `ParsesStringValue` and
   `HasValidationRules` to `BYanelli\Roma\Data\Values`, and `NormalizesRawValue` to
   `BYanelli\Roma\Data\Enums`. The public attributes are unchanged.
+- Serialization moves out of `IsArrayable` into a `Serializer` service behind the `Roma`
+  facade: `Roma::serialize($obj, $profile)` returns a `Serialized` (body, headers, status,
+  query, path) and `Roma::toArray()` returns the body. A `Profile` sets the enum style, the
+  default date format, the query boolean style and the allowed destinations;
+  `Profile::response()` is the default and matches the previous output, while
+  `clientRequest()` and `storage()` write backed enums as their value. The profile applies
+  to nested objects, and nested plain objects no longer need the trait. A destination
+  attribute the profile doesn't allow throws. `Response` implements `JsonSerializable`.
+  Breaking: `responseStatus()` and `responseHeaders()` are public and take the `Serialized`
+  result, and `CustomizesSerialization::dateFormat()` replaces the protected
+  `IsArrayable::dateFormat()` override.
 - `list<T>` array element types in `@var` and `@param`, alongside `array<T>`. A `list<T>`
   property also validates with Laravel's `list` rule, so input with non-sequential keys is
   rejected.

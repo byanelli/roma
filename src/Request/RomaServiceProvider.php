@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Request;
 
 use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Serialization\Serializer;
 use BYanelli\Roma\TypeScript\RomaTypeScriptCommand;
 use Illuminate\Contracts\Container\Container;
 use Spatie\LaravelPackageTools\Package;
@@ -18,6 +19,7 @@ class RomaServiceProvider extends PackageServiceProvider
 
         $this->app->bind(Contracts\RequestResolver::class, fn () => $this->app->make(RequestResolver::class));
         $this->app->bind(Contracts\RequestMapper::class, fn () => $this->app->make(RequestMapper::class));
+        $this->app->singleton(Serializer::class);
     }
 
     public function packageBooted(): void
