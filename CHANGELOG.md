@@ -50,6 +50,11 @@ All notable changes to `roma` will be documented in this file.
 - A validation message for an array element shows its concrete key, e.g. "The
   data.prices.m.2025-01-01.input field must be a number." instead of `data.prices.*.*.input`.
   A precognitive response shows the bare key (`codes.1`).
+- `IsArrayable::toArray()` takes an optional `Profile`. A nested object whose class
+  declares its own `toArray()` is serialized by calling it with the active profile, and the
+  result is normalized with that profile; an override without the parameter also works. The
+  object passed to `Serializer::toArray()` or `serialize()` is always serialized by its
+  properties.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's

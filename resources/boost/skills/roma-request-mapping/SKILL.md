@@ -133,7 +133,9 @@ out of the body with `#[Status]` (int → HTTP status) or `#[Header('Name')]`. U
 `IsResponsable` / `IsArrayable` traits when the class can't extend `Response`. Nested plain
 objects don't need the traits. For runtime values, override the public
 `responseStatus(Serialized $serialized)` / `responseHeaders(Serialized $serialized)`, or
-implement `CustomizesSerialization` for date formats. `Serializer::toArray($obj, $profile)` /
+implement `CustomizesSerialization` for date formats. Prefer get-only hooked properties for
+computed values (they reach TypeScript); an overridden `toArray(?Profile $profile = null)` is
+the escape hatch and should pass `$profile` to `Serializer::toArray($this, $profile)`. `Serializer::toArray($obj, $profile)` /
 `Serializer::serialize()` (facade `BYanelli\Roma\Facades\Serializer`) serialize any object
 outside a response.
 

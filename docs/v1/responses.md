@@ -117,6 +117,46 @@ class TeapotResponse extends Response {
 }
 ```
 
+## Computed values
+
+For a value derived from other properties, use a get-only hooked property. It is serialized
+like any other property and appears in the generated TypeScript:
+
+```php
+class UserResponse extends Response {
+    public string $fullName { get => "{$this->first} {$this->last}"; }
+
+    public function __construct(public string $first, public string $last) {}
+}
+```
+
+Overriding `toArray()` is the escape hatch for output the properties can't describe. Keys it
+adds are not in the generated TypeScript. When the object is nested in another, the
+serializer calls the override with its profile and normalizes the result with that profile,
+so pass the profile on to keep the caller's enum style and date format:
+
+```php
+use BYanelli\Roma\Facades\Serializer;
+use BYanelli\Roma\Response\IsArrayable;
+use BYanelli\Roma\Serialization\Profile;
+use Illuminate\Contracts\Support\Arrayable;
+
+class Swatch implements Arrayable {
+    use IsArrayable;
+
+    public function __construct(public Color $color) {}
+
+    public function toArray(?Profile $profile = null): array {
+        return [...Serializer::toArray($this, $profile), 'hex' => $this->color->hex()];
+    }
+}
+```
+
+An override declared as `toArray(): array` also works; it is called with an argument it
+ignores. `Serializer::toArray($object)` and `Serializer::serialize($object)` always serialize
+the object they are given by its properties, which is why the override can call them without
+recursing, and why a `Response`'s HTTP body ignores its own override.
+
 ## Date formats
 
 Dates use `DateTimeInterface::ATOM` unless the property has `#[DateFormat('Y-m-d')]`. To

@@ -18,6 +18,7 @@ use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
@@ -44,6 +45,11 @@ class Serializer
      * @var array<class-string, bool>
      */
     private array $usesTrait = [];
+
+    /**
+     * @var array<class-string, bool>
+     */
+    private array $overridesToArray = [];
 
     public function serialize(object $object, ?Profile $profile = null): Serialized
     {
@@ -148,6 +154,7 @@ class Serializer
             $value instanceof DateTimeInterface => $value->format($dateFormat),
             is_array($value) => array_map(fn (mixed $item): mixed => $this->normalize($item, $profile, $dateFormat), $value),
             ! is_object($value) => $value,
+            $this->usesTrait($value) && $this->overridesToArray($value) => $this->normalize($this->ownToArray($value, $profile), $profile, $dateFormat),
             $this->usesTrait($value) => $this->body($value, $profile),
             $value instanceof Arrayable => $this->normalize($value->toArray(), $profile, $dateFormat),
             // These already define their JSON form.
@@ -236,6 +243,31 @@ class Serializer
             is_array($value) => array_map(fn (mixed $item): mixed => $this->queryValue($item, $profile), $value),
             default => $value,
         };
+    }
+
+    /**
+     * Whether the class declares its own toArray() rather than using the trait's.
+     */
+    private function overridesToArray(object $object): bool
+    {
+        return $this->overridesToArray[$object::class] ??= (function () use ($object): bool {
+            $method = new ReflectionMethod($object, 'toArray');
+            $trait = new ReflectionMethod(IsArrayable::class, 'toArray');
+
+            return $method->getFileName() !== $trait->getFileName() || $method->getStartLine() !== $trait->getStartLine();
+        })();
+    }
+
+    /**
+     * An override declared without the profile parameter ignores the extra argument.
+     */
+    private function ownToArray(object $object, Profile $profile): mixed
+    {
+        if (! method_exists($object, 'toArray')) {
+            throw new RuntimeException($object::class.' has no toArray() method.');
+        }
+
+        return $object->toArray($profile);
     }
 
     private function usesTrait(object $object): bool
