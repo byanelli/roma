@@ -11,7 +11,7 @@ use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
-use BYanelli\Roma\Data\Sources\Property as PropertySource;
+use BYanelli\Roma\Data\Sources\Nested;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use Closure;
@@ -25,12 +25,22 @@ use ReflectionUnionType;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 
-readonly class ClassDefinitionBuilder
+class ClassDefinitionBuilder
 {
+    /**
+     * @var array<string, array<class-string, Class_>>
+     */
+    private static array $cache = [];
+
+    /**
+     * `$nested` builds the definitions of nested objects, whose property sources are relative
+     * to the object, into `$definitions`.
+     */
     public function __construct(
-        private SourcePolicy $policy,
-        private ?Source $parentSource = null,
-        private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser,
+        private readonly SourcePolicy $policy,
+        private readonly PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser,
+        private readonly NestedDefinitions $definitions = new NestedDefinitions,
+        private readonly bool $nested = false,
     ) {}
 
     /**
@@ -147,7 +157,7 @@ readonly class ClassDefinitionBuilder
         // property inside one cannot declare its own source: it would silently
         // relocate the property and fail validation as "required". To override
         // a nested property's key (e.g. a literal dotted key) use #[Key] instead.
-        if ($this->parentSource !== null
+        if ($this->nested
             && ($this->hasSourceAttribute($attributes) || $this->hasSourceAttribute($typeAttributes))) {
             throw new RuntimeException(
                 "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested object and "
@@ -163,7 +173,7 @@ readonly class ClassDefinitionBuilder
             fn (object $attr) => $attr instanceof ExplicitKeyAttribute && ! $attr instanceof SourceAttribute
         );
 
-        if ($this->parentSource === null && $keyWithoutSource) {
+        if (! $this->nested && $keyWithoutSource) {
             throw new RuntimeException(
                 "Roma property \"{$declaringClass}::\${$obj->getName()}\" is on a top-level class, where "
                 .'#[Key] does not apply; pass the key to the source attribute instead, e.g. #[Input(\'a.b\')].'
@@ -172,7 +182,7 @@ readonly class ClassDefinitionBuilder
 
         // A type-implied source would replace the parent's key path, so the
         // property would receive the whole slice of its parent's data.
-        if ($this->parentSource !== null && $typeSource !== null) {
+        if ($this->nested && $typeSource !== null) {
             throw new RuntimeException(
                 "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested object, but its "
                 ."type {$typeName} always maps from the \"{$typeSource->getKey()}\" source, which is not supported "
@@ -184,9 +194,10 @@ readonly class ClassDefinitionBuilder
             $attributes = [...$attributes, ...$typeAttributes];
         }
 
-        $parent = $typeSource ?? $this->parentSource ?? $this->getSourceFromAttributes($attributes);
-
-        if ($this->parentSource === null) {
+        if ($this->nested) {
+            $parent = new Nested;
+        } else {
+            $parent = $typeSource ?? $this->getSourceFromAttributes($attributes);
             $this->assertSourceAllowed($parent, "property \"{$declaringClass}::\${$obj->getName()}\"");
         }
 
@@ -196,7 +207,7 @@ readonly class ClassDefinitionBuilder
             name: $obj->getName(),
             key: $key,
             wireKey: $this->getWireKey($attributes) ?: $key,
-            type: $this->getTypeFromReflectionObject($parent, $key, $obj, $this->getDiscriminated($attributes)),
+            type: $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes)),
             role: $this->getRole($obj),
             default: $this->getDefault($obj),
             parent: $parent,
@@ -303,23 +314,19 @@ readonly class ClassDefinitionBuilder
     }
 
     private function getArrayType(
-        Source $parent,
-        string $key,
         ReflectionParameter|ReflectionProperty $obj,
         ?Discriminated $discriminated,
     ): Types\Array_|Types\Shape {
         return $this->phpDocTypeParser->getArrayType(
             $obj,
             fn (array $names) => count($names) === 1
-                ? $this->getTypeByName($parent, $key, $obj, $names[0], $discriminated)
-                : $this->getUnionType($parent, $key, $obj, $names, $discriminated)
+                ? $this->getTypeByName($obj, $names[0], $discriminated)
+                : $this->getUnionType($obj, $names, $discriminated)
                     ?? throw new RuntimeException('Unsupported array element type: '.implode('|', $names)),
         );
     }
 
     private function getTypeByName(
-        Source $parent,
-        string $key,
         ReflectionParameter|ReflectionProperty $obj,
         string $name,
         ?Discriminated $discriminated = null,
@@ -330,31 +337,29 @@ readonly class ClassDefinitionBuilder
             'bool' => new Types\Boolean,
             'float' => new Types\Float_,
             'mixed' => new Mixed_,
-            'array' => $this->getArrayType($parent, $key, $obj, $discriminated),
+            'array' => $this->getArrayType($obj, $discriminated),
             UploadedFile::class, SymfonyUploadedFile::class => new Types\File,
             default => match (true) {
                 // Any DateTimeInterface implementor is a date. The bare interface
                 // has no concrete target class; a concrete class carries its own.
                 is_a($name, \DateTimeInterface::class, true) => new Types\Date(interface_exists($name) ? null : $name),
                 enum_exists($name) => new Types\Enum($name),
-                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => $this->getContractType($parent, $key, $obj, $name, $discriminated),
-                class_exists($name) => $this->nestedBuilder($parent, $key)->buildClassDefinition($name),
+                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => $this->getContractType($obj, $name, $discriminated),
+                class_exists($name) => $this->nestedBuilder()->buildClassDefinition($name),
                 default => throw new RuntimeException("Unsupported type $name"),
             },
         };
     }
 
-    private function nestedBuilder(Source $parent, string $key): self
+    private function nestedBuilder(): self
     {
-        return new ClassDefinitionBuilder($this->policy, new PropertySource($parent, $key), $this->phpDocTypeParser);
+        return new self($this->policy, $this->phpDocTypeParser, $this->definitions, nested: true);
     }
 
     /**
      * @param  class-string  $contract
      */
     private function getContractType(
-        Source $parent,
-        string $key,
         ReflectionParameter|ReflectionProperty $obj,
         string $contract,
         ?Discriminated $discriminated,
@@ -362,7 +367,7 @@ readonly class ClassDefinitionBuilder
         if ($discriminated !== null) {
             $discriminator = Discriminator::fromAttribute($discriminated, $this->subject($obj), $contract);
 
-            return $this->buildUnion($parent, $key, $discriminator, null);
+            return $this->buildUnion($discriminator, null);
         }
 
         $classLevel = Discriminator::attributeOf($contract) ?? throw new RuntimeException(
@@ -370,7 +375,7 @@ readonly class ClassDefinitionBuilder
             ."Add #[Discriminated] to {$contract} or to the property, or type the property with a concrete class."
         );
 
-        return $this->buildUnion($parent, $key, Discriminator::fromAttribute($classLevel, $contract, $contract), $contract);
+        return $this->buildUnion(Discriminator::fromAttribute($classLevel, $contract, $contract), $contract);
     }
 
     /**
@@ -380,8 +385,6 @@ readonly class ClassDefinitionBuilder
      * @param  list<string>  $names
      */
     private function getUnionType(
-        Source $parent,
-        string $key,
         ReflectionParameter|ReflectionProperty $obj,
         array $names,
         ?Discriminated $discriminated,
@@ -401,7 +404,7 @@ readonly class ClassDefinitionBuilder
             .'Add #[Discriminated(['.implode(', ', array_map(fn (string $c) => class_basename($c).'::class', $names)).'])] to the property.'
         );
 
-        return $this->buildUnion($parent, $key, Discriminator::fromAttribute($discriminated, $this->subject($obj), union: $classes), null);
+        return $this->buildUnion(Discriminator::fromAttribute($discriminated, $this->subject($obj), union: $classes), null);
     }
 
     /**
@@ -418,24 +421,25 @@ readonly class ClassDefinitionBuilder
     /**
      * @param  ?class-string  $contract
      */
-    private function buildUnion(Source $parent, string $key, Discriminator $discriminator, ?string $contract): Types\Union
+    private function buildUnion(Discriminator $discriminator, ?string $contract): Types\Union
     {
-        $builder = $this->nestedBuilder($parent, $key);
+        $builder = $this->nestedBuilder();
         $members = [];
 
         foreach ($discriminator->classes as $value => $class) {
-            $definition = $builder->buildClassDefinition($class);
+            $members[$value] = $builder->buildClassDefinition($class);
 
-            foreach ($definition->properties as $property) {
-                if (in_array($discriminator->key, [$property->source->getOwnKey(), $property->wireKey], true)) {
-                    throw new RuntimeException(
-                        'Roma property "'.class_basename($class)."::\${$property->name}\" uses the key \"{$discriminator->key}\", "
-                        .'which is the discriminator key of a union the class belongs to.'
-                    );
+            // A member that contains this union is still being built.
+            $this->definitions->whenBuilt($class, function (Class_ $definition) use ($class, $discriminator): void {
+                foreach ($definition->properties as $property) {
+                    if (in_array($discriminator->key, [$property->source->getOwnKey(), $property->wireKey], true)) {
+                        throw new RuntimeException(
+                            'Roma property "'.class_basename($class)."::\${$property->name}\" uses the key \"{$discriminator->key}\", "
+                            .'which is the discriminator key of a union the class belongs to.'
+                        );
+                    }
                 }
-            }
-
-            $members[$value] = $definition;
+            });
         }
 
         return new Types\Union($discriminator->key, $members, $contract);
@@ -447,16 +451,14 @@ readonly class ClassDefinitionBuilder
     }
 
     public function getTypeFromReflectionObject(
-        Source $parent,
-        string $key,
         ReflectionParameter|ReflectionProperty $obj,
         ?Discriminated $discriminated = null,
     ): Type {
         $declared = $obj->getType();
 
         $type = match (true) {
-            $declared instanceof ReflectionNamedType => $this->getTypeByName($parent, $key, $obj, $declared->getName(), $discriminated),
-            $declared instanceof ReflectionUnionType => $this->getUnionType($parent, $key, $obj, $this->unionMemberNames($declared), $discriminated) ?? new Mixed_,
+            $declared instanceof ReflectionNamedType => $this->getTypeByName($obj, $declared->getName(), $discriminated),
+            $declared instanceof ReflectionUnionType => $this->getUnionType($obj, $this->unionMemberNames($declared), $discriminated) ?? new Mixed_,
             default => new Mixed_,
         };
 
@@ -504,6 +506,9 @@ readonly class ClassDefinitionBuilder
     }
 
     /**
+     * A top-level definition is cached per class and policy. A nested definition doesn't depend
+     * on where the object appears, so one is built per class within a top-level build.
+     *
      * @param  class-string|ReflectionClass<object>  $class
      */
     public function buildClassDefinition(string|ReflectionClass $class): Class_
@@ -512,37 +517,26 @@ readonly class ClassDefinitionBuilder
             $class = new ReflectionClass($class);
         }
 
-        $className = $class->getName();
-
-        // Tier-1 cache: a top-level definition is reflected and PHPDoc-parsed
-        // once per class and policy per process. Only top-level builds are
-        // cached — a nested definition bakes its parent's key path into every
-        // property source, so it is only valid inside that parent tree (and is
-        // cached as part of it). Class_ definitions are immutable, so reuse is
-        // safe. (A method-static, not a static property, because a readonly
-        // class may not declare one.)
-        /** @var array<string, array<class-string, Class_>> $cache */
-        static $cache = [];
-
-        $policyKey = $this->policy->cacheKey();
-
-        if ($this->parentSource === null && isset($cache[$policyKey][$className])) {
-            return $cache[$policyKey][$className];
+        if ($this->nested) {
+            return $this->definitions->get($class->getName(), fn () => $this->define($class));
         }
 
-        $definition = new Class_(
-            class: $className,
+        return self::$cache[$this->policy->cacheKey()][$class->getName()]
+            ??= new self($this->policy, $this->phpDocTypeParser, new NestedDefinitions)->define($class);
+    }
+
+    /**
+     * @param  ReflectionClass<object>  $class
+     */
+    private function define(ReflectionClass $class): Class_
+    {
+        return new Class_(
+            class: $class->getName(),
             properties: [
                 ...$this->getConstructorParameterAndClassProperties($class),
                 ...$this->getValidationOnlyProperties($class),
             ],
         );
-
-        if ($this->parentSource === null) {
-            $cache[$policyKey][$className] = $definition;
-        }
-
-        return $definition;
     }
 
     /**

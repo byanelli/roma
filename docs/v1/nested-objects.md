@@ -50,6 +50,34 @@ readonly class OrderRequest {
 }
 ```
 
+## Classes that contain themselves
+
+A nested class may contain itself, directly or through other classes, for trees such as
+comment threads, a parent chain or folders of discriminated entries:
+
+```php
+readonly class Comment {
+    /**
+     * @param  list<Comment>  $replies
+     */
+    public function __construct(
+        public string $body,
+        public array $replies = [],
+    ) {}
+}
+
+readonly class ThreadRequest {
+    /**
+     * @param  list<Comment>  $replies
+     */
+    public function __construct(public array $replies) {}
+}
+```
+
+Validation rules for such a structure are built from the data, as deep as it goes, so an
+error keeps its full key: `input.replies.0.replies.1.body`. TypeScript refers to the
+interface by name (`replies?: Comment[]`).
+
 ## Overriding a nested key with `#[Key]`
 
 To override a nested property's key — for example when the client field name contains a

@@ -62,6 +62,23 @@ readonly class InterfaceBuilder
         ?string $name = null,
         bool $stringValued = false,
     ): Interface_ {
+        return $this->interface($class, $isPropertyOptional, $includeProperty, $name, $stringValued, []);
+    }
+
+    /**
+     * @param  Closure(PhpProperty): bool  $isPropertyOptional
+     * @param  ?Closure(PhpProperty): bool  $includeProperty
+     * @param  array<class-string, true>  $ancestors  the nested classes being built, which a class
+     *                                                that contains itself refers to by name
+     */
+    private function interface(
+        Class_ $class,
+        Closure $isPropertyOptional,
+        ?Closure $includeProperty,
+        ?string $name,
+        bool $stringValued,
+        array $ancestors,
+    ): Interface_ {
         $properties = [];
 
         foreach ($class->properties as $property) {
@@ -75,7 +92,7 @@ readonly class InterfaceBuilder
 
             $properties[] = new Property(
                 key: $property->wireKey,
-                type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional),
+                type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional, $ancestors),
                 optional: $isPropertyOptional($property),
                 nullable: $property->nullable,
             );
@@ -90,8 +107,9 @@ readonly class InterfaceBuilder
 
     /**
      * @param  Closure(PhpProperty): bool  $optional
+     * @param  array<class-string, true>  $ancestors
      */
-    private function buildType(PhpType $type, Closure $optional): Type
+    private function buildType(PhpType $type, Closure $optional, array $ancestors): Type
     {
         return match (true) {
             // A value object that parses from a single string (e.g. an
@@ -102,7 +120,7 @@ readonly class InterfaceBuilder
             $type instanceof Class_ && $type->parsesStringValue() => new String_,
             // A nested object emits all of its properties (no top-level filter)
             // but inherits the same optionality policy as its parent.
-            $type instanceof Class_ => $this->buildInterface($type, $optional),
+            $type instanceof Class_ => $this->nested($type, $optional, $ancestors),
             $type instanceof PhpString => new String_,
             $type instanceof PhpInteger, $type instanceof PhpFloat => new Number,
             $type instanceof PhpBoolean => new Boolean,
@@ -110,13 +128,13 @@ readonly class InterfaceBuilder
             $type instanceof PhpEnum => new Enum($type->class),
             $type instanceof PhpArray && $type->keyType !== null => new Record_(
                 $type->keyType instanceof PhpInteger ? new Number : new String_,
-                $this->buildType($type->memberType, $optional),
+                $this->buildType($type->memberType, $optional, $ancestors),
             ),
-            $type instanceof PhpArray => new Array_($this->buildType($type->memberType, $optional)),
+            $type instanceof PhpArray => new Array_($this->buildType($type->memberType, $optional, $ancestors)),
             $type instanceof PhpShape => new Object_(array_map(
                 fn (PhpShapeItem $item) => new Property(
                     key: $item->key,
-                    type: $this->buildType($item->type, $optional),
+                    type: $this->buildType($item->type, $optional, $ancestors),
                     optional: $item->optional,
                     nullable: $item->nullable,
                 ),
@@ -124,12 +142,27 @@ readonly class InterfaceBuilder
             )),
             $type instanceof PhpUnion => new Union(
                 $type->key,
-                array_map(fn (Class_ $member) => $this->buildInterface($member, $optional), $type->members),
+                array_map(fn (Class_ $member) => $this->nested($member, $optional, $ancestors), $type->members),
                 $type->contract,
             ),
             $type instanceof PhpFile => new File,
             $type instanceof PhpMixed => new Mixed_,
             default => new Mixed_,
         };
+    }
+
+    /**
+     * A class that is already being built becomes a reference to its interface by name.
+     *
+     * @param  Closure(PhpProperty): bool  $optional
+     * @param  array<class-string, true>  $ancestors
+     */
+    private function nested(Class_ $class, Closure $optional, array $ancestors): Interface_
+    {
+        if (isset($ancestors[$class->class])) {
+            return new Interface_(TypeScriptName::for($class->class), [], $class->class);
+        }
+
+        return $this->interface($class, $optional, null, null, false, [...$ancestors, $class->class => true]);
     }
 }

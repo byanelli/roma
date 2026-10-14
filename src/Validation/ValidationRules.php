@@ -40,13 +40,25 @@ readonly class ValidationRules
     private array $attributeNames;
 
     /**
+     * Whether the rules for a class's members depend on the data, keyed by class.
+     *
+     * @var array<class-string, bool>
+     */
+    private array $dataDependent;
+
+    /**
      * `$data` is the coerced data being validated. The rules for a union depend on its
-     * discriminator, so an array that contains a union gets rules per element.
+     * discriminator, and the rules for a class that contains itself are only as deep as the
+     * data, so an array that contains either gets rules per element.
      *
      * @param  array<array-key, mixed>  $data
      */
     public function __construct(Class_ $class, private array $data)
     {
+        $dataDependent = [];
+        $this->findDataDependent($class, [], $dataDependent);
+        $this->dataDependent = $dataDependent;
+
         $rules = [];
         $names = [];
 
@@ -202,10 +214,11 @@ readonly class ValidationRules
         ];
 
         return match (true) {
+            $type instanceof Class_ && $this->dependsOnData($type) && ! is_array($this->valueAt($keySegments)) => [$entry],
             $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $keySegments, $name)],
             $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $keySegments, $name)],
             $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $keySegments, $name)],
-            $type instanceof Types\Array_ && $this->containsUnion($type->memberType) => [$entry, ...$this->elementEntries($type, $keySegments, $name)],
+            $type instanceof Types\Array_ && $this->dependsOnData($type->memberType) => [$entry, ...$this->elementEntries($type, $keySegments, $name)],
             $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, [...$keySegments, '*'], "$name.*", [])],
             default => [$entry],
         };
@@ -255,15 +268,71 @@ readonly class ValidationRules
         return $entries;
     }
 
-    private function containsUnion(Type $type): bool
+    /**
+     * Whether `$type` contains a union or a class that contains itself.
+     */
+    private function dependsOnData(Type $type): bool
     {
         return match (true) {
             $type instanceof Types\Union => true,
-            $type instanceof Types\Array_ => $this->containsUnion($type->memberType),
-            $type instanceof Types\Shape => collect($type->items)->contains(fn (Types\ShapeItem $item) => $this->containsUnion($item->type)),
-            $type instanceof Class_ => collect($type->properties)->contains(fn (Property $property) => $this->containsUnion($property->type)),
+            $type instanceof Types\Array_ => $this->dependsOnData($type->memberType),
+            $type instanceof Types\Shape => collect($type->items)->contains(fn (Types\ShapeItem $item) => $this->dependsOnData($item->type)),
+            $type instanceof Class_ => $this->dataDependent[$type->class] ?? false,
             default => false,
         };
+    }
+
+    /**
+     * Fills `$found` for every class `$type` reaches. A class reached again while its own
+     * members are being visited contains itself.
+     *
+     * @param  array<class-string, true>  $visiting
+     * @param  array<class-string, bool>  $found
+     */
+    private function findDataDependent(Type $type, array $visiting, array &$found): bool
+    {
+        if ($type instanceof Class_) {
+            if (isset($visiting[$type->class])) {
+                return true;
+            }
+
+            if (! isset($found[$type->class])) {
+                $visiting[$type->class] = true;
+                $found[$type->class] = $this->anyDataDependent(array_map(fn (Property $property) => $property->type, $type->properties), $visiting, $found);
+            }
+
+            return $found[$type->class];
+        }
+
+        if ($type instanceof Types\Union) {
+            $this->anyDataDependent(array_values($type->members), $visiting, $found);
+
+            return true;
+        }
+
+        return match (true) {
+            $type instanceof Types\Array_ => $this->findDataDependent($type->memberType, $visiting, $found),
+            $type instanceof Types\Shape => $this->anyDataDependent(array_map(fn (Types\ShapeItem $item) => $item->type, $type->items), $visiting, $found),
+            default => false,
+        };
+    }
+
+    /**
+     * Visits every type, so that `$found` covers all the classes they reach.
+     *
+     * @param  list<Type>  $types
+     * @param  array<class-string, true>  $visiting
+     * @param  array<class-string, bool>  $found
+     */
+    private function anyDataDependent(array $types, array $visiting, array &$found): bool
+    {
+        $any = false;
+
+        foreach ($types as $type) {
+            $any = $this->findDataDependent($type, $visiting, $found) || $any;
+        }
+
+        return $any;
     }
 
     /**

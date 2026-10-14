@@ -24,20 +24,19 @@ class ClassMapping
     private ?ValidationRules $validationRules = null;
 
     /**
-     * `$source` is the location of a nested object, and null at the top level,
-     * where `$data` is keyed by root source.
+     * At the top level `$data` is keyed by root source; a nested object's data is its own slice.
      *
      * @param  array<string, mixed>  $data
      */
     private function __construct(
         private readonly Class_ $class,
         array $data,
-        private readonly ?Source $source,
+        private readonly bool $nested,
         private readonly DateFactory $dateFactory,
     ) {
         $this->data = $data;
 
-        if ($source === null) {
+        if (! $nested) {
             $this->addValidationOnlyValuesToData();
         }
 
@@ -46,7 +45,7 @@ class ClassMapping
 
     public static function fromPayload(Class_ $class, Payload $payload, DateFactory $dateFactory = new DateFactory): self
     {
-        return new self($class, $payload->data($class), null, $dateFactory);
+        return new self($class, $payload->data($class), false, $dateFactory);
     }
 
     /**
@@ -198,23 +197,23 @@ class ClassMapping
     /**
      * @return array<mixed>
      */
-    private function toArrayOfType(Property $property, Types\Array_ $type, mixed $rawValue): array
+    private function toArrayOfType(Types\Array_ $type, mixed $rawValue): array
     {
         if (! is_array($rawValue)) {
             throw new CoercionException('Expected array, got '.get_debug_type($rawValue));
         }
 
-        return Arr::map($rawValue, fn ($value) => $this->castOrKeep($property, $type->memberType, $value));
+        return Arr::map($rawValue, fn ($value) => $this->castOrKeep($type->memberType, $value));
     }
 
     /**
      * Coerces one array element or shape item, keeping the raw value when it is invalid so
      * that validation reports it without leaving the other elements uncoerced.
      */
-    private function castOrKeep(Property $property, Type $type, mixed $rawValue): mixed
+    private function castOrKeep(Type $type, mixed $rawValue): mixed
     {
         try {
-            return $this->castValue($property, $type, $rawValue);
+            return $this->castValue($type, $rawValue);
         } catch (CoercionException) {
             return $rawValue;
         }
@@ -223,7 +222,7 @@ class ClassMapping
     /**
      * @return array<mixed>
      */
-    private function toShape(Property $property, Types\Shape $type, mixed $rawValue): array
+    private function toShape(Types\Shape $type, mixed $rawValue): array
     {
         if (! is_array($rawValue)) {
             throw new CoercionException('Expected array, got '.get_debug_type($rawValue));
@@ -238,7 +237,7 @@ class ClassMapping
 
             $value = $rawValue[$item->key];
 
-            $result[$item->key] = $value === null ? null : $this->castOrKeep($property, $item->type, $value);
+            $result[$item->key] = $value === null ? null : $this->castOrKeep($item->type, $value);
         }
 
         return $result;
@@ -312,7 +311,7 @@ class ClassMapping
     private function castData(): void
     {
         foreach ($this->class->properties as $property) {
-            [$role, $type, $keySegments] = [$property->role, $property->type, $this->relativeKeySegments($property)];
+            [$role, $type, $keySegments] = [$property->role, $property->type, $property->getKeySegments()];
 
             if ($property->isVirtual || $role == Role::ValidationOnly) {
                 continue;
@@ -335,7 +334,7 @@ class ClassMapping
             }
 
             try {
-                $typedValue = $this->castValue($property, $type, $rawValue);
+                $typedValue = $this->castValue($type, $rawValue);
             } catch (CoercionException $e) {
                 // Invalid input for the declared type: keep the raw value so
                 // validation rejects it with a proper message. Any other
@@ -347,7 +346,7 @@ class ClassMapping
         }
     }
 
-    private function castValue(Property $property, Type $type, mixed $rawValue): mixed
+    private function castValue(Type $type, mixed $rawValue): mixed
     {
         return match (true) {
             $type instanceof Types\Boolean => $this->toBoolean($rawValue),
@@ -356,10 +355,10 @@ class ClassMapping
             $type instanceof Types\Date => $this->toDate($type, $rawValue),
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
-            $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
-            $type instanceof Types\Shape => $this->toShape($property, $type, $rawValue),
-            $type instanceof Class_ => $this->castObjectValue($property, $type, $rawValue),
-            $type instanceof Types\Union => $this->toUnionMember($property, $type, $rawValue),
+            $type instanceof Types\Array_ => $this->toArrayOfType($type, $rawValue),
+            $type instanceof Types\Shape => $this->toShape($type, $rawValue),
+            $type instanceof Class_ => $this->castObjectValue($type, $rawValue),
+            $type instanceof Types\Union => $this->toUnionMember($type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),
@@ -377,25 +376,6 @@ class ClassMapping
                 $this->dataGet($this->data, $keySegments),
             );
         }
-    }
-
-    /**
-     * This mapping's key keySegments relative to its own source. At the top level
-     * (no source) these are the property's absolute keySegments; inside a nested
-     * object the parent source's keySegments are dropped so lookups land in the
-     * object's own data slice.
-     *
-     * @return list<string>
-     */
-    private function relativeKeySegments(Property $property): array
-    {
-        $keySegments = $property->getKeySegments();
-
-        if ($this->source !== null) {
-            $keySegments = array_slice($keySegments, count($this->source->getKeySegments()));
-        }
-
-        return $keySegments;
     }
 
     /**
@@ -472,14 +452,14 @@ class ClassMapping
 
     public function getMappedValue(Property $property): mixed
     {
-        $value = $this->dataGet($this->data, $this->relativeKeySegments($property), $property->default);
+        $value = $this->dataGet($this->data, $property->getKeySegments(), $property->default);
 
         // A deferred string value (see castObjectValue) is parsed here, at
         // construction time, now that validation has accepted the raw string.
         if ($property->type instanceof Class_
             && is_string($value)
             && $property->type->defersStringParsing()) {
-            return $this->toNestedClass($property, $property->type, $property->type->class::parseString($value));
+            return $this->toNestedClass($property->type, $property->type->class::parseString($value));
         }
 
         return $value;
@@ -528,28 +508,28 @@ class ClassMapping
      * a rule we parse eagerly, so the object's fields still validate individually
      * as a safety net.
      */
-    private function castObjectValue(Property $property, Class_ $type, mixed $rawValue): mixed
+    private function castObjectValue(Class_ $type, mixed $rawValue): mixed
     {
         if (is_string($rawValue) && $type->defersStringParsing()) {
             return $rawValue;
         }
 
         if (is_string($rawValue) && $type->parsesStringValue()) {
-            return $this->toNestedClass($property, $type, $type->class::parseString($rawValue));
+            return $this->toNestedClass($type, $type->class::parseString($rawValue));
         }
 
         if (! is_array($rawValue)) {
             throw new CoercionException('Expected object, got '.get_debug_type($rawValue));
         }
 
-        return $this->toNestedClass($property, $type, $rawValue);
+        return $this->toNestedClass($type, $rawValue);
     }
 
     /**
      * The member's mapping keeps the discriminator in its data for validation; the member
      * class has no property under that key, so the value is not passed to it.
      */
-    private function toUnionMember(Property $property, Types\Union $type, mixed $rawValue): ClassMapping
+    private function toUnionMember(Types\Union $type, mixed $rawValue): ClassMapping
     {
         if (! is_array($rawValue)) {
             throw new CoercionException('Expected object, got '.get_debug_type($rawValue));
@@ -558,15 +538,15 @@ class ClassMapping
         $member = $type->memberFor($rawValue[$type->key] ?? null)
             ?? throw new CoercionException("Unknown or missing discriminator \"{$type->key}\"");
 
-        return $this->toNestedClass($property, $member, $rawValue);
+        return $this->toNestedClass($member, $rawValue);
     }
 
     /**
      * @param  array<string, mixed>  $data
      */
-    private function toNestedClass(Property $property, Class_ $class_, array $data): ClassMapping
+    private function toNestedClass(Class_ $class_, array $data): ClassMapping
     {
-        return new ClassMapping($class_, $data, $property->source, $this->dateFactory);
+        return new ClassMapping($class_, $data, true, $this->dateFactory);
     }
 
     /**

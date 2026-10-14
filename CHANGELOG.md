@@ -46,6 +46,12 @@ All notable changes to `roma` will be documented in this file.
   property or an array, map or shape element of one, and not for a member serialized directly
   or through a property typed as its class. `Profile::storage()` output maps back to an equal
   object.
+- A class may contain itself, directly or through other classes or a discriminated union
+  (`list<Comment>` in `Comment`, `?Node $parent`). Mapping, validation, serialization and
+  TypeScript support it: rules for such a structure are built from the data, errors keep
+  full keys such as `input.replies.0.replies.1.body`, and TypeScript refers to the interface
+  by name (`replies?: Comment[]`). A nested definition's property sources are now relative
+  to the object, so one definition per class serves every place the class appears.
 - An invalid array element or shape item no longer leaves the other elements uncoerced.
 - A validation message for an array element shows its concrete key, e.g. "The
   data.prices.m.2025-01-01.input field must be a number." instead of `data.prices.*.*.input`.
