@@ -2,10 +2,10 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Request\Attributes\Body;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Attributes\Input;
-use BYanelli\Roma\Request\Attributes\Key;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 
@@ -193,7 +193,7 @@ it('overrides a plain nested key with #[Key]', function () {
 /*
 |--------------------------------------------------------------------------
 | A source attribute on a nested property is rejected; #[Key] is the only
-| way to override a nested key. #[Key] is conversely rejected at top level.
+| way to override a nested key.
 |--------------------------------------------------------------------------
 */
 
@@ -222,12 +222,14 @@ readonly class TestTopLevelKeyRequest
     public string $x;
 }
 
-it('rejects #[Key] on a top-level property', function () {
+it('maps a top-level literal dotted #[Key] within the input source', function () {
     /** @var TestCase $this */
-    $this->setRequest();
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['a.b' => 'hello', 'a' => ['b' => 'nested']],
+    );
 
-    expect(fn () => $this->mapRequest(TestTopLevelKeyRequest::class))
-        ->toThrow(RuntimeException::class, '#[Key] does not apply');
+    expect($this->mapRequest(TestTopLevelKeyRequest::class)->x)->toBe('hello');
 });
 
 /*

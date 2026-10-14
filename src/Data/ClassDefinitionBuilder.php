@@ -63,28 +63,48 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * The explicit key an attribute declares, if any. A KeyAttribute (e.g. a
-     * header or accessor) always supplies one; an ExplicitKeyAttribute (e.g. a
-     * source attribute or #[Key]) may supply one or leave it null to use the
-     * property name.
-     *
+     * The key an attribute declares, if any. A KeyAttribute (e.g. a header or accessor) always
+     * declares one; an ExplicitKeyAttribute (e.g. a source attribute or #[Key]) may leave it
+     * null to use the property name.
+     */
+    private function declaredKey(object $attribute): ?string
+    {
+        $key = match (true) {
+            $attribute instanceof KeyAttribute => $attribute->getKey(),
+            $attribute instanceof ExplicitKeyAttribute => $attribute->getKey(),
+            default => null,
+        };
+
+        return $key === '' ? null : $key;
+    }
+
+    /**
      * @param  array<int, object>  $attributes
      */
     private function getKeyFromAttributes(array $attributes): ?string
     {
         foreach ($attributes as $attribute) {
-            $key = match (true) {
-                $attribute instanceof KeyAttribute => $attribute->getKey(),
-                $attribute instanceof ExplicitKeyAttribute => $attribute->getKey(),
-                default => null,
-            };
-
-            if ($key !== null && $key !== '') {
+            if (($key = $this->declaredKey($attribute)) !== null) {
                 return $key;
             }
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<int, object>  $attributes
+     */
+    private function assertSingleKey(array $attributes, string $subject): void
+    {
+        $keyed = array_values(array_filter($attributes, fn (object $attribute) => $this->declaredKey($attribute) !== null));
+
+        if (count($keyed) > 1) {
+            throw new RuntimeException(
+                "Roma property \"{$subject}\" gets a key from both #[".class_basename($keyed[0]).'] and #['
+                .class_basename($keyed[1]).']. Give the key in only one of them.'
+            );
+        }
     }
 
     /**
@@ -167,19 +187,6 @@ class ClassDefinitionBuilder
             );
         }
 
-        // A key attribute with no source (#[Key]) only overrides a key inside a
-        // nested object; a top-level property has no inherited location to override.
-        $keyWithoutSource = collect($attributes)->contains(
-            fn (object $attr) => $attr instanceof ExplicitKeyAttribute && ! $attr instanceof SourceAttribute
-        );
-
-        if (! $this->nested && $keyWithoutSource) {
-            throw new RuntimeException(
-                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is on a top-level class, where "
-                .'#[Key] does not apply; pass the key to the source attribute instead, e.g. #[Input(\'a.b\')].'
-            );
-        }
-
         // A type-implied source would replace the parent's key path, so the
         // property would receive the whole slice of its parent's data.
         if ($this->nested && $typeSource !== null) {
@@ -193,6 +200,8 @@ class ClassDefinitionBuilder
         if (! $this->hasSourceAttribute($attributes)) {
             $attributes = [...$attributes, ...$typeAttributes];
         }
+
+        $this->assertSingleKey($attributes, "{$declaringClass}::\${$obj->getName()}");
 
         if ($this->nested) {
             $parent = new Nested;

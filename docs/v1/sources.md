@@ -32,6 +32,29 @@ readonly class SearchRequest {
 }
 ```
 
+### Renaming a key
+
+A source attribute takes the key as its argument, and `#[Key]` sets it within whichever
+source the property reads from. The serializer writes a property under its `#[Key]` too, so
+an object mapped from input serializes back to the same keys:
+
+```php
+use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Request\Attributes\Query;
+
+readonly class SearchRequest {
+    #[Query('page_num')]
+    public int $page;       // from query.page_num
+
+    #[Key('per_page')]
+    public int $perPage;    // from input.per_page
+}
+```
+
+A property may get its key from only one attribute: `#[Query('page_num')]` together with
+`#[Key('page')]`, or `#[Header('X-Foo')]` with `#[Key('foo')]`, throws when the class
+definition is built.
+
 ### The QUERY method
 
 `QUERY` ([RFC 10008](https://www.rfc-editor.org/info/rfc10008/)) is a safe, idempotent

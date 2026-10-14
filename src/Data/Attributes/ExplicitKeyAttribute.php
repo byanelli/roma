@@ -6,8 +6,8 @@ namespace BYanelli\Roma\Data\Attributes;
  * An attribute (e.g. #[Body], #[Query], #[Input] or #[Key]) that may carry an
  * explicit literal key. This is how a field whose name contains a literal dot
  * — impossible to express as a PHP property name — is declared, e.g.
- * #[Body('a.b')] public string $x. One without a SourceAttribute only applies
- * inside a nested object.
+ * #[Body('a.b')] public string $x. One without a SourceAttribute sets the key
+ * within the property's source, or within a nested object.
  */
 interface ExplicitKeyAttribute
 {

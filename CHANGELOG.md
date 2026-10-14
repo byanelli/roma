@@ -4,6 +4,13 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: the request and response `#[Key]` attributes are merged into
+  `BYanelli\Roma\Attributes\Key`, which mapping and serialization both read, so a renamed
+  property maps and serializes under the same key. `#[Key]` on a top-level property sets the
+  key within its source: `#[Key('page_num')] public int $page` reads `input.page_num`. A
+  property that gets a key from two attributes, such as `#[Query('page_num')]` with
+  `#[Key('page')]` or a response `#[Header('X-Foo')]` with `#[Key('foo')]`, throws when the
+  definition is built.
 - The mapping core no longer depends on HTTP. It is in `BYanelli\Roma\Data` (`ObjectMapper`,
   `ClassMapping`, `ClassDefinitionBuilder`, `Payload`, `SourcePolicy`) and
   `BYanelli\Roma\Validation`; `RequestMapper` wraps it with `RequestPayload` and

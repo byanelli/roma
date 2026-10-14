@@ -2,11 +2,11 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Request\Attributes\Body;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Attributes\Query;
 use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
-use BYanelli\Roma\Response\Attributes\Key;
 use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\Response;

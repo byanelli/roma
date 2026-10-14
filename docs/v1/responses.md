@@ -63,6 +63,23 @@ key. The value must be one of the union's classes.
 `json_encode($response)` produces the same output as `toArray()`, or as an overridden
 `toArray()` after normalization (see below).
 
+## Rename a key with `#[Key]`
+
+A property serializes under its PHP name unless it has `#[Key]`. It is the same attribute
+that sets a key when mapping input, so a class used both ways reads and writes the same key:
+
+```php
+use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Response\Response;
+
+class UserResponse extends Response {
+    #[Key('user_id')]
+    public int $id;              // {"user_id": 42}
+}
+```
+
+`#[Key]` together with `#[Header('Name')]` throws, since the header name is already the key.
+
 ## Omit unset properties with `#[Optional]`
 
 A response property has no implicit default: leaving it unset makes serialization throw,

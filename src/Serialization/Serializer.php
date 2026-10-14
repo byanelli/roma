@@ -4,13 +4,13 @@ namespace BYanelli\Roma\Serialization;
 
 use BackedEnum;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\PhpDocTypeParser;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\UnresolvableClassName;
 use BYanelli\Roma\Response\Attributes\DateFormat;
-use BYanelli\Roma\Response\Attributes\Key;
 use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\IsArrayable;
 use DateTimeInterface;
@@ -317,10 +317,20 @@ class Serializer
             }
 
             $destination = $this->attribute($property, DestinationAttribute::class);
+            $key = $this->attribute($property, Key::class)?->key;
+
+            if ($destination?->destinationKey() !== null && $key !== null) {
+                throw new RuntimeException(sprintf(
+                    'Roma property "%s::$%s" gets a key from both #[%s] and #[Key]. Give the key in only one of them.',
+                    $property->getDeclaringClass()->getShortName(),
+                    $property->getName(),
+                    class_basename($destination),
+                ));
+            }
 
             $plan[] = new PropertyPlan(
                 reflection: $property,
-                key: $destination?->destinationKey() ?? $this->attribute($property, Key::class)->key ?? $property->getName(),
+                key: $destination?->destinationKey() ?? $key ?? $property->getName(),
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $this->attribute($property, DateFormat::class)?->format,
                 optional: $this->attribute($property, Optional::class) !== null,

@@ -4,10 +4,10 @@
 
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\DiscriminatorValue;
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
-use BYanelli\Roma\Request\Attributes\Key;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;
 use BYanelli\Roma\Tests\Support\Discriminated\Checkout;

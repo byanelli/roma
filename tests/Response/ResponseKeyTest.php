@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Response\Attributes\Key;
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Response\Attributes\Optional;
 use BYanelli\Roma\Response\Response;
 
