@@ -52,7 +52,7 @@ class CreateContactController {
 ## Highlights
 
 - **Map from anywhere in the request.** Bind properties to the body, query, headers, route
-  parameters, or cookies with `#[Body]`, `#[Query]`, `#[Header]`, `#[RouteParameter]`,
+  parameters, or cookies with `#[Body]`, `#[Query]`, `#[Header]`, `#[Path]`,
   `#[Cookie]`; the default is the merged input bag.
 - **Typed and validated.** Automatic coercion (strings → `int` / `float` / `bool` / enum /
   date / `UploadedFile`), validation via `#[Rule]`, nested objects, discriminated unions

@@ -96,8 +96,11 @@ readonly class RequestInfo {
 ```
 
 * **Booleans:** `#[Ajax]`, `#[Secure]`, `#[Pjax]`, `#[Prefetch]`, `#[IsJson]`, `#[ExpectsJson]`, `#[WantsJson]`
-* **Strings:** `#[Method]`, `#[Ip]`, `#[UserAgent]`, `#[Url]`, `#[FullUrl]`, `#[Path]`, `#[DecodedPath]`, `#[Root]`, `#[Host]`, `#[SchemeAndHttpHost]`, `#[BearerToken]`, `#[Format]`, `#[Content]`
+* **Strings:** `#[Method]`, `#[Ip]`, `#[UserAgent]`, `#[Url]`, `#[FullUrl]`, `#[RequestPath]`, `#[DecodedPath]`, `#[Root]`, `#[Host]`, `#[SchemeAndHttpHost]`, `#[BearerToken]`, `#[Format]`, `#[Content]`
 * **Arrays:** `#[Ips]`, `#[Segments]`
+
+`#[RequestPath]` is the request's path (`$request->path()`), reported as `request.path`;
+`#[Path]` reads a route parameter.
 
 Every boolean accessor accepts `mustBe` to become a constraint: `#[Secure(mustBe: true)]`
 requires HTTPS, `#[Ajax(mustBe: false)]` requires a non-AJAX request.

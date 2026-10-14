@@ -4,7 +4,7 @@ namespace BYanelli\Roma\Http\Request\Sources;
 
 use BYanelli\Roma\Data\Source;
 
-final readonly class RouteParameter extends Source
+final readonly class Path extends Source
 {
     public function __construct()
     {
@@ -13,6 +13,6 @@ final readonly class RouteParameter extends Source
 
     public function getOwnKey(): string
     {
-        return 'route';
+        return 'path';
     }
 }

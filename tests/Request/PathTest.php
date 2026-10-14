@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Http\Attributes\RouteParameter;
+use BYanelli\Roma\Http\Attributes\Path;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +15,7 @@ enum RouteRole: string
 
 readonly class TestRouteStringParam
 {
-    #[RouteParameter]
+    #[Path]
     public string $slug;
 }
 
@@ -28,7 +28,7 @@ it('maps a string route parameter', function () {
 
 readonly class TestRouteIntParam
 {
-    #[RouteParameter]
+    #[Path]
     public int $id;
 }
 
@@ -41,7 +41,7 @@ it('coerces an int route parameter', function () {
 
 readonly class TestRouteEnumParam
 {
-    #[RouteParameter]
+    #[Path]
     public RouteRole $role;
 }
 
@@ -60,7 +60,7 @@ it('yields a required error for a missing route parameter', function () {
         $this->mapRequest(TestRouteIntParam::class);
     } catch (ValidationException $e) {
         expect($e->errors())->toBe([
-            'route.id' => ['The route.id field is required.'],
+            'path.id' => ['The path.id field is required.'],
         ]);
 
         return;
@@ -71,7 +71,7 @@ it('yields a required error for a missing route parameter', function () {
 
 it('yields a clean validation error when no route is bound', function () {
     /** @var TestCase $this */
-    // No route resolver at all: the route bucket is empty, so the required
+    // No route resolver at all: the path bucket is empty, so the required
     // param fails validation cleanly rather than crashing.
     $this->app->bind('request', fn () => new Request);
 
@@ -79,7 +79,7 @@ it('yields a clean validation error when no route is bound', function () {
         $this->mapRequest(TestRouteIntParam::class);
     } catch (ValidationException $e) {
         expect($e->errors())->toBe([
-            'route.id' => ['The route.id field is required.'],
+            'path.id' => ['The path.id field is required.'],
         ]);
 
         return;
@@ -90,7 +90,7 @@ it('yields a clean validation error when no route is bound', function () {
 
 readonly class TestRouteExplicitKeyParam
 {
-    #[RouteParameter('user_id')]
+    #[Path('user_id')]
     public int $userId;
 }
 

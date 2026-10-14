@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `#[RouteParameter]` is renamed `#[Path]` (`BYanelli\Roma\Http\Attributes\Path`),
+  and its source key and error-key prefix change from `route.` to `path.`, so a missing
+  parameter reports `path.id`. The accessor that returns the request path is renamed
+  `#[RequestPath]`; it still reports as `request.path`.
 - Breaking: classes are grouped by the kind of data they handle, and `src/Request` and
   `src/Response` are gone. Generic attributes (`Key`, `Rule`, `Present`, `Guard`,
   `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`) are in

@@ -24,7 +24,7 @@ readonly class RequestPayload implements Payload
                 ? $this->request->json()->all()
                 : $this->request->request->all(),
             (new Sources\File)->getKey() => $this->request->files->all(),
-            (new Sources\RouteParameter)->getKey() => $this->routeParameters(),
+            (new Sources\Path)->getKey() => $this->routeParameters(),
             (new Sources\Cookie)->getKey() => $this->request->cookies->all(),
             (new Sources\RequestObject_)->getKey() => $this->accessorValues($class),
         ];

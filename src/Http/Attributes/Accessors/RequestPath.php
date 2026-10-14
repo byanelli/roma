@@ -12,8 +12,13 @@ use Illuminate\Http\Request;
  * @see Request::path()
  */
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
-readonly class Path extends Accessor
+readonly class RequestPath extends Accessor
 {
+    public function getKey(): string
+    {
+        return 'path';
+    }
+
     public function getType(): Type
     {
         return new String_;

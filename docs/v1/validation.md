@@ -101,7 +101,7 @@ value belongs:
 * `input.price` — merged input (query + body)
 * `query.page` / `body.token` — a `#[Query]` / `#[Body]` property
 * `header.X-Flag` — a header, by its real (un-normalized) name
-* `route.id` — a `#[RouteParameter]` property
+* `path.id` — a `#[Path]` property
 * `cookie.session` — a `#[Cookie]` property
 * `request.ajax` — request metadata from an accessor
 

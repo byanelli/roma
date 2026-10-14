@@ -47,7 +47,7 @@ readonly class RequestSourcePolicy implements SourcePolicy
             Sources\File::class,
             Sources\Header::class,
             Sources\Cookie::class,
-            Sources\RouteParameter::class,
+            Sources\Path::class,
             Sources\RequestObject_::class,
         ], true);
     }

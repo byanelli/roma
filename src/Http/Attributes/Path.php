@@ -9,13 +9,13 @@ use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\Sources;
 
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
-readonly class RouteParameter implements ExplicitKeyAttribute, SourceAttribute
+readonly class Path implements ExplicitKeyAttribute, SourceAttribute
 {
     public function __construct(public ?string $key = null) {}
 
     public function getSource(): Source
     {
-        return new Sources\RouteParameter;
+        return new Sources\Path;
     }
 
     public function getKey(): ?string

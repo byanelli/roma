@@ -4,7 +4,7 @@ description: >-
   Use when building or editing HTTP input/output mapping with the Roma package
   (byanelli/roma) in a Laravel app. Activate on mentions of Roma, request/response
   objects, typed request DTOs, the #[Request] attribute, source-binding attributes
-  (#[Body], #[Query], #[Header], #[RouteParameter], #[Cookie]), header value objects
+  (#[Body], #[Query], #[Header], #[Path], #[Cookie]), header value objects
   (Authorization), self-sourcing metadata enums (Method, ContentType, Scheme),
   #[Guard], #[Rule], Roma TypeScript generation (roma:typescript), or Roma
   Precognition. Do NOT use for plain Laravel FormRequests that are not mapped to a
@@ -27,7 +27,7 @@ Fetch it when you need detail beyond this skill.
 | Namespace | Contents |
 | --- | --- |
 | `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue` |
-| `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `RouteParameter`; `Accessors\*`, `Headers\*` |
+| `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
@@ -77,7 +77,7 @@ Default source is the merged input bag (query + body). Bind explicitly:
 |---|---|
 | `#[Query]` / `#[Body]` | query string / request body |
 | `#[Header('X-Api-Key')]` | a request header |
-| `#[RouteParameter]` | a route parameter (name = property unless given) |
+| `#[Path]` | a route parameter (name = property unless given) |
 | `#[Cookie]` | a cookie (pass a name for dotted cookie names) |
 | `Illuminate\Http\UploadedFile` type | a file upload (top-level only) |
 
@@ -137,7 +137,7 @@ serializer writes the key only through a discriminated property, and TypeScript 
 ### Error-key contract (important)
 
 Validation errors are keyed by **source-prefixed, request-relative** names:
-`input.price`, `query.page`, `header.X-Flag`, `route.id`, `cookie.session`, `request.ajax`.
+`input.price`, `query.page`, `header.X-Flag`, `path.id`, `cookie.session`, `request.ajax`.
 Never emit or expect bare field keys — the **only** exception is a precognitive request,
 where form-data errors are keyed by the bare posted name for front-end helpers.
 

@@ -85,25 +85,25 @@ Route::match(['QUERY'], '/search', SearchController::class);
 
 ## Route parameters
 
-Bind to a route parameter with `#[RouteParameter]`. The property name is the parameter name
+Bind to a route parameter with `#[Path]`. The property name is the parameter name
 unless you pass an explicit one. Route parameters arrive as strings, so scalar and enum
 coercion applies:
 
 ```php
-use BYanelli\Roma\Http\Attributes\RouteParameter;
+use BYanelli\Roma\Http\Attributes\Path;
 
 // Route: /users/{id}/posts/{post_slug}
 readonly class ShowPostRequest {
-    #[RouteParameter]
+    #[Path]
     public int $id;      // from {id}, coerced "42" -> 42
 
-    #[RouteParameter('post_slug')]
+    #[Path('post_slug')]
     public string $slug; // from {post_slug}
 }
 ```
 
-If the request has no bound route, a required route parameter fails validation with a
-`route.` error — it never crashes.
+A missing route parameter fails validation under a `path.` key, such as `path.id`, including
+when the request has no bound route.
 
 ## Cookies
 

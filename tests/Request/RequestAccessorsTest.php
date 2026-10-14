@@ -6,7 +6,7 @@ use BYanelli\Roma\Http\Attributes\Accessors\Content;
 use BYanelli\Roma\Http\Attributes\Accessors\Host;
 use BYanelli\Roma\Http\Attributes\Accessors\Ips;
 use BYanelli\Roma\Http\Attributes\Accessors\IsJson;
-use BYanelli\Roma\Http\Attributes\Accessors\Path;
+use BYanelli\Roma\Http\Attributes\Accessors\RequestPath;
 use BYanelli\Roma\Http\Attributes\Accessors\Secure;
 use BYanelli\Roma\Http\Attributes\Accessors\Segments;
 use BYanelli\Roma\Http\Attributes\Accessors\Url;
@@ -19,7 +19,7 @@ readonly class TestStringAccessors
     #[Host]
     public string $host;
 
-    #[Path]
+    #[RequestPath]
     public string $path;
 
     #[Url]
