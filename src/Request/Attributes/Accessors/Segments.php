@@ -3,10 +3,10 @@
 namespace BYanelli\Roma\Request\Attributes\Accessors;
 
 use Attribute;
+use BYanelli\Roma\Data\Type;
+use BYanelli\Roma\Data\Types\Array_;
+use BYanelli\Roma\Data\Types\String_;
 use BYanelli\Roma\Request\Attributes\Accessor;
-use BYanelli\Roma\Request\Data\Type;
-use BYanelli\Roma\Request\Data\Types\Array_;
-use BYanelli\Roma\Request\Data\Types\String_;
 use Illuminate\Http\Request;
 
 /**

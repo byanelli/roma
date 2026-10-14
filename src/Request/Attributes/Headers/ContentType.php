@@ -3,7 +3,7 @@
 namespace BYanelli\Roma\Request\Attributes\Headers;
 
 use Attribute;
-use BYanelli\Roma\Request\Attributes\AttributeTarget;
+use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Request\Attributes\Header;
 use BYanelli\Roma\Request\Enums\ContentType as ContentTypeEnum;
 use Illuminate\Validation\Rule;

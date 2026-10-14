@@ -3,8 +3,10 @@
 namespace BYanelli\Roma\Request\Attributes;
 
 use Attribute;
-use BYanelli\Roma\Request\Data\Source;
-use BYanelli\Roma\Request\Data\Sources;
+use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
+use BYanelli\Roma\Data\Attributes\SourceAttribute;
+use BYanelli\Roma\Data\Source;
+use BYanelli\Roma\Request\Sources;
 
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
 readonly class Cookie implements ExplicitKeyAttribute, SourceAttribute

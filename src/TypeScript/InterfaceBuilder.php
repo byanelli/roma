@@ -2,21 +2,21 @@
 
 namespace BYanelli\Roma\TypeScript;
 
-use BYanelli\Roma\Request\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
-use BYanelli\Roma\Request\Data\Property as PhpProperty;
-use BYanelli\Roma\Request\Data\Role as PhpRole;
-use BYanelli\Roma\Request\Data\Type as PhpType;
-use BYanelli\Roma\Request\Data\Types\Array_ as PhpArray;
-use BYanelli\Roma\Request\Data\Types\Boolean as PhpBoolean;
-use BYanelli\Roma\Request\Data\Types\Class_;
-use BYanelli\Roma\Request\Data\Types\Date as PhpDate;
-use BYanelli\Roma\Request\Data\Types\Enum as PhpEnum;
-use BYanelli\Roma\Request\Data\Types\File as PhpFile;
-use BYanelli\Roma\Request\Data\Types\Float_ as PhpFloat;
-use BYanelli\Roma\Request\Data\Types\Integer as PhpInteger;
-use BYanelli\Roma\Request\Data\Types\Mixed_ as PhpMixed;
-use BYanelli\Roma\Request\Data\Types\Polymorphic as PhpPolymorphic;
-use BYanelli\Roma\Request\Data\Types\String_ as PhpString;
+use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
+use BYanelli\Roma\Data\Property as PhpProperty;
+use BYanelli\Roma\Data\Role as PhpRole;
+use BYanelli\Roma\Data\Type as PhpType;
+use BYanelli\Roma\Data\Types\Array_ as PhpArray;
+use BYanelli\Roma\Data\Types\Boolean as PhpBoolean;
+use BYanelli\Roma\Data\Types\Class_;
+use BYanelli\Roma\Data\Types\Date as PhpDate;
+use BYanelli\Roma\Data\Types\Enum as PhpEnum;
+use BYanelli\Roma\Data\Types\File as PhpFile;
+use BYanelli\Roma\Data\Types\Float_ as PhpFloat;
+use BYanelli\Roma\Data\Types\Integer as PhpInteger;
+use BYanelli\Roma\Data\Types\Mixed_ as PhpMixed;
+use BYanelli\Roma\Data\Types\Polymorphic as PhpPolymorphic;
+use BYanelli\Roma\Data\Types\String_ as PhpString;
 use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;
 use BYanelli\Roma\TypeScript\Types\Boolean;

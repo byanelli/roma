@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Request\Enums;
 
+use BYanelli\Roma\Data\Enums\NormalizesRawValue;
 use Illuminate\Support\Str;
 
 /**

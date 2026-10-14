@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Request\Enums;
 
-use BYanelli\Roma\Request\Attributes\SourceAttribute;
+use BYanelli\Roma\Data\Attributes\SourceAttribute;
 
 /**
  * Implemented by a request-metadata type (a metadata enum like Method or

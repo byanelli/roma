@@ -2,6 +2,8 @@
 
 namespace BYanelli\Roma\Request\Values;
 
+use BYanelli\Roma\Data\Values\HasValidationRules;
+use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Request\Attributes\Headers\Authorization as AuthorizationHeader;
 use BYanelli\Roma\Request\Enums\AuthScheme;
 use BYanelli\Roma\Request\Enums\HasRequestSource;

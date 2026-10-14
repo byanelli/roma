@@ -2,8 +2,8 @@
 
 namespace BYanelli\Roma\Request\Validation;
 
-use BYanelli\Roma\Request\Data\Source;
-use BYanelli\Roma\Request\Data\Sources;
+use BYanelli\Roma\Data\Source;
+use BYanelli\Roma\Request\Sources;
 
 /**
  * The keys a client addresses as form data. Input, query, body, and file

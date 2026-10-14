@@ -2,10 +2,10 @@
 
 namespace BYanelli\Roma\TypeScript;
 
+use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
+use BYanelli\Roma\Data\Property as PhpProperty;
 use BYanelli\Roma\Discovery\DiscoveredClasses;
-use BYanelli\Roma\Request\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
-use BYanelli\Roma\Request\Data\Property as PhpProperty;
-use BYanelli\Roma\Request\Data\Sources;
+use BYanelli\Roma\Request\Sources;
 use BYanelli\Roma\Response\Attributes\Header as ResponseHeader;
 use BYanelli\Roma\Response\Attributes\Optional as ResponseOptional;
 use BYanelli\Roma\Response\Attributes\Status as ResponseStatus;

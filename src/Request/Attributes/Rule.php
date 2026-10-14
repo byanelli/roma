@@ -3,6 +3,8 @@
 namespace BYanelli\Roma\Request\Attributes;
 
 use Attribute;
+use BYanelli\Roma\Data\Attributes\AttributeTarget;
+use BYanelli\Roma\Data\Attributes\RulesAttribute;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class Rule implements RulesAttribute

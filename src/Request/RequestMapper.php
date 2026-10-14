@@ -2,9 +2,9 @@
 
 namespace BYanelli\Roma\Request;
 
+use BYanelli\Roma\Data\ClassDefinitionBuilder;
+use BYanelli\Roma\Data\ClassRequestMapping;
 use BYanelli\Roma\Request\Attributes\Guard;
-use BYanelli\Roma\Request\Data\ClassDefinitionBuilder;
-use BYanelli\Roma\Request\Data\ClassRequestMapping;
 use BYanelli\Roma\Request\Validation\ClientDataKeys;
 use BYanelli\Roma\Request\Validation\PrecognitiveRuleFilter;
 use Closure;

@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Request\Attributes;
 
 use Attribute;
+use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 
 /**
  * Overrides the request key of a property inside a nested request object. This

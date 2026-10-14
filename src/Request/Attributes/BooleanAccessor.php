@@ -2,8 +2,9 @@
 
 namespace BYanelli\Roma\Request\Attributes;
 
-use BYanelli\Roma\Request\Data\Type;
-use BYanelli\Roma\Request\Data\Types\Boolean;
+use BYanelli\Roma\Data\Attributes\AttributeTarget;
+use BYanelli\Roma\Data\Type;
+use BYanelli\Roma\Data\Types\Boolean;
 
 abstract readonly class BooleanAccessor extends Accessor
 {
