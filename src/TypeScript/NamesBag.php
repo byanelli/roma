@@ -39,6 +39,16 @@ class NamesBag
         return $this->reserve('enum/'.$enumClass, TypeScriptName::for($enumClass));
     }
 
+    /**
+     * The TypeScript name for the type alias of a union defined on an interface or abstract class.
+     *
+     * @param  class-string  $contract
+     */
+    public function nameForUnion(string $contract): string
+    {
+        return $this->reserve('union/'.$contract, TypeScriptName::for($contract));
+    }
+
     private function reserve(string $uniqueKey, string $preferred): string
     {
         return $this->alreadyResolved[$uniqueKey] ??= $this->reserveName($preferred);

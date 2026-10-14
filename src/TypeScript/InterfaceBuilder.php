@@ -17,6 +17,7 @@ use BYanelli\Roma\Data\Types\Mixed_ as PhpMixed;
 use BYanelli\Roma\Data\Types\Shape as PhpShape;
 use BYanelli\Roma\Data\Types\ShapeItem as PhpShapeItem;
 use BYanelli\Roma\Data\Types\String_ as PhpString;
+use BYanelli\Roma\Data\Types\Union as PhpUnion;
 use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;
 use BYanelli\Roma\TypeScript\Types\Boolean;
@@ -29,6 +30,7 @@ use BYanelli\Roma\TypeScript\Types\Number;
 use BYanelli\Roma\TypeScript\Types\Object_;
 use BYanelli\Roma\TypeScript\Types\Record_;
 use BYanelli\Roma\TypeScript\Types\String_;
+use BYanelli\Roma\TypeScript\Types\Union;
 use Closure;
 
 /**
@@ -120,6 +122,11 @@ readonly class InterfaceBuilder
                 ),
                 $type->items,
             )),
+            $type instanceof PhpUnion => new Union(
+                $type->key,
+                array_map(fn (Class_ $member) => $this->buildInterface($member, $optional), $type->members),
+                $type->contract,
+            ),
             $type instanceof PhpFile => new File,
             $type instanceof PhpMixed => new Mixed_,
             default => new Mixed_,

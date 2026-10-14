@@ -38,7 +38,9 @@ All notable changes to `roma` will be documented in this file.
   error at the key ("must be one of: Card, bank"). Validation rules for arrays that contain a
   union are built per element (`fallbacks.0.last4`). The class list, duplicate values and
   member properties under the key are checked when the definition is built. `list<A|B>`
-  PHPDoc element types are accepted with a property-level attribute.
+  PHPDoc element types are accepted with a property-level attribute. TypeScript emits
+  `({ type: 'Card' } & Card) | ({ type: 'bank' } & BankAccount)`, as a named type alias
+  (`export type PaymentMethod = ...`) when the attribute is on an interface or abstract class.
 - An invalid array element or shape item no longer leaves the other elements uncoerced.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values

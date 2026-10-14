@@ -16,6 +16,7 @@ use BYanelli\Roma\TypeScript\Types\Enum;
 use BYanelli\Roma\TypeScript\Types\Interface_;
 use BYanelli\Roma\TypeScript\Types\Object_;
 use BYanelli\Roma\TypeScript\Types\Record_;
+use BYanelli\Roma\TypeScript\Types\Union;
 
 /**
  * Emits TypeScript definitions for Roma request and response objects by walking
@@ -43,11 +44,13 @@ readonly class TypeScriptGenerator
     {
         $interfaces = $this->collectInterfaces();
         $enums = $this->collectEnums($interfaces);
+        $unions = $this->collectUnionAliases($interfaces);
 
         // Enums referenced by any interface are emitted as their own named types,
         // ahead of the interfaces that reference them.
         $blocks = [
             ...array_map($this->renderer->renderEnum(...), $enums),
+            ...array_map($this->renderer->renderUnionAlias(...), $unions),
             ...array_map($this->renderer->renderInterface(...), $interfaces),
         ];
 
@@ -94,6 +97,44 @@ readonly class TypeScriptGenerator
         } elseif ($type instanceof Object_) {
             foreach ($type->properties as $property) {
                 $this->collectEnumsFromType($property->type, $classes);
+            }
+        }
+    }
+
+    /**
+     * The distinct unions defined on an interface or abstract class that any emitted
+     * interface references, ordered by name.
+     *
+     * @param  list<Interface_>  $interfaces
+     * @return list<Union>
+     */
+    private function collectUnionAliases(array $interfaces): array
+    {
+        $unions = [];
+
+        foreach ($interfaces as $interface) {
+            foreach ($interface->properties as $property) {
+                $this->collectUnionAliasesFromType($property->type, $unions);
+            }
+        }
+
+        return array_values(collect($unions)->sortBy(fn (Union $union, string $contract) => TypeScriptName::for($contract))->all());
+    }
+
+    /**
+     * @param  array<class-string, Union>  $unions
+     */
+    private function collectUnionAliasesFromType(Type $type, array &$unions): void
+    {
+        if ($type instanceof Union && $type->contract !== null) {
+            $unions[$type->contract] ??= $type;
+        } elseif ($type instanceof Array_) {
+            $this->collectUnionAliasesFromType($type->memberType, $unions);
+        } elseif ($type instanceof Record_) {
+            $this->collectUnionAliasesFromType($type->valueType, $unions);
+        } elseif ($type instanceof Object_) {
+            foreach ($type->properties as $property) {
+                $this->collectUnionAliasesFromType($property->type, $unions);
             }
         }
     }

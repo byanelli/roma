@@ -57,6 +57,8 @@ readonly class TypeScriptRenderer
             $type instanceof Types\Record_ => 'Record<'.$this->renderType($type->keyType).', '.$this->renderType($type->valueType).'>',
             $type instanceof Types\Object_ => $this->renderObjectType($type),
             $type instanceof Interface_ => $this->namesBag->nameFor($type),
+            $type instanceof Types\Union && $type->contract !== null => $this->namesBag->nameForUnion($type->contract),
+            $type instanceof Types\Union => $this->renderUnionMembers($type),
             $type instanceof Types\File => 'Blob',
             default => 'unknown', // Mixed_ and any future type
         };
@@ -64,7 +66,33 @@ readonly class TypeScriptRenderer
 
     private function renderArrayType(Type $member): string
     {
-        return $this->renderType($member).'[]';
+        $rendered = $this->renderType($member);
+
+        return ($member instanceof Types\Union && $member->contract === null ? "($rendered)" : $rendered).'[]';
+    }
+
+    /**
+     * A union defined on an interface or abstract class, as `export type PaymentMethod = ...;`.
+     */
+    public function renderUnionAlias(Types\Union $union): string
+    {
+        if ($union->contract === null) {
+            throw new \InvalidArgumentException('Only a union defined on an interface or abstract class has an alias.');
+        }
+
+        return 'export type '.$this->namesBag->nameForUnion($union->contract).' = '.$this->renderUnionMembers($union).';';
+    }
+
+    private function renderUnionMembers(Types\Union $union): string
+    {
+        $members = [];
+
+        foreach ($union->members as $value => $interface) {
+            $members[] = '({ '.$this->renderKey($union->key).': '.$this->renderString((string) $value).' } & '
+                .$this->namesBag->nameFor($interface).')';
+        }
+
+        return implode(' | ', $members);
     }
 
     private function renderObjectType(Types\Object_ $type): string
