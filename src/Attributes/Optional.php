@@ -5,11 +5,11 @@ namespace BYanelli\Roma\Attributes;
 use Attribute;
 
 /**
- * Marks a response property as optional: if it is left unset, its key is
- * omitted from the serialized output instead of throwing. Without this, a
- * property has no implicit default — leaving it unset (nullable or not) is an
- * error. Set an explicit default on the property to serialize a value when
- * unset.
+ * Marks a property that may be absent. When mapping, it is never required: an absent
+ * constructor parameter takes its default, else the Missing instance if typed `T|Missing`,
+ * else null; an absent non-promoted property stays unset. A parameter with none of these
+ * throws when the definition is built. When serializing, an unset property or one whose
+ * value is Missing is omitted instead of throwing.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class Optional {}

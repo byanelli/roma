@@ -123,6 +123,35 @@ class ProductSearchRequest {
 }
 ```
 
+### Telling absent from `null` with `#[Optional]`
+
+`#[Optional]` makes a property never required. To tell an absent key from an explicit
+`null`, add `BYanelli\Roma\Missing` to the type: an absent key maps to the shared
+`Missing::instance()`, so you can test `$request->bio instanceof Missing`. On a non-promoted
+property an absent key leaves it unset instead.
+
+```php
+use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Missing;
+
+readonly class UpdateProfileRequest {
+    public function __construct(
+        #[Optional] public string|Missing $bio,        // Missing when absent
+        #[Optional] public ?string $nickname,          // null when absent
+        #[Optional] public Address|Missing|null $home,  // Missing when absent, null when null
+    ) {}
+
+    #[Optional]
+    public string $website;                            // unset when absent
+}
+```
+
+Coercion, validation, TypeScript and serialization treat `string|Missing` as `string`; a
+present value must still be a valid string. TypeScript emits `bio?: string`, and the
+serializer omits a property whose value is `Missing`, so the object serializes back to the
+input it was mapped from. An `#[Optional]` constructor parameter must be nullable, include
+`Missing` or have a default; otherwise it throws when the class definition is built.
+
 Use `#[Present]` on a nullable property when the key _must_ appear but may be `null`:
 
 ```php

@@ -97,13 +97,18 @@ class ClassMapping
 
     /**
      * Get a map/associative array of values and/or nested class mappings to be assigned to
-     * class properties.
+     * class properties. An absent #[Optional] property is left out, so it stays unset.
      *
      * @return array<string, mixed>
      */
     public function getClassPropertiesMappedValuesOrNestedClassesAsMap(): array
     {
-        return Arr::mapWithKeys($this->getClassProperties(), fn (Property $p) => [$p->name => $this->getMappedValue($p)]);
+        $present = array_filter(
+            $this->getClassProperties(),
+            fn (Property $p) => ! $p->optional || $this->dataHas($this->data, $p->getKeySegments()),
+        );
+
+        return Arr::mapWithKeys($present, fn (Property $p) => [$p->name => $this->getMappedValue($p)]);
     }
 
     private function toBoolean(mixed $val): bool

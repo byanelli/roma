@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
@@ -15,6 +16,7 @@ use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
 use BYanelli\Roma\Data\Sources\Nested;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
+use BYanelli\Roma\Missing;
 use Closure;
 use Illuminate\Http\UploadedFile;
 use ReflectionAttribute;
@@ -167,8 +169,7 @@ class ClassDefinitionBuilder
     {
         $attributes = $this->getAttributeInstances($obj->getAttributes());
 
-        $type = $obj->getType();
-        $typeName = $type instanceof ReflectionNamedType ? $type->getName() : null;
+        $typeName = $this->declaredTypeName($obj);
         $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
 
         $typeAttributes = $typeName !== null ? $this->policy->attributesForType($typeName) : [];
@@ -212,6 +213,8 @@ class ClassDefinitionBuilder
         }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
+        $optional = collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
+        $nullable = $obj->getType()?->allowsNull() ?? true;
 
         return new Property(
             name: $obj->getName(),
@@ -222,17 +225,77 @@ class ClassDefinitionBuilder
                 collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format,
             ),
             role: $this->getRole($obj),
-            default: $this->getDefault($obj),
+            default: $optional ? $this->getOptionalDefault($obj, $nullable) : $this->getDefault($obj),
             parent: $parent,
             accessor: $this->getAccessorFromAttributes($attributes) ?: fn () => null,
             rules: $this->getRulesForParameterOrProperty($attributes),
-            nullable: $obj->getType()?->allowsNull() ?? true,
+            nullable: $nullable,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
             rawAttributes: $attributes,
             // A virtual (hooked, backing-less) property is a computed value with
             // no backing store. The mapper, validator and request TypeScript skip it.
             isVirtual: $obj instanceof ReflectionProperty && $obj->isVirtual(),
+            optional: $optional,
         );
+    }
+
+    /**
+     * An absent #[Optional] parameter takes its default, else Missing when its type allows it,
+     * else null. An absent property is left as it is, so it needs none.
+     */
+    private function getOptionalDefault(ReflectionParameter|ReflectionProperty $obj, bool $nullable): mixed
+    {
+        $default = $this->getDefault($obj);
+
+        if (! $obj instanceof ReflectionParameter || ! $default instanceof NoDefault) {
+            return $default;
+        }
+
+        if ($this->acceptsMissing($obj)) {
+            return Missing::instance();
+        }
+
+        if ($nullable) {
+            return $default;
+        }
+
+        throw new RuntimeException(
+            "Roma parameter \"{$this->subject($obj)}\" is #[Optional] but has no value for when it is absent. "
+            .'Make it nullable (?string), add Missing to its type (string|Missing), or give it a default.'
+        );
+    }
+
+    private function acceptsMissing(ReflectionParameter|ReflectionProperty $obj): bool
+    {
+        $type = $obj->getType();
+
+        if (! $type instanceof ReflectionUnionType) {
+            return false;
+        }
+
+        foreach ($type->getTypes() as $member) {
+            if ($member instanceof ReflectionNamedType && $member->getName() === Missing::class) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The declared type's name, ignoring null and Missing, or null when there isn't exactly one.
+     */
+    private function declaredTypeName(ReflectionParameter|ReflectionProperty $obj): ?string
+    {
+        $type = $obj->getType();
+
+        if ($type instanceof ReflectionNamedType) {
+            return $type->getName();
+        }
+
+        $names = $type instanceof ReflectionUnionType ? $this->unionMemberNames($type) : [];
+
+        return count($names) === 1 ? $names[0] : null;
     }
 
     /**
@@ -489,7 +552,7 @@ class ClassDefinitionBuilder
 
         $type = match (true) {
             $declared instanceof ReflectionNamedType => $this->getTypeByName($obj, $declared->getName(), $discriminated),
-            $declared instanceof ReflectionUnionType => $this->getUnionType($obj, $this->unionMemberNames($declared), $discriminated) ?? new Mixed_,
+            $declared instanceof ReflectionUnionType => $this->getUnionMembersType($obj, $this->unionMemberNames($declared), $discriminated),
             default => new Mixed_,
         };
 
@@ -504,8 +567,22 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * The names of a union type's members other than null, or an empty list when a member
-     * is an intersection type.
+     * A union with one member besides null and Missing is that member's type.
+     *
+     * @param  list<string>  $names
+     */
+    private function getUnionMembersType(ReflectionParameter|ReflectionProperty $obj, array $names, ?Discriminated $discriminated): Type
+    {
+        return match (count($names)) {
+            0 => new Mixed_,
+            1 => $this->getTypeByName($obj, $names[0], $discriminated),
+            default => $this->getUnionType($obj, $names, $discriminated) ?? new Mixed_,
+        };
+    }
+
+    /**
+     * The names of a union type's members other than null and Missing, or an empty list when
+     * a member is an intersection type.
      *
      * @return list<string>
      */
@@ -518,7 +595,7 @@ class ClassDefinitionBuilder
                 return [];
             }
 
-            if ($member->getName() !== 'null') {
+            if (! in_array($member->getName(), ['null', Missing::class], true)) {
                 $names[] = $member->getName();
             }
         }

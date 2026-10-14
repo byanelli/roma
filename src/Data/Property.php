@@ -35,6 +35,7 @@ readonly class Property
         ?string $errorKey = null,
         public array $rawAttributes = [],
         public bool $isVirtual = false,
+        public bool $optional = false,
     ) {
         // A key is one opaque key segment. A literal '.' is fully supported: data
         // access walks key segments and validation rules escape it as "\.". A '*'
@@ -49,7 +50,7 @@ readonly class Property
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).
         $this->default = ($nullable && $default instanceof NoDefault) ? null : $default;
-        $this->isRequired = $this->default instanceof NoDefault;
+        $this->isRequired = ! $optional && $this->default instanceof NoDefault;
         $this->source = new PropertySource($parent, $parent->normalizeKey($key));
 
         // The client-facing name shown in validation errors. Plain fields reuse

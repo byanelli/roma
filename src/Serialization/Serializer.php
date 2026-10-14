@@ -12,6 +12,7 @@ use BYanelli\Roma\Data\PhpDocTypeParser;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\UnresolvableClassName;
+use BYanelli\Roma\Missing;
 use DateTimeInterface;
 use Generator;
 use Illuminate\Contracts\Support\Arrayable;
@@ -142,11 +143,17 @@ class Serializer
                 ));
             }
 
+            $value = $reflection->getValue($object);
+
+            if ($value instanceof Missing) {
+                continue;
+            }
+
             $dateFormat = ($object instanceof CustomizesSerialization ? $object->dateFormat($reflection, $profile) : null)
                 ?? $property->dateFormat
                 ?? $profile->dateFormat;
 
-            yield [$property, $reflection->getValue($object), $dateFormat];
+            yield [$property, $value, $dateFormat];
         }
     }
 
@@ -354,7 +361,7 @@ class Serializer
         if ($declared instanceof ReflectionUnionType) {
             $names = array_values(array_filter(
                 array_map(fn ($type) => $type instanceof ReflectionNamedType ? $type->getName() : '', $declared->getTypes()),
-                fn (string $name) => $name !== 'null',
+                fn (string $name) => ! in_array($name, ['null', Missing::class], true),
             ));
 
             return $this->discriminatedValue($names, $attribute, $subject);

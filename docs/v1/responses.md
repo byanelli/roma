@@ -100,6 +100,9 @@ class ContactResponse extends Response {
 }
 ```
 
+A property whose value is `BYanelli\Roma\Missing::instance()` is omitted too, which is how a
+promoted constructor parameter typed `string|Missing` can be left out.
+
 ## Status and headers
 
 Mark an `int` property `#[Status]` to make its value the HTTP status code, or a property

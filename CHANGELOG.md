@@ -4,6 +4,14 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Optional]` applies when mapping, and a property with it is never required. An absent
+  constructor parameter takes its default, else the new `BYanelli\Roma\Missing::instance()`
+  when its type includes `Missing` (`string|Missing`, `Card|Missing|null`), else `null`; one
+  with none of these throws when the definition is built. An absent non-promoted property is
+  left unset. A union with `Missing` is treated as its other type for coercion, validation,
+  TypeScript (`bio?: string`) and serialization, and doesn't need `#[Discriminated]`. The
+  serializer omits a property whose value is `Missing`, so a mapped object serializes back
+  to its input.
 - `#[DateFormat('Y-m-d')]` applies when mapping: the input must match the format, validated
   with Laravel's `date_format` rule in place of `date`, and is parsed with `createFromFormat`
   into the declared class (`Carbon`, `CarbonImmutable`, `DateTimeImmutable`, …). Fields the
