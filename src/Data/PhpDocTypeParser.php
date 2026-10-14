@@ -26,6 +26,8 @@ use RuntimeException;
 
 class PhpDocTypeParser
 {
+    public function __construct(private readonly ClassNameResolver $classNames = new ClassNameResolver) {}
+
     private const array ARRAY_TYPES = ['array', 'non-empty-array', 'list', 'non-empty-list'];
 
     /**
@@ -33,7 +35,7 @@ class PhpDocTypeParser
      */
     private const array KEYWORDS = [
         'int', 'integer', 'string', 'bool', 'boolean', 'float', 'double', 'mixed', 'object', 'true', 'false',
-        'null', 'callable', 'iterable', 'void', 'never', 'scalar', 'numeric', 'resource', 'static', 'parent',
+        'null', 'callable', 'iterable', 'void', 'never', 'scalar', 'numeric', 'resource', 'parent',
     ];
 
     private function parsePhpDoc(string $phpDoc): PhpDocNode
@@ -241,43 +243,35 @@ class PhpDocTypeParser
     }
 
     /**
-     * A class name resolves when it is fully qualified, in the declaring class's namespace or,
-     * like a global class, exists as written. Use imports are not read.
+     * Resolves a class name as PHP would in the source that declares the property.
      */
     private function resolveTypeName(string $name, ReflectionParameter|ReflectionProperty $obj): string
     {
         $class = $obj->getDeclaringClass();
 
-        if (str_starts_with($name, '\\')) {
-            $name = ltrim($name, '\\');
-
-            return $this->classExists($name) ? $name : throw $this->unresolvable("the class \\{$name}, which does not exist", $obj);
-        }
-
-        if (strtolower($name) === 'self' && $class !== null) {
+        if (in_array(strtolower($name), ['self', 'static'], true) && $class !== null) {
             return $class->getName();
         }
 
-        if (in_array(strtolower($name), self::KEYWORDS, true) || preg_match('/^[A-Za-z_][A-Za-z0-9_\\\\]*$/', $name) !== 1) {
+        if (in_array(strtolower($name), self::KEYWORDS, true) || preg_match('/^\\\\?[A-Za-z_][A-Za-z0-9_\\\\]*$/', $name) !== 1) {
             return $name;
         }
 
-        $namespace = $class?->getNamespaceName() ?? '';
-        $qualified = $namespace === '' ? $name : "{$namespace}\\{$name}";
+        $scope = $this->classNames->declaringScope($obj);
+        $candidates = array_unique([
+            $scope === null ? ltrim($name, '\\') : $this->classNames->resolve($name, $scope),
+            // Not a PHP rule: also try the name as written, e.g. `App\Card` or `DateTimeImmutable` without an import.
+            ltrim($name, '\\'),
+        ]);
 
-        return match (true) {
-            $this->classExists($qualified) => $qualified,
-            $this->classExists($name) => $name,
-            default => throw $this->unresolvable(
-                "the class name {$name}, which is not fully qualified and is not in the namespace "
-                .($namespace === '' ? '(global)' : $namespace).'. Use imports are not read, so write the fully qualified '
-                .'name, such as \\Vendor\\Package\\'.class_basename($name).'. Pint\'s fully_qualified_strict_types fixer '
-                .'shortens a fully qualified name in a docblock when the class is imported, so don\'t import a class that '
-                .'only PHPDoc uses. The Laravel preset also sets the fixer\'s import_symbols option, which adds the import; '
-                .'set the fixer\'s "phpdoc_tags" option to [] in pint.json to keep fully qualified names in docblocks',
-                $obj,
-            ),
-        };
+        foreach ($candidates as $candidate) {
+            if ($this->classExists($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw $this->unresolvable("the class name {$name}; tried ".implode(' and ', $candidates)
+            .(count($candidates) === 1 ? ', which does not exist' : ', and neither exists'), $obj);
     }
 
     private function classExists(string $name): bool

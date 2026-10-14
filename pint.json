@@ -1,0 +1,6 @@
+{
+    "preset": "laravel",
+    "notPath": [
+        "tests/Support/Imports/GroupImportRequest.php"
+    ]
+}

@@ -142,21 +142,14 @@ property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list
 class, `self`, or another array type. A `list<T>` also validates that the input keys are
 sequential (Laravel's `list` rule).
 
-Roma doesn't read `use` imports, so a class in PHPDoc must be fully qualified
-(`list<\App\Billing\Card>`) or in the declaring class's namespace (`list<Card>`). Any other
-short name throws when the class definition is built, in mapping, serialization and
-TypeScript generation. Pint's Laravel preset imports a fully qualified name in a docblock and
-shortens it; to keep the name, configure its `fully_qualified_strict_types` fixer in
-`pint.json`:
-
-```json
-{
-    "preset": "laravel",
-    "rules": {
-        "fully_qualified_strict_types": { "import_symbols": true, "phpdoc_tags": [] }
-    }
-}
-```
+A class name in PHPDoc resolves as PHP resolves one in code, using the `use` imports and
+namespace of the file that declares the property, which for an inherited property is the
+trait's or parent class's file. `\App\Billing\Card` is fully qualified. `Card` resolves
+through `use App\Billing\Card;`, `use App\Billing\{Card, Voucher};` or an alias, and
+`Billing\Card` through `use App\Billing;`. Any other name is in the declaring namespace. Roma
+also accepts a name as written, such as `App\Billing\Card` or `DateTimeImmutable` without an
+import. A name that resolves to no class throws `UnresolvableClassName` when the class
+definition is built, in mapping, serialization and TypeScript generation.
 
 Maps and array shapes are supported too, and the property receives a plain array:
 

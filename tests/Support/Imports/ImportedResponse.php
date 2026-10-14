@@ -3,12 +3,12 @@
 namespace BYanelli\Roma\Tests\Support\Imports;
 
 use BYanelli\Roma\Response\Response;
-use BYanelli\Roma\Tests\Support\Discriminated\Card;
+use BYanelli\Roma\Tests\Support\Discriminated\PaymentMethod;
 
 class ImportedResponse extends Response
 {
     /**
-     * @param  list<Card>  $cards
+     * @param  list<PaymentMethod>  $methods
      */
-    public function __construct(public array $cards) {}
+    public function __construct(public array $methods) {}
 }
