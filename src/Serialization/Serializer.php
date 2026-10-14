@@ -8,6 +8,7 @@ use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\PhpDocTypeParser;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
+use BYanelli\Roma\Data\UnresolvableClassName;
 use BYanelli\Roma\Response\Attributes\DateFormat;
 use BYanelli\Roma\Response\Attributes\Key;
 use BYanelli\Roma\Response\Attributes\Optional;
@@ -376,6 +377,8 @@ class Serializer
                     return $value ?? new Types\Mixed_;
                 },
             );
+        } catch (UnresolvableClassName $e) {
+            throw $e;
         } catch (RuntimeException) {
             // Mapping requires a supported PHPDoc type on an array; serialization doesn't.
             return null;

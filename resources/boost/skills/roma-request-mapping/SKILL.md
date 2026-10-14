@@ -54,7 +54,10 @@ class CreateContactController {
 - An `array` property needs its element type in PHPDoc (`@var` on a property, `@param` on
   a constructor parameter): `array<T>`, `list<T>`, `array<string, T>` / `array<int, T>`, or
   an array shape such as `array{min: int, max?: int}`. `list<T>` also requires sequential
-  keys. These nest, e.g. `array<string, list<array{id: int}>>`.
+  keys. These nest, e.g. `array<string, list<array{id: int}>>`. A class in PHPDoc must be
+  fully qualified (`list<\App\Billing\Card>`) or in the declaring class's namespace;
+  imported short names throw. Pint's Laravel preset rewrites FQ docblock names to imports
+  unless `fully_qualified_strict_types` has `"phpdoc_tags": []`.
 
 ## Sources
 

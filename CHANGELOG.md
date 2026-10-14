@@ -52,6 +52,11 @@ All notable changes to `roma` will be documented in this file.
   full keys such as `input.replies.0.replies.1.body`, and TypeScript refers to the interface
   by name (`replies?: Comment[]`). A nested definition's property sources are now relative
   to the object, so one definition per class serves every place the class appears.
+- A class name in a PHPDoc type that is not fully qualified and not in the declaring class's
+  namespace, such as an imported `list<Card>`, throws `UnresolvableClassName` when the
+  definition is built, in mapping, TypeScript generation and serialization. The message
+  gives the class, property and type, and the Pint setting that keeps fully qualified names
+  in docblocks. `list<self>` refers to the declaring class.
 - An invalid array element or shape item no longer leaves the other elements uncoerced.
 - A validation message for an array element shows its concrete key, e.g. "The
   data.prices.m.2025-01-01.input field must be a number." instead of `data.prices.*.*.input`.

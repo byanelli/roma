@@ -139,9 +139,24 @@ empty string such as `?flag=`, fails validation with Laravel's boolean message.
 An `array` property or constructor parameter needs its element type in PHPDoc: `@var` on a
 property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list<T>` (and
 `non-empty-array<T>` / `non-empty-list<T>`), where `T` is a scalar, `mixed`, an enum, a
-class written as a fully-qualified name or a short name in the declaring class's namespace,
-or another array type. A `list<T>` also validates that the input keys are sequential
-(Laravel's `list` rule).
+class, `self`, or another array type. A `list<T>` also validates that the input keys are
+sequential (Laravel's `list` rule).
+
+Roma doesn't read `use` imports, so a class in PHPDoc must be fully qualified
+(`list<\App\Billing\Card>`) or in the declaring class's namespace (`list<Card>`). Any other
+short name throws when the class definition is built, in mapping, serialization and
+TypeScript generation. Pint's Laravel preset imports a fully qualified name in a docblock and
+shortens it; to keep the name, configure its `fully_qualified_strict_types` fixer in
+`pint.json`:
+
+```json
+{
+    "preset": "laravel",
+    "rules": {
+        "fully_qualified_strict_types": { "import_symbols": true, "phpdoc_tags": [] }
+    }
+}
+```
 
 Maps and array shapes are supported too, and the property receives a plain array:
 

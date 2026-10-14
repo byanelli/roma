@@ -28,6 +28,14 @@ class PhpDocTypeParser
 {
     private const array ARRAY_TYPES = ['array', 'non-empty-array', 'list', 'non-empty-list'];
 
+    /**
+     * PHPDoc type keywords, which are never class names.
+     */
+    private const array KEYWORDS = [
+        'int', 'integer', 'string', 'bool', 'boolean', 'float', 'double', 'mixed', 'object', 'true', 'false',
+        'null', 'callable', 'iterable', 'void', 'never', 'scalar', 'numeric', 'resource', 'static', 'parent',
+    ];
+
     private function parsePhpDoc(string $phpDoc): PhpDocNode
     {
         $config = new ParserConfig(usedAttributes: []);
@@ -137,9 +145,9 @@ class PhpDocTypeParser
         return match (true) {
             $node instanceof ArrayShapeNode => $this->shape($node, $obj, $namedType),
             $node instanceof GenericTypeNode && in_array($node->type->name, self::ARRAY_TYPES, true) => $this->array($node, $obj, $namedType),
-            $node instanceof IdentifierTypeNode && ! in_array($node->name, [...self::ARRAY_TYPES, 'iterable'], true) => $namedType([$this->resolveTypeName(ltrim($node->name, '\\'), $obj)]),
+            $node instanceof IdentifierTypeNode && ! in_array($node->name, [...self::ARRAY_TYPES, 'iterable'], true) => $namedType([$this->resolveTypeName($node->name, $obj)]),
             $node instanceof UnionTypeNode && $this->isUnionOfNames($node) => $namedType(array_values(array_map(
-                fn (TypeNode $member) => $this->resolveTypeName(ltrim((string) $member, '\\'), $obj),
+                fn (TypeNode $member) => $this->resolveTypeName((string) $member, $obj),
                 $node->types,
             ))),
             default => throw new RuntimeException("Unsupported array element type: $node"),
@@ -233,21 +241,56 @@ class PhpDocTypeParser
     }
 
     /**
-     * Resolve a parsed element type name to something loadable. Scalars and
-     * names that already resolve (FQCNs) are used as-is; a bare short name is
-     * resolved against the declaring class's namespace. Full use-statement
-     * resolution is out of scope — FQCN or same-namespace is the story.
+     * A class name resolves when it is fully qualified, in the declaring class's namespace or,
+     * like a global class, exists as written. Use imports are not read.
      */
     private function resolveTypeName(string $name, ReflectionParameter|ReflectionProperty $obj): string
     {
-        if (in_array($name, ['int', 'string', 'bool', 'float', 'mixed'], true)
-            || class_exists($name)
-            || enum_exists($name)) {
+        $class = $obj->getDeclaringClass();
+
+        if (str_starts_with($name, '\\')) {
+            $name = ltrim($name, '\\');
+
+            return $this->classExists($name) ? $name : throw $this->unresolvable("the class \\{$name}, which does not exist", $obj);
+        }
+
+        if (strtolower($name) === 'self' && $class !== null) {
+            return $class->getName();
+        }
+
+        if (in_array(strtolower($name), self::KEYWORDS, true) || preg_match('/^[A-Za-z_][A-Za-z0-9_\\\\]*$/', $name) !== 1) {
             return $name;
         }
 
-        $namespace = $obj->getDeclaringClass()?->getNamespaceName() ?? '';
+        $namespace = $class?->getNamespaceName() ?? '';
+        $qualified = $namespace === '' ? $name : "{$namespace}\\{$name}";
 
-        return $namespace === '' ? $name : $namespace.'\\'.$name;
+        return match (true) {
+            $this->classExists($qualified) => $qualified,
+            $this->classExists($name) => $name,
+            default => throw $this->unresolvable(
+                "the class name {$name}, which is not fully qualified and is not in the namespace "
+                .($namespace === '' ? '(global)' : $namespace).'. Use imports are not read, so write the fully qualified '
+                .'name, such as \\Vendor\\Package\\'.class_basename($name).'. Pint\'s fully_qualified_strict_types fixer '
+                .'shortens a fully qualified name in a docblock when the class is imported, so don\'t import a class that '
+                .'only PHPDoc uses. The Laravel preset also sets the fixer\'s import_symbols option, which adds the import; '
+                .'set the fixer\'s "phpdoc_tags" option to [] in pint.json to keep fully qualified names in docblocks',
+                $obj,
+            ),
+        };
+    }
+
+    private function classExists(string $name): bool
+    {
+        return class_exists($name) || interface_exists($name);
+    }
+
+    private function unresolvable(string $problem, ReflectionParameter|ReflectionProperty $obj): UnresolvableClassName
+    {
+        $subject = ($obj->getDeclaringClass()?->getName() ?? '').'::$'.$obj->getName();
+
+        return new UnresolvableClassName(
+            "Roma cannot read the PHPDoc type {$this->getArrayTypePhpDocNode($obj)} of {$subject}: it contains {$problem}."
+        );
     }
 }
