@@ -62,11 +62,11 @@ class Serializer
             $key = $property->key;
 
             match ($property->destination) {
-                Destination::Body => $body[$key] = $this->normalize($value, $profile, $dateFormat, $property->discriminated),
+                Destination::Body => $body[$key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated),
                 Destination::Header => $headers[$key] = $this->headerValue($value, $dateFormat),
                 Destination::Status => $status = (int) $value,
-                Destination::Query => $query[$key] = $this->queryValue($this->normalize($value, $profile, $dateFormat, $property->discriminated), $profile),
-                Destination::Path => $path[$key] = $this->normalize($value, $profile, $dateFormat, $property->discriminated),
+                Destination::Query => $query[$key] = $this->queryValue($this->normalizeValue($value, $profile, $dateFormat, $property->discriminated), $profile),
+                Destination::Path => $path[$key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated),
             };
         }
 
@@ -82,6 +82,20 @@ class Serializer
     }
 
     /**
+     * Converts the values of an array, such as the output of an overridden toArray(), as the
+     * serializer converts property values.
+     *
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    public function normalize(array $value, ?Profile $profile = null): array
+    {
+        $profile ??= Profile::response();
+
+        return array_map(fn (mixed $item): mixed => $this->normalizeValue($item, $profile, $profile->dateFormat), $value);
+    }
+
+    /**
      * The body of a nested object. Its other destinations apply only at the top level and are dropped.
      *
      * @return array<string, mixed>
@@ -92,7 +106,7 @@ class Serializer
 
         foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
             if ($property->destination === Destination::Body) {
-                $body[$property->key] = $this->normalize($value, $profile, $dateFormat, $property->discriminated);
+                $body[$property->key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated);
             }
         }
 
@@ -139,7 +153,7 @@ class Serializer
     /**
      * `$discriminated` is the part of the declared type that applies to `$value`.
      */
-    private function normalize(mixed $value, Profile $profile, string $dateFormat, ?Type $discriminated = null): mixed
+    private function normalizeValue(mixed $value, Profile $profile, string $dateFormat, ?Type $discriminated = null): mixed
     {
         if ($discriminated instanceof DiscriminatedValue && is_object($value)) {
             return $this->withDiscriminator($value, $discriminated, $profile, $dateFormat);
@@ -152,15 +166,15 @@ class Serializer
         return match (true) {
             $value instanceof UnitEnum => $this->enumValue($value, $profile->enums),
             $value instanceof DateTimeInterface => $value->format($dateFormat),
-            is_array($value) => array_map(fn (mixed $item): mixed => $this->normalize($item, $profile, $dateFormat), $value),
+            is_array($value) => array_map(fn (mixed $item): mixed => $this->normalizeValue($item, $profile, $dateFormat), $value),
             ! is_object($value) => $value,
-            $this->usesTrait($value) && $this->overridesToArray($value) => $this->normalize($this->ownToArray($value, $profile), $profile, $dateFormat),
+            $this->overridesToArray($value) => $this->normalizeValue($this->ownToArray($value, $profile), $profile, $dateFormat),
             $this->usesTrait($value) => $this->body($value, $profile),
-            $value instanceof Arrayable => $this->normalize($value->toArray(), $profile, $dateFormat),
+            $value instanceof Arrayable => $this->normalizeValue($value->toArray(), $profile, $dateFormat),
             // These already define their JSON form.
             $value instanceof JsonSerializable => $value,
             $value instanceof Stringable => (string) $value,
-            $value instanceof stdClass => $this->normalize(get_object_vars($value), $profile, $dateFormat),
+            $value instanceof stdClass => $this->normalizeValue(get_object_vars($value), $profile, $dateFormat),
             default => $this->body($value, $profile),
         };
     }
@@ -180,7 +194,7 @@ class Serializer
         foreach ($value as $key => $item) {
             $itemType = $type instanceof Types\Array_ ? $type->memberType : ($items[$key] ?? null);
 
-            $result[$key] = $this->normalize($item, $profile, $dateFormat, $itemType);
+            $result[$key] = $this->normalizeValue($item, $profile, $dateFormat, $itemType);
         }
 
         return $result;
@@ -199,7 +213,7 @@ class Serializer
             $type->subject,
         ));
 
-        $body = $this->normalize($value, $profile, $dateFormat);
+        $body = $this->normalizeValue($value, $profile, $dateFormat);
 
         if (! is_array($body) || array_key_exists($discriminator->key, $body)) {
             throw new RuntimeException(sprintf(
@@ -246,10 +260,14 @@ class Serializer
     }
 
     /**
-     * Whether the class declares its own toArray() rather than using the trait's.
+     * Whether the object uses IsArrayable and its class declares its own toArray().
      */
-    private function overridesToArray(object $object): bool
+    public function overridesToArray(object $object): bool
     {
+        if (! $this->usesTrait($object)) {
+            return false;
+        }
+
         return $this->overridesToArray[$object::class] ??= (function () use ($object): bool {
             $method = new ReflectionMethod($object, 'toArray');
             $trait = new ReflectionMethod(IsArrayable::class, 'toArray');

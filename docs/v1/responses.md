@@ -152,10 +152,13 @@ class Swatch implements Arrayable {
 }
 ```
 
-An override declared as `toArray(): array` also works; it is called with an argument it
-ignores. `Serializer::toArray($object)` and `Serializer::serialize($object)` always serialize
-the object they are given by its properties, which is why the override can call them without
-recursing, and why a `Response`'s HTTP body ignores its own override.
+An override declared as `toArray(): array` also works on a class that uses the trait
+directly; it is called with an argument it ignores. A `Response` subclass must keep the
+profile parameter. `Serializer::toArray($object)` and `Serializer::serialize($object)` always
+serialize the object they are given by its properties, which is why the override can call
+them without recursing. A `Response`'s HTTP body is its override's output, normalized with
+the response profile; the status and headers still come from its `#[Status]` and `#[Header]`
+properties.
 
 ## Date formats
 

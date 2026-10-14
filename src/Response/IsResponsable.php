@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Response;
 
 use BYanelli\Roma\Facades\Serializer;
+use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Serialization\Serialized;
 use Illuminate\Http\JsonResponse;
 
@@ -14,11 +15,19 @@ trait IsResponsable
 {
     use IsArrayable;
 
+    /**
+     * The body is the output of the class's own toArray() when it declares one.
+     */
     public function toResponse(mixed $request): JsonResponse
     {
-        $serialized = Serializer::serialize($this);
+        $profile = Profile::response();
+        $serialized = Serializer::serialize($this, $profile);
 
-        return new JsonResponse($serialized->body, $this->responseStatus($serialized), $this->responseHeaders($serialized));
+        $body = Serializer::overridesToArray($this)
+            ? Serializer::normalize($this->toArray($profile), $profile)
+            : $serialized->body;
+
+        return new JsonResponse($body, $this->responseStatus($serialized), $this->responseHeaders($serialized));
     }
 
     /**

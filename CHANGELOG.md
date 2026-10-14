@@ -54,7 +54,8 @@ All notable changes to `roma` will be documented in this file.
   declares its own `toArray()` is serialized by calling it with the active profile, and the
   result is normalized with that profile; an override without the parameter also works. The
   object passed to `Serializer::toArray()` or `serialize()` is always serialized by its
-  properties.
+  properties. `toResponse()` sends an override's output as the body, normalized with
+  `Profile::response()`, and takes the status and headers from the properties.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's

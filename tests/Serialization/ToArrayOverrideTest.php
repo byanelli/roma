@@ -3,10 +3,13 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Facades\Serializer;
+use BYanelli\Roma\Response\Attributes\Header;
+use BYanelli\Roma\Response\Attributes\Status;
 use BYanelli\Roma\Response\IsArrayable;
 use BYanelli\Roma\Response\Response;
 use BYanelli\Roma\Serialization\Profile;
 use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Http\Request;
 
 enum OverrideColor: string
 {
@@ -96,4 +99,46 @@ it('gives the same output from toArray() and json_encode', function () {
     expect($swatch->toArray())->toBe(['color' => ['name' => 'Red', 'value' => 'red'], 'label' => 'warm'])
         ->and(json_decode(json_encode($swatch), true))->toBe($swatch->toArray())
         ->and(json_decode(json_encode(swatchPalette()), true))->toBe(swatchPalette()->toArray());
+});
+
+class OverriddenResponse extends Response
+{
+    #[Status]
+    public int $status = 201;
+
+    #[Header('X-Shade')]
+    public string $shade = 'warm';
+
+    public function __construct(public OverrideColor $color) {}
+
+    public function toArray(?Profile $profile = null): array
+    {
+        return [...Serializer::toArray($this, $profile), 'extra' => 'value'];
+    }
+}
+
+class ReplacedBodyResponse extends Response
+{
+    #[Status]
+    public int $status = 202;
+
+    public function toArray(?Profile $profile = null): array
+    {
+        return ['replaced' => true];
+    }
+}
+
+it('sends an overridden toArray() as the response body', function () {
+    $response = new OverriddenResponse(OverrideColor::Red)->toResponse(new Request);
+
+    expect($response->getData(true))->toBe(['color' => ['name' => 'Red', 'value' => 'red'], 'extra' => 'value'])
+        ->and($response->getStatusCode())->toBe(201)
+        ->and($response->headers->get('X-Shade'))->toBe('warm');
+});
+
+it('takes the status from the properties when the override replaces the body', function () {
+    $response = new ReplacedBodyResponse()->toResponse(new Request);
+
+    expect($response->getData(true))->toBe(['replaced' => true])
+        ->and($response->getStatusCode())->toBe(202);
 });
