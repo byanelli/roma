@@ -8,7 +8,6 @@ use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Support\Arr;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -32,7 +31,7 @@ readonly class ObjectMapper
      * @param  class-string<T>  $className
      * @return T
      *
-     * @throws \ReflectionException|ValidationException
+     * @throws \ReflectionException|MappingValidationException
      */
     public function map(string $className, Payload $payload, SourcePolicy $policy)
     {
@@ -54,14 +53,32 @@ readonly class ObjectMapper
     /**
      * Validate the mapping, then construct the object and run its guards.
      *
-     * @throws \ReflectionException|ValidationException
+     * @throws \ReflectionException|MappingValidationException
      */
     public function instantiate(ClassMapping $mapping): mixed
     {
+        $this->validateMapping($mapping);
+
+        return $this->build($mapping);
+    }
+
+    /**
+     * @throws MappingValidationException
+     */
+    public function validateMapping(ClassMapping $mapping): void
+    {
         $attributeNames = $mapping->attributeNames();
 
-        $this->validate($this->makeValidator($mapping, $attributeNames), $attributeNames);
+        $this->validate($this->makeValidator($mapping, $attributeNames), $attributeNames, $mapping->getClassName());
+    }
 
+    /**
+     * Construct the object from a validated mapping and run its guards.
+     *
+     * @throws \ReflectionException
+     */
+    public function build(ClassMapping $mapping): mixed
+    {
         $instance = $this->construct($mapping);
 
         $this->runGuards($instance);
@@ -90,20 +107,18 @@ readonly class ObjectMapper
     }
 
     /**
-     * Validate, re-keying any errors from internal source-prefixed keys to
-     * client-facing names before rethrowing.
+     * Validate, re-keying any errors from internal source-prefixed keys to client-facing names.
      *
      * @param  array<string, string>  $attributeNames
+     * @param  class-string  $className
      * @param  ?Closure(string): string  $unnamedKey  renames an error key with no attribute name
      *
-     * @throws ValidationException
+     * @throws MappingValidationException
      */
-    public function validate(ValidatorContract $validator, array $attributeNames, ?Closure $unnamedKey = null): void
+    public function validate(ValidatorContract $validator, array $attributeNames, string $className, ?Closure $unnamedKey = null): void
     {
-        try {
-            $validator->validate();
-        } catch (ValidationException $e) {
-            throw ValidationException::withMessages($this->rekeyErrors($e, $attributeNames, $unnamedKey));
+        if ($validator->fails()) {
+            throw new MappingValidationException($className, $this->rekeyErrors($validator->errors()->messages(), $attributeNames, $unnamedKey));
         }
     }
 
@@ -198,18 +213,19 @@ readonly class ObjectMapper
      * no attribute-name entry, so it goes through `$unnamedKey` instead. Two
      * fields that share a client-facing name merge their messages.
      *
+     * @param  array<string, array<int, string>>  $messages
      * @param  array<string, string>  $attributeNames
      * @param  ?Closure(string): string  $unnamedKey
      * @return array<string, list<string>>
      */
-    private function rekeyErrors(ValidationException $e, array $attributeNames, ?Closure $unnamedKey): array
+    private function rekeyErrors(array $messages, array $attributeNames, ?Closure $unnamedKey): array
     {
         $errors = [];
 
-        foreach ($e->errors() as $key => $messages) {
+        foreach ($messages as $key => $keyMessages) {
             $name = $attributeNames[$key] ?? ($unnamedKey !== null ? $unnamedKey($key) : $key);
 
-            $errors[$name] = array_values(array_merge($errors[$name] ?? [], $messages));
+            $errors[$name] = array_merge($errors[$name] ?? [], $keyMessages);
         }
 
         return $errors;

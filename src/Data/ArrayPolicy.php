@@ -6,8 +6,6 @@ use BYanelli\Roma\Data\Sources\Data;
 
 /**
  * Maps every property from the plain array of an ArrayPayload.
- *
- * @internal
  */
 readonly class ArrayPolicy implements SourcePolicy
 {

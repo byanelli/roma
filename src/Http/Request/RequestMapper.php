@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Http\Request;
 
 use BYanelli\Roma\Data\ClassMapping;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Http\Request\Precognition\ClientDataKeys;
 use BYanelli\Roma\Http\Request\Precognition\PrecognitiveRuleFilter;
@@ -40,7 +41,25 @@ readonly class RequestMapper implements Contracts\RequestMapper
             $this->validatePrecognitiveRequest($mapping, $request);
         }
 
-        return $this->objectMapper->instantiate($mapping);
+        $this->asHttpValidation(fn () => $this->objectMapper->validateMapping($mapping));
+
+        return $this->objectMapper->build($mapping);
+    }
+
+    /**
+     * Laravel renders a ValidationException as a 422 with the same error keys and messages.
+     *
+     * @param  callable(): void  $validate
+     *
+     * @throws ValidationException
+     */
+    private function asHttpValidation(callable $validate): void
+    {
+        try {
+            $validate();
+        } catch (MappingValidationException $e) {
+            throw ValidationException::withMessages($e->errors());
+        }
     }
 
     /**
@@ -94,7 +113,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
             $this->precognitiveRuleFilter->filter($request, $validator->getRulesWithoutPlaceholders()),
         );
 
-        $this->objectMapper->validate($validator, $attributeNames, $unnamedKey);
+        $this->asHttpValidation(fn () => $this->objectMapper->validate($validator, $attributeNames, $mapping->getClassName(), $unnamedKey));
 
         abort(204, headers: ['Precognition-Success' => 'true']);
     }

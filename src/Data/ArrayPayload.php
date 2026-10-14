@@ -7,8 +7,6 @@ use BYanelli\Roma\Data\Types\Class_;
 
 /**
  * A plain array, mapped with ArrayPolicy.
- *
- * @internal
  */
 readonly class ArrayPayload implements Payload
 {

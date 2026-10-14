@@ -4,6 +4,7 @@
 
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Profile;
@@ -32,11 +33,11 @@ function recursiveErrors(Closure $map): array
 {
     try {
         $map();
-    } catch (ValidationException $e) {
+    } catch (ValidationException|MappingValidationException $e) {
         return $e->errors();
     }
 
-    throw new RuntimeException('Expected a ValidationException');
+    throw new RuntimeException('Expected a validation exception');
 }
 
 function threadData(): array

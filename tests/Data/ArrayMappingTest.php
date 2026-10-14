@@ -6,11 +6,11 @@ use BYanelli\Roma\Attributes\Guard;
 use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Tests\TestCase;
 use Carbon\CarbonImmutable;
-use Illuminate\Validation\ValidationException;
 
 /*
 | These tests map plain arrays through the core with ArrayPayload and
@@ -103,8 +103,8 @@ it('reports validation errors under the data source prefix', function () {
 
     try {
         mapArray(ArrayMappedPost::class, $data);
-        $this->fail('Expected ValidationException');
-    } catch (ValidationException $e) {
+        $this->fail('Expected MappingValidationException');
+    } catch (MappingValidationException $e) {
         expect(array_keys($e->errors()))->toEqualCanonicalizing([
             'data.author',
             'data.views',
@@ -121,7 +121,7 @@ it('reports a missing required key under the data source prefix', function () {
     unset($data['views']);
 
     expect(fn () => mapArray(ArrayMappedPost::class, $data))
-        ->toThrow(fn (ValidationException $e) => expect($e->errors())->toHaveKey('data.views'));
+        ->toThrow(fn (MappingValidationException $e) => expect($e->errors())->toHaveKey('data.views'));
 });
 
 it('runs guards after mapping a plain array', function () {
@@ -139,7 +139,7 @@ it('does not run guards when validation fails', function () {
 
     try {
         mapArray(ArrayMappedPost::class, validPostData(['author' => 'nope']));
-    } catch (ValidationException) {
+    } catch (MappingValidationException) {
     }
 
     expect($log->calls)->toBe([]);
@@ -173,8 +173,8 @@ it('caches a definition separately for each policy', function () {
 
     try {
         mapArray(ArrayMappedSharedClass::class, []);
-        $this->fail('Expected ValidationException');
-    } catch (ValidationException $e) {
+        $this->fail('Expected MappingValidationException');
+    } catch (MappingValidationException $e) {
         expect(array_keys($e->errors()))->toBe(['data.name']);
     }
 });
@@ -186,11 +186,11 @@ function arrayMappingErrors(string $class, array $data): array
 {
     try {
         mapArray($class, $data);
-    } catch (ValidationException $e) {
+    } catch (MappingValidationException $e) {
         return $e->errors();
     }
 
-    throw new RuntimeException('Expected ValidationException');
+    throw new RuntimeException('Expected MappingValidationException');
 }
 
 readonly class ArrayMappedOrder

@@ -4,6 +4,7 @@
 
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
@@ -20,11 +21,11 @@ function keyedErrors(string $class, array $data): array
 {
     try {
         mapKeyed($class, $data);
-    } catch (ValidationException $e) {
+    } catch (MappingValidationException $e) {
         return $e->errors();
     }
 
-    throw new RuntimeException('Expected ValidationException');
+    throw new RuntimeException('Expected MappingValidationException');
 }
 
 enum KeyedTier: string

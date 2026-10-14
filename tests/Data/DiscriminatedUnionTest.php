@@ -7,6 +7,7 @@ use BYanelli\Roma\Attributes\DiscriminatorValue;
 use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;
@@ -44,11 +45,11 @@ function discriminatedErrors(Closure $map): array
 {
     try {
         $map();
-    } catch (ValidationException $e) {
+    } catch (ValidationException|MappingValidationException $e) {
         return $e->errors();
     }
 
-    throw new RuntimeException('Expected a ValidationException');
+    throw new RuntimeException('Expected a validation exception');
 }
 
 it('maps a JSON body into the member the discriminator selects', function () {

@@ -6,6 +6,7 @@ use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Missing;
@@ -13,7 +14,6 @@ use BYanelli\Roma\Tests\Support\Discriminated\Card;
 use BYanelli\Roma\Tests\Support\Discriminated\PaymentMethod;
 use BYanelli\Roma\Tests\Support\Discriminated\Voucher;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;
-use Illuminate\Validation\ValidationException;
 
 class TestOptionalProfile
 {
@@ -51,11 +51,11 @@ function optionalErrors(array $data): array
 {
     try {
         mapOptional($data);
-    } catch (ValidationException $e) {
+    } catch (MappingValidationException $e) {
         return $e->errors();
     }
 
-    throw new RuntimeException('Expected a ValidationException');
+    throw new RuntimeException('Expected a MappingValidationException');
 }
 
 it('maps absent #[Optional] properties to their default, Missing or null, or leaves them unset', function () {

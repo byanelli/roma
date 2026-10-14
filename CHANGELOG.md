@@ -4,6 +4,13 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `ObjectMapper` throws `BYanelli\Roma\Data\MappingValidationException` instead of
+  Laravel's `ValidationException`, so a mapping failure that escapes a controller is a 500,
+  not a 422. It contains the re-keyed errors (`errors()`) and the class being mapped
+  (`className()`), and its message lists the first three errors. `RequestMapper` converts it
+  to a `ValidationException` with the same keys and messages, so requests, including
+  precognitive ones, still get a 422. `ObjectMapper::validate()` takes the class name, and
+  `validateMapping()` and `build()` split `instantiate()` into validation and construction.
 - `#[Optional]` applies when mapping, and a property with it is never required. An absent
   constructor parameter takes its default, else the new `BYanelli\Roma\Missing::instance()`
   when its type includes `Missing` (`string|Missing`, `Card|Missing|null`), else `null`; one

@@ -94,7 +94,7 @@ class ApiOnlyRequest {
 
 ## Error keys
 
-When validation fails, Roma throws Laravel's `ValidationException` with errors keyed by a
+When a request fails validation, Roma throws Laravel's `ValidationException` with errors keyed by a
 **source-prefixed, request-relative** name, so the caller always knows where the offending
 value belongs:
 
@@ -108,6 +108,30 @@ value belongs:
 Nested fields keep their full path and array elements are indexed (`input.address.city`,
 `input.items.1.code`). The one exception is a [precognitive request](/docs/roma/v1/precognition),
 whose errors are keyed by the bare posted field name for front-end form tooling.
+
+## Mapping outside a request
+
+`ObjectMapper` maps a plain array onto the same classes. A failure there throws
+`BYanelli\Roma\Data\MappingValidationException`, which Laravel renders as a 500 if nothing
+catches it, so data your code maps during a request, such as a config array, never answers
+the caller with a 422. Its `errors()` are keyed under `data.` and `className()` returns the
+class being mapped:
+
+```php
+use BYanelli\Roma\Data\ArrayPayload;
+use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
+use BYanelli\Roma\Data\ObjectMapper;
+
+try {
+    $settings = app(ObjectMapper::class)->map(Settings::class, new ArrayPayload($array), new ArrayPolicy);
+} catch (MappingValidationException $e) {
+    $e->errors();    // ['data.timeout' => ['The data.timeout field must be an integer.']]
+    $e->className(); // Settings::class
+}
+```
+
+Request mapping converts it to Laravel's `ValidationException`, so a request still gets a 422.
 
 ## Nullable and optional
 

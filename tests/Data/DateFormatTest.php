@@ -5,6 +5,7 @@
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
+use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Tests\TestCase;
@@ -38,11 +39,11 @@ function dateFormatErrors(array $data): array
 {
     try {
         mapDateFormatted($data);
-    } catch (ValidationException $e) {
+    } catch (MappingValidationException $e) {
         return $e->errors();
     }
 
-    throw new RuntimeException('Expected a ValidationException');
+    throw new RuntimeException('Expected a MappingValidationException');
 }
 
 it('parses a date in its #[DateFormat] into the declared class', function () {
