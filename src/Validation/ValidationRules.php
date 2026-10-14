@@ -12,6 +12,9 @@ use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use Illuminate\Validation\Rule;
 
+/**
+ * @phpstan-type Entry array{keySegments: list<string>, rules: list<mixed>, name: string}
+ */
 readonly class ValidationRules
 {
     /**
@@ -93,30 +96,31 @@ readonly class ValidationRules
             $type instanceof Types\Date => ['date'],
             $type instanceof Types\String_ => ['string'],
             $type instanceof Types\Array_ => $type->isList ? ['array', 'list'] : ['array'],
+            $type instanceof Class_ => ['array'],
             $type instanceof Types\Enum => [Rule::enum($type->class)],
             default => [],
         };
     }
 
     /**
-     * The presence rules that lead every property's rule list: "nullable"
+     * The presence rules that lead every value's rule list: "nullable"
      * (allow an explicit null) and the requiredness rule. A required member of
-     * a nested object becomes a RequiredWithinObject rule keyed on that object,
-     * so it is only required when the object is actually present — an absent or
-     * null object doesn't trip its members.
+     * a nested object becomes a RequiredWithinObject rule keyed on
+     * that object, so it is only required when the object is actually present —
+     * an absent or null object doesn't trip its members.
      *
      * @param  list<string>|null  $objectKeySegments
      * @return list<mixed>
      */
-    private function leadingRules(Property $property, ?array $objectKeySegments): array
+    private function leadingRules(bool $nullable, bool $required, ?array $objectKeySegments): array
     {
         $rules = [];
 
-        if ($property->nullable) {
+        if ($nullable) {
             $rules[] = 'nullable';
         }
 
-        if ($property->isRequired) {
+        if ($required) {
             $rules[] = $objectKeySegments !== null
                 ? new RequiredWithinObject($objectKeySegments)
                 : 'required';
@@ -126,13 +130,10 @@ readonly class ValidationRules
     }
 
     /**
-     * @param  list<string>|null  $objectKeySegments
-     * @return list<array{keySegments: list<string>, rules: list<mixed>, name: string}>
+     * @return list<Entry>
      */
-    private function entryFromProperty(Property $property, ?array $objectKeySegments = null): array
+    private function entryFromProperty(Property $property): array
     {
-        [$type, $rules, $name] = [$property->type, $property->rules, $property->errorKey];
-
         $keySegments = $property->getKeySegments();
 
         // Validation-only values are copied under a private key so they don't
@@ -141,102 +142,90 @@ readonly class ValidationRules
             $keySegments = [self::VALIDATION_ONLY_KEY, ...$keySegments];
         }
 
+        return $this->valueEntries(
+            $property->type,
+            $keySegments,
+            $property->errorKey,
+            [...$this->leadingRules($property->nullable, $property->isRequired, null), ...$property->rules],
+        );
+    }
+
+    /**
+     * The entries for a value of `$type` at `$keySegments`, followed by those
+     * of its members. A '*' key segment stands for every member of an
+     * enclosing array.
+     *
+     * @param  list<string>  $keySegments
+     * @param  list<mixed>  $rules  the presence and declared rules, which precede the type's rules
+     * @return list<Entry>
+     */
+    private function valueEntries(Type $type, array $keySegments, string $name, array $rules): array
+    {
         // A value object that parses from a raw string and vets it with its own
         // rule is validated as a leaf string at its own key — the input is one
         // string (e.g. a header value), not a structured sub-object, so the
-        // object's shape is not exposed to the validator and its fields are not
-        // recursed into.
+        // object's fields are not recursed into.
         if ($type instanceof Class_ && $this->validatesAsString($type->class)) {
             return [[
                 'keySegments' => $keySegments,
-                'rules' => array_merge(
-                    $this->leadingRules($property, $objectKeySegments),
-                    $rules,
-                    ['string'],
-                    $this->stringValueRules($type->class),
-                ),
+                'rules' => [...$rules, 'string', ...$this->stringValueRules($type->class)],
                 'name' => $name,
             ]];
         }
 
-        // Nested object: validate the object's presence/shape, then recurse
-        // into its properties. Each child already carries its own absolute
-        // keySegments (e.g. input -> address -> city), so its rules slot straight
-        // in. Their required members are gated on this object's presence, so an
-        // absent or null object doesn't require them.
-        if ($type instanceof Class_) {
-            $entries = [[
-                'keySegments' => $keySegments,
-                'rules' => array_merge($this->leadingRules($property, $objectKeySegments), $rules, ['array']),
-                'name' => $name,
-            ]];
-
-            return array_merge($entries, $this->entriesFromProperties($type->properties, $property->getKeySegments()));
-        }
-
-        $entries = [[
+        $entry = [
             'keySegments' => $keySegments,
-            'rules' => array_merge($this->leadingRules($property, $objectKeySegments), $rules, $this->getTypeValidationRules($type)),
+            'rules' => [...$rules, ...$this->getTypeValidationRules($type)],
             'name' => $name,
-        ]];
+        ];
 
-        if ($type instanceof Types\Array_) {
-            $entries = array_merge($entries, $this->arrayMemberEntries($property, $type));
+        return match (true) {
+            $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $keySegments, $name)],
+            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, [...$keySegments, '*'], "$name.*", [])],
+            default => [$entry],
+        };
+    }
+
+    /**
+     * @param  list<string>  $keySegments
+     * @return list<Entry>
+     */
+    private function objectMemberEntries(Class_ $class, array $keySegments, string $name): array
+    {
+        $entries = [];
+
+        foreach ($class->properties as $member) {
+            // A virtual (computed) property is not an input, so it gets no
+            // rules — otherwise it would validate as required.
+            if ($member->isVirtual) {
+                continue;
+            }
+
+            $key = $member->source->getOwnKey();
+
+            $entries = [...$entries, ...$this->valueEntries(
+                $member->type,
+                [...$keySegments, $key],
+                "$name.$key",
+                [...$this->leadingRules($member->nullable, $member->isRequired, $keySegments), ...$member->rules],
+            )];
         }
 
         return $entries;
     }
 
     /**
-     * @return list<array{keySegments: list<string>, rules: list<mixed>, name: string}>
-     */
-    private function arrayMemberEntries(Property $property, Types\Array_ $type): array
-    {
-        $arrayKeySegments = $property->getKeySegments();
-        $arrayName = $property->errorKey;
-        $memberType = $type->memberType;
-
-        // Array of scalars/enums: a single "key.*" rule for every element.
-        if (! $memberType instanceof Class_) {
-            return [[
-                'keySegments' => [...$arrayKeySegments, '*'],
-                'rules' => $this->getTypeValidationRules($memberType),
-                'name' => $arrayName.'.*',
-            ]];
-        }
-
-        // Array of nested objects: re-key each object property under "key.*" by
-        // splicing a "*" segment in after the array's own keySegments. Members keep
-        // plain required rules; Laravel's "*" only applies them to present
-        // elements.
-        $result = [];
-
-        foreach ($this->entriesFromProperties($memberType->properties) as $entry) {
-            $relative = array_slice($entry['keySegments'], count($arrayKeySegments));
-
-            $result[] = [
-                'keySegments' => [...$arrayKeySegments, '*', ...$relative],
-                'rules' => $entry['rules'],
-                'name' => $arrayName.'.*.'.implode('.', $relative),
-            ];
-        }
-
-        return $result;
-    }
-
-    /**
      * @param  list<Property>  $properties
-     * @param  list<string>|null  $objectKeySegments
-     * @return list<array{keySegments: list<string>, rules: list<mixed>, name: string}>
+     * @return list<Entry>
      */
-    private function entriesFromProperties(array $properties, ?array $objectKeySegments = null): array
+    private function entriesFromProperties(array $properties): array
     {
         return array_values(
             collect($properties)
                 // A virtual (computed) property is not an input, so it gets no
                 // rules — otherwise it would validate as required.
                 ->reject(fn (Property $property) => $property->isVirtual)
-                ->flatMap(fn (Property $property) => $this->entryFromProperty($property, $objectKeySegments))
+                ->flatMap(fn (Property $property) => $this->entryFromProperty($property))
                 ->all()
         );
     }

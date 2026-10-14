@@ -30,6 +30,7 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
 
     /**
      * @param  list<string>  $objectKeySegments  Exact key keySegments locating the containing object in the validated data.
+     *                                           A '*' segment matches the array index in the validated attribute.
      */
     public function __construct(private readonly array $objectKeySegments) {}
 
@@ -45,8 +46,9 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        // The containing object is absent or null, so nothing is required.
-        if ($this->containingObject() === null) {
+        // The containing object is absent, null, or not an array (which its own
+        // "array" rule reports), so nothing is required.
+        if (! is_array($this->containingObject($attribute))) {
             return;
         }
 
@@ -59,11 +61,19 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
      * Walk the object's key keySegments with exact-key access so a literal dot in
      * a key segment isn't mistaken for structural nesting.
      */
-    private function containingObject(): mixed
+    private function containingObject(string $attribute): mixed
     {
+        $keySegments = in_array('*', $this->objectKeySegments, true)
+            ? $this->resolveWildcards($attribute)
+            : $this->objectKeySegments;
+
+        if ($keySegments === null) {
+            return null;
+        }
+
         $sub = $this->data;
 
-        foreach ($this->objectKeySegments as $keySegment) {
+        foreach ($keySegments as $keySegment) {
             if (! is_array($sub) || ! array_key_exists($keySegment, $sub)) {
                 return null;
             }
@@ -72,5 +82,32 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
         }
 
         return $sub;
+    }
+
+    /**
+     * The object's key segments with each '*' replaced by the index it matched in
+     * `$attribute`, e.g. "input.items.2.city" for ["input", "items", "*"].
+     *
+     * @return list<string>|null
+     */
+    private function resolveWildcards(string $attribute): ?array
+    {
+        $pattern = implode('\.', array_map(
+            fn (string $keySegment) => $keySegment === '*' ? '([^.]+)' : preg_quote($keySegment, '/'),
+            $this->objectKeySegments,
+        ));
+
+        if (preg_match('/^'.$pattern.'\./', $attribute, $matches) !== 1) {
+            return null;
+        }
+
+        $index = 1;
+        $keySegments = [];
+
+        foreach ($this->objectKeySegments as $keySegment) {
+            $keySegments[] = $keySegment === '*' ? $matches[$index++] : $keySegment;
+        }
+
+        return $keySegments;
     }
 }

@@ -22,6 +22,8 @@ All notable changes to `roma` will be documented in this file.
   Breaking: `responseStatus()` and `responseHeaders()` are public and take the `Serialized`
   result, and `CustomizesSerialization::dateFormat()` replaces the protected
   `IsArrayable::dateFormat()` override.
+- A required property of an object nested in an array member is now enforced; it is
+  required only when that object is present and an array.
 - `list<T>` array element types in `@var` and `@param`, alongside `array<T>`. A `list<T>`
   property also validates with Laravel's `list` rule, so input with non-sequential keys is
   rejected.

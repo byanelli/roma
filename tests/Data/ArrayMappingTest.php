@@ -178,3 +178,47 @@ it('caches a definition separately for each policy', function () {
         expect(array_keys($e->errors()))->toBe(['data.name']);
     }
 });
+
+/**
+ * @return array<string, list<string>>
+ */
+function arrayMappingErrors(string $class, array $data): array
+{
+    try {
+        mapArray($class, $data);
+    } catch (ValidationException $e) {
+        return $e->errors();
+    }
+
+    throw new RuntimeException('Expected ValidationException');
+}
+
+readonly class ArrayMappedOrder
+{
+    public function __construct(
+        public string $id,
+        public ?ArrayMappedAddress $address = null,
+    ) {}
+}
+
+readonly class ArrayMappedOrderList
+{
+    /**
+     * @param  list<ArrayMappedOrder>  $orders
+     */
+    public function __construct(public array $orders) {}
+}
+
+it('requires the members of an object inside an array member only when that object is present', function () {
+    expect(arrayMappingErrors(ArrayMappedOrderList::class, [
+        'orders' => [
+            ['id' => 'a'],
+            ['id' => 'b', 'address' => null],
+            ['id' => 'c', 'address' => []],
+            [],
+        ],
+    ]))->toEqual([
+        'data.orders.2.address.city' => ['The data.orders.*.address.city field is required.'],
+        'data.orders.3.id' => ['The data.orders.*.id field is required.'],
+    ]);
+});
