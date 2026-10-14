@@ -176,13 +176,26 @@ it('matches Validate-Only patterns against expanded array rules', function () {
 
     $response->assertUnprocessable();
 
-    $this->assertArrayHasKey('codes.1', $response->json('errors'));
+    expect($response->json('errors'))->toBe(['codes.1' => ['The codes.1 field must be a string.']]);
 
     $this->withPrecognition()
         ->withHeader('Precognition-Validate-Only', 'codes.0')
         ->postJson('/codes', ['codes' => ['abc', 123]])
         ->assertNoContent()
         ->assertHeader('Precognition-Success', 'true');
+});
+
+it('names an array element by its source-prefixed key when configured', function () {
+    /** @var TestCase $this */
+    config()->set('roma.precognition.source_prefixed_errors', true);
+
+    Route::post('/codes', fn (PrecognitiveCodesRequest $request) => response()->json(['ran' => true]))
+        ->middleware(HandlePrecognitiveRequests::class);
+
+    $this->withPrecognition()
+        ->postJson('/codes', ['codes' => ['abc', 123]])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors', ['input.codes.1' => ['The input.codes.1 field must be a string.']]);
 });
 
 it('does not validate headers during a precognitive request', function () {

@@ -57,8 +57,11 @@ readonly class ValidationRules
             $rules[$this->escapedKey($entry['keySegments'])] = $entry['rules'];
 
             // The attribute-name key is the unescaped join, matching what
-            // Laravel puts in the error bag and looks up for :attribute.
-            $names[$this->plainKey($entry['keySegments'])] = $entry['name'];
+            // Laravel puts in the error bag and looks up for :attribute. A
+            // wildcard key gets no name, so messages show the concrete key.
+            if (! in_array('*', $entry['keySegments'], true)) {
+                $names[$this->plainKey($entry['keySegments'])] = $entry['name'];
+            }
         }
 
         $this->rules = $rules;

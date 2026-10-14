@@ -9,6 +9,7 @@ use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Validator;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -70,15 +71,22 @@ readonly class ObjectMapper
 
     /**
      * @param  array<string, string>  $attributeNames
+     * @param  ?Closure(string): string  $unnamedKey  renames a key with no attribute name, such as an array element's
      */
-    public function makeValidator(ClassMapping $mapping, array $attributeNames): ValidatorContract
+    public function makeValidator(ClassMapping $mapping, array $attributeNames, ?Closure $unnamedKey = null): ValidatorContract
     {
-        return $this->validatorFactory->make(
+        $validator = $this->validatorFactory->make(
             $mapping->data(),
             $this->resolveRuleClosures($mapping->rules()),
             [],
             $attributeNames,
         );
+
+        if ($unnamedKey !== null && $validator instanceof Validator) {
+            $validator->setImplicitAttributesFormatter($unnamedKey);
+        }
+
+        return $validator;
     }
 
     /**

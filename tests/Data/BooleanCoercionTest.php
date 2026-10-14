@@ -51,7 +51,7 @@ it('coerces false values', function (mixed $value) {
 
 it('rejects other values with the boolean message', function (mixed $value) {
     expect(boolErrors(['flag' => true, 'flags' => [$value]]))
-        ->toBe(['data.flags.0' => ['The data.flags.* field must be true or false.']]);
+        ->toBe(['data.flags.0' => ['The data.flags.0 field must be true or false.']]);
 })->with(['', ' ', 'maybe', 'y', 't', 2, '2', -1, 1.0, [[]]]);
 
 it('reports a blank required boolean as required', function () {

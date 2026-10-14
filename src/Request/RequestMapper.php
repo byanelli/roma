@@ -70,7 +70,9 @@ readonly class RequestMapper implements Contracts\RequestMapper
             $attributeNames = array_map($this->clientDataKeys->stripSourcePrefix(...), $attributeNames);
         }
 
-        $validator = $this->objectMapper->makeValidator($mapping, $attributeNames);
+        $unnamedKey = $stripPrefixes ? $this->clientDataKeys->stripSourcePrefix(...) : null;
+
+        $validator = $this->objectMapper->makeValidator($mapping, $attributeNames, $unnamedKey);
 
         // Validation is optionally narrowed to the fields named in the
         // Precognition-Validate-Only header. As in FormRequest, filtering
@@ -92,11 +94,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
             $this->precognitiveRuleFilter->filter($request, $validator->getRulesWithoutPlaceholders()),
         );
 
-        $this->objectMapper->validate(
-            $validator,
-            $attributeNames,
-            $stripPrefixes ? $this->clientDataKeys->stripSourcePrefix(...) : null,
-        );
+        $this->objectMapper->validate($validator, $attributeNames, $unnamedKey);
 
         abort(204, headers: ['Precognition-Success' => 'true']);
     }

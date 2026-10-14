@@ -178,9 +178,9 @@ it('reports errors inside nested maps of shapes under their full keys', function
             ],
         ],
     ]))->toEqual([
-        'data.prices.gemini.flash.input' => ['The data.prices.*.*.input field must be a number.'],
-        'data.prices.gemini.flash.output' => ['The data.prices.*.*.output field is required.'],
-        'data.prices.gemini.pro' => ['The data.prices.*.* field must be an array.'],
+        'data.prices.gemini.flash.input' => ['The data.prices.gemini.flash.input field must be a number.'],
+        'data.prices.gemini.flash.output' => ['The data.prices.gemini.flash.output field is required.'],
+        'data.prices.gemini.pro' => ['The data.prices.gemini.pro field must be an array.'],
     ]);
 });
 

@@ -175,13 +175,13 @@ it('fails to map invalid requests', function () {
                 'The input.name field is required.',
             ],
             'input.arr.0' => [
-                'The input.arr.* field must be an integer.',
+                'The input.arr.0 field must be an integer.',
             ],
             'input.arr.1' => [
-                'The input.arr.* field must be an integer.',
+                'The input.arr.1 field must be an integer.',
             ],
             'input.arr.2' => [
-                'The input.arr.* field must be an integer.',
+                'The input.arr.2 field must be an integer.',
             ],
         ], $e->errors());
 

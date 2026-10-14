@@ -262,8 +262,8 @@ it('still treats structural dots as nesting and validates array wildcards', func
     } catch (ValidationException $e) {
         expect($e->errors())->toBe([
             'input.address.city' => ['The input.address.city field must be a string.'],
-            'input.items.0' => ['The input.items.* field must be an integer.'],
-            'input.items.1' => ['The input.items.* field must be an integer.'],
+            'input.items.0' => ['The input.items.0 field must be an integer.'],
+            'input.items.1' => ['The input.items.1 field must be an integer.'],
         ]);
 
         return;

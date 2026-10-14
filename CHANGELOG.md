@@ -47,6 +47,9 @@ All notable changes to `roma` will be documented in this file.
   or through a property typed as its class. `Profile::storage()` output maps back to an equal
   object.
 - An invalid array element or shape item no longer leaves the other elements uncoerced.
+- A validation message for an array element shows its concrete key, e.g. "The
+  data.prices.m.2025-01-01.input field must be a number." instead of `data.prices.*.*.input`.
+  A precognitive response shows the bare key (`codes.1`).
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's

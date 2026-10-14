@@ -218,7 +218,7 @@ it('requires the members of an object inside an array member only when that obje
             [],
         ],
     ]))->toEqual([
-        'data.orders.2.address.city' => ['The data.orders.*.address.city field is required.'],
-        'data.orders.3.id' => ['The data.orders.*.id field is required.'],
+        'data.orders.2.address.city' => ['The data.orders.2.address.city field is required.'],
+        'data.orders.3.id' => ['The data.orders.3.id field is required.'],
     ]);
 });
