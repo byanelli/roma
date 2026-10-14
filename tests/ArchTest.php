@@ -17,3 +17,7 @@ arch('the serializer does not depend on HTTP')
 arch('the generic attributes do not depend on HTTP')
     ->expect('BYanelli\Roma\Attributes')
     ->not->toUse($http);
+
+arch('the JSON Schema builder does not depend on HTTP')
+    ->expect('BYanelli\Roma\JsonSchema')
+    ->not->toUse($http);

@@ -4,8 +4,20 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
-- `#[Description('...')]` on a class or property is written as a doc comment in generated
-  TypeScript.
+- JSON Schema from class definitions. `BYanelli\Roma\JsonSchema\ClassSchema::properties($class)`
+  returns `array<string, Illuminate\JsonSchema\Types\Type>`, the shape an MCP or AI SDK
+  tool's `schema()` returns, and `ClassSchema::object($class)` returns one `ObjectType`. Both
+  are built at runtime from the definition the class is mapped with from a plain array.
+  Scalars, dates (`format: date-time`, `date` for `#[DateFormat('Y-m-d')]`, else the PHP
+  format in the description), enums (`enum` of values or case names), nested objects,
+  arrays, maps, shapes and discriminated unions (`anyOf`, with the key as a single-value
+  `enum` in each member) are supported. Required, nullable and defaults follow mapping.
+  `min`/`max`/`between`/`size`, `in`, `email`/`url`/`uuid`/`date`/`date_format`, `regex`,
+  `required` and `present` rules add keywords; other rules are left to the mapper. An
+  `array<string, T>` map has no value schema, and a class that contains itself or a file
+  upload throws, since Laravel's types have no `additionalProperties` schema or `$ref`.
+- `#[Description('...')]` on a class or property sets the JSON Schema `description` and is
+  written as a doc comment in generated TypeScript.
 - Breaking: `ObjectMapper` throws `BYanelli\Roma\Data\MappingValidationException` instead of
   Laravel's `ValidationException`, so a mapping failure that escapes a controller is a 500,
   not a 422. It contains the re-keyed errors (`errors()`) and the class being mapped

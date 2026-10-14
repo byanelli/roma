@@ -65,13 +65,15 @@ class CreateContactController {
   object, with profiles for responses, outgoing requests and storage.
 - **TypeScript generation.** `php artisan roma:typescript` emits an interface for every
   request and response — one source of truth for your frontend (great with Inertia).
+- **JSON Schema.** `ClassSchema::properties(SearchInput::class)` builds Laravel `JsonSchema`
+  types from a class at runtime, for the `schema()` method of an MCP or AI SDK tool.
 - **Laravel Precognition.** Works out of the box.
 - **AI-ready.** Ships [Laravel Boost](https://github.com/laravel/boost) guidelines, so AI
   coding agents know when and how to reach for Roma.
 
 See the **[full documentation](https://yanelli.dev/docs/roma)** for everything: request
 objects, sources, validation & guards, headers & metadata, nested objects, responses,
-TypeScript generation, and Precognition.
+TypeScript generation, JSON Schema, and Precognition.
 
 ## Testing
 

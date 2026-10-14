@@ -7,7 +7,7 @@ description: >-
   (#[Body], #[Query], #[Header], #[Path], #[Cookie]), header value objects
   (Authorization), self-sourcing metadata enums (Method, ContentType, Scheme),
   #[Guard], #[Rule], Roma TypeScript generation (roma:typescript), or Roma
-  Precognition. Do NOT use for plain Laravel FormRequests that are not mapped to a
+  Precognition, or Roma JSON Schema for tools (ClassSchema). Do NOT use for plain Laravel FormRequests that are not mapped to a
   typed object, for Eloquent API Resources, or for non-HTTP DTOs.
 ---
 
@@ -32,6 +32,7 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
 | `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
+| `BYanelli\Roma\JsonSchema` | `ClassSchema` |
 
 ## Defining and injecting a request
 
@@ -169,6 +170,17 @@ outside a response.
 `{Name}Headers` for requests). Requests are auto-detected by a class-level `#[Request]`;
 responses by extending `Response`/using `IsResponsable`. No manual list to maintain.
 `#[Description('...')]` on a class or property becomes a `/** ... */` doc comment.
+
+## JSON Schema
+
+`ClassSchema::properties(SearchInput::class)` returns `array<string, Illuminate\JsonSchema\Types\Type>`
+built at runtime from the class: return it from an MCP or AI SDK tool's
+`schema(JsonSchema $schema)` instead of writing the schema by hand. `ClassSchema::object()`
+returns one `ObjectType`. Required/nullable/defaults follow mapping, `#[Description]` sets
+`description`, discriminated unions become `anyOf`, and `#[Rule]`s such as `max`, `in`,
+`email` and `regex` add keywords; other rules are still enforced when mapping. A class that
+contains itself, a file upload or an HTTP source attribute throws. `array<string, T>` maps
+are an `object` without a value schema.
 
 ## Precognition
 

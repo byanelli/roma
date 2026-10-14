@@ -1,0 +1,347 @@
+<?php
+
+/** @noinspection PhpIllegalPsrClassPathInspection */
+
+use BYanelli\Roma\Attributes\DateFormat;
+use BYanelli\Roma\Attributes\Description;
+use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\Present;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\JsonSchema\ClassSchema;
+use BYanelli\Roma\Missing;
+use BYanelli\Roma\Tests\Support\Discriminated\Card;
+use BYanelli\Roma\Tests\Support\Discriminated\PaymentMethod;
+use BYanelli\Roma\Tests\Support\Discriminated\Voucher;
+use BYanelli\Roma\Tests\Support\Recursive\Comment;
+use BYanelli\Roma\Tests\Support\Recursive\Thread;
+use Illuminate\Http\UploadedFile;
+use Illuminate\JsonSchema\JsonSchema;
+use Illuminate\JsonSchema\Types\ObjectType;
+use Illuminate\JsonSchema\Types\StringType;
+use Illuminate\JsonSchema\Types\Type;
+use Illuminate\Validation\Rules\In;
+
+enum SchemaColor: string
+{
+    case Red = 'red';
+    case Green = 'green';
+}
+
+enum SchemaPriority: int
+{
+    case Low = 1;
+    case High = 2;
+}
+
+enum SchemaSize
+{
+    case Small;
+    case Large;
+}
+
+#[Description('A postal address.')]
+readonly class SchemaAddress
+{
+    public function __construct(
+        public string $city,
+        public ?string $postcode = null,
+    ) {}
+}
+
+readonly class SchemaScalars
+{
+    public function __construct(
+        public string $name,
+        public int $count,
+        public float $ratio,
+        public bool $active,
+        public DateTimeImmutable $at,
+        #[DateFormat('Y-m-d')] public DateTimeImmutable $day,
+        #[DateFormat('d/m/Y'), Description('The day it starts.')] public DateTimeImmutable $starts,
+        public SchemaColor $color,
+        public SchemaPriority $priority,
+        public SchemaSize $size,
+        public mixed $anything,
+    ) {}
+}
+
+readonly class SchemaCollections
+{
+    /**
+     * @param  list<string>  $tags
+     * @param  array<int>  $scores
+     * @param  array<string, int>  $counts
+     * @param  array<int, string>  $names
+     * @param  array{input: float, output?: ?float}  $price
+     * @param  list<SchemaAddress>  $addresses
+     * @param  list<mixed>  $extra
+     */
+    public function __construct(
+        public array $tags,
+        public array $scores,
+        public array $counts,
+        public array $names,
+        public array $price,
+        public array $addresses,
+        public array $extra,
+        public SchemaAddress $home,
+        #[Description('Where to send mail.')] public ?SchemaAddress $mailing,
+    ) {}
+}
+
+readonly class SchemaPresence
+{
+    /**
+     * @param  list<int>  $ids
+     * @param  array<string, int>  $counts
+     */
+    public function __construct(
+        public string $required,
+        public ?string $nullable,
+        public string $defaulted = 'x',
+        #[Optional] public string|Missing $optional = 'y',
+        #[Optional] public int|Missing $missing = 0,
+        #[Optional] public ?SchemaColor $color = null,
+        #[Present] public ?string $present = null,
+        public SchemaColor $tint = SchemaColor::Green,
+        public SchemaSize $size = SchemaSize::Large,
+        public array $ids = [1, 2],
+        public array $counts = [],
+        public float $ratio = 0.5,
+    ) {}
+}
+
+readonly class SchemaUnions
+{
+    /**
+     * @param  list<PaymentMethod>  $fallbacks
+     */
+    public function __construct(
+        public PaymentMethod $payment,
+        #[Discriminated([Card::class, Voucher::class], key: 'kind')] public Card|Voucher|null $refund,
+        public array $fallbacks = [],
+    ) {}
+}
+
+class SchemaRules
+{
+    public static function dynamic(): string
+    {
+        return 'max:3';
+    }
+
+    /**
+     * @param  list<string>  $tags
+     */
+    public function __construct(
+        #[Rule('min:2', 'max:10')] public string $name,
+        #[Rule('between:1,5')] public int $rating,
+        #[Rule('min:0.5', 'max:99.5')] public float $weight,
+        #[Rule('min:1', 'max:3')] public array $tags,
+        #[Rule('size:8')] public string $code,
+        #[Rule('in:draft,published')] public string $status,
+        #[Rule(['in:1,2,3'])] public int $level,
+        #[Rule('email')] public string $email,
+        #[Rule('url')] public string $site,
+        #[Rule('uuid')] public string $id,
+        #[Rule('date')] public string $date,
+        #[Rule('date_format:Y-m-d')] public string $day,
+        #[Rule('regex:/^[a-z]+\/\d+$/')] public string $slug,
+        #[Rule('regex:#^\#\w+$#u')] public string $hashtag,
+        #[Rule('regex:/^abc$/i')] public string $caseless,
+        #[Rule(self::dynamic(...), 'alpha_dash', 'unique:users')] public string $handle,
+        #[Rule(new In(['a', 'b']))] public string $letter,
+        #[Rule('required')] public string $nickname = '',
+    ) {}
+}
+
+readonly class SchemaFile
+{
+    public function __construct(public UploadedFile $upload) {}
+}
+
+readonly class SchemaFromQuery
+{
+    public function __construct(#[Query] public string $term) {}
+}
+
+/**
+ * @param  class-string  $class
+ * @return array<string, array<string, mixed>>
+ */
+function schemaProperties(string $class): array
+{
+    return array_map(fn (Type $type) => $type->toArray(), ClassSchema::properties($class));
+}
+
+it('returns a schema per property for a tool schema() method', function () {
+    $properties = ClassSchema::properties(SchemaAddress::class);
+
+    expect($properties)->toHaveKeys(['city', 'postcode'])
+        ->and($properties['city'])->toBeInstanceOf(StringType::class)
+        ->and(ClassSchema::object(SchemaAddress::class))->toBeInstanceOf(ObjectType::class);
+});
+
+it('maps scalars, dates, enums and mixed', function () {
+    expect(schemaProperties(SchemaScalars::class))->toBe([
+        'name' => ['type' => 'string'],
+        'count' => ['type' => 'integer'],
+        'ratio' => ['type' => 'number'],
+        'active' => ['type' => 'boolean'],
+        'at' => ['format' => 'date-time', 'type' => 'string'],
+        'day' => ['format' => 'date', 'type' => 'string'],
+        'starts' => ['description' => 'The day it starts. Format (PHP date): d/m/Y', 'type' => 'string'],
+        'color' => ['enum' => ['red', 'green'], 'type' => 'string'],
+        'priority' => ['enum' => [1, 2], 'type' => 'integer'],
+        'size' => ['enum' => ['Small', 'Large'], 'type' => 'string'],
+        'anything' => ['type' => ['string', 'integer', 'number', 'boolean', 'object', 'array', 'null']],
+    ]);
+});
+
+it('maps arrays, maps, shapes and nested objects', function () {
+    $address = [
+        'description' => 'A postal address.',
+        'properties' => [
+            'city' => ['type' => 'string'],
+            'postcode' => ['type' => ['string', 'null']],
+        ],
+        'type' => 'object',
+        'required' => ['city'],
+    ];
+
+    expect(schemaProperties(SchemaCollections::class))->toBe([
+        'tags' => ['items' => ['type' => 'string'], 'type' => 'array'],
+        'scores' => ['items' => ['type' => 'integer'], 'type' => 'array'],
+        'counts' => ['type' => 'object'],
+        'names' => ['items' => ['type' => 'string'], 'type' => 'array'],
+        'price' => [
+            'properties' => [
+                'input' => ['type' => 'number'],
+                'output' => ['type' => ['number', 'null']],
+            ],
+            'type' => 'object',
+            'required' => ['input'],
+        ],
+        'addresses' => ['items' => $address, 'type' => 'array'],
+        'extra' => ['type' => 'array'],
+        'home' => $address,
+        'mailing' => [...$address, 'description' => 'Where to send mail.', 'type' => ['object', 'null']],
+    ]);
+});
+
+it('marks required, nullable and default values', function () {
+    $object = ClassSchema::object(SchemaPresence::class)->toArray();
+
+    expect($object['required'])->toBe(['required', 'present'])
+        ->and($object['properties'])->toBe([
+            'required' => ['type' => 'string'],
+            'nullable' => ['type' => ['string', 'null']],
+            'defaulted' => ['default' => 'x', 'type' => 'string'],
+            'optional' => ['default' => 'y', 'type' => 'string'],
+            'missing' => ['default' => 0, 'type' => 'integer'],
+            'color' => ['enum' => ['red', 'green'], 'type' => ['string', 'null']],
+            'present' => ['type' => ['string', 'null']],
+            'tint' => ['default' => 'green', 'enum' => ['red', 'green'], 'type' => 'string'],
+            'size' => ['default' => 'Large', 'enum' => ['Small', 'Large'], 'type' => 'string'],
+            'ids' => ['default' => [1, 2], 'items' => ['type' => 'integer'], 'type' => 'array'],
+            'counts' => ['type' => 'object'],
+            'ratio' => ['default' => 0.5, 'type' => 'number'],
+        ]);
+});
+
+it('maps a discriminated union to anyOf with the discriminator in each member', function () {
+    $card = fn (string $key) => [
+        'properties' => [
+            $key => ['enum' => ['Card'], 'type' => 'string'],
+            'last4' => ['type' => 'string'],
+            'saved' => ['default' => false, 'type' => 'boolean'],
+        ],
+        'type' => 'object',
+        'required' => [$key, 'last4'],
+    ];
+    $bank = [
+        'properties' => [
+            'type' => ['enum' => ['bank'], 'type' => 'string'],
+            'iban' => ['type' => 'string'],
+        ],
+        'type' => 'object',
+        'required' => ['type', 'iban'],
+    ];
+    $voucher = [
+        'properties' => [
+            'kind' => ['enum' => ['Voucher'], 'type' => 'string'],
+            'code' => ['type' => 'string'],
+        ],
+        'type' => 'object',
+        'required' => ['kind', 'code'],
+    ];
+
+    expect(schemaProperties(SchemaUnions::class))->toBe([
+        'payment' => ['anyOf' => [$card('type'), $bank]],
+        'refund' => ['anyOf' => [$card('kind'), $voucher, ['type' => 'null']]],
+        'fallbacks' => ['default' => [], 'items' => ['anyOf' => [$card('type'), $bank]], 'type' => 'array'],
+    ]);
+});
+
+it('adds keywords for the rules that have one and skips the rest', function () {
+    $object = ClassSchema::object(SchemaRules::class)->toArray();
+
+    expect($object['properties'])->toBe([
+        'name' => ['minLength' => 2, 'maxLength' => 10, 'type' => 'string'],
+        'rating' => ['minimum' => 1, 'maximum' => 5, 'type' => 'integer'],
+        'weight' => ['minimum' => 0.5, 'maximum' => 99.5, 'type' => 'number'],
+        'tags' => ['minItems' => 1, 'maxItems' => 3, 'items' => ['type' => 'string'], 'type' => 'array'],
+        'code' => ['minLength' => 8, 'maxLength' => 8, 'type' => 'string'],
+        'status' => ['enum' => ['draft', 'published'], 'type' => 'string'],
+        'level' => ['enum' => [1, 2, 3], 'type' => 'integer'],
+        'email' => ['format' => 'email', 'type' => 'string'],
+        'site' => ['format' => 'uri', 'type' => 'string'],
+        'id' => ['format' => 'uuid', 'type' => 'string'],
+        'date' => ['format' => 'date-time', 'type' => 'string'],
+        'day' => ['format' => 'date', 'type' => 'string'],
+        'slug' => ['pattern' => '^[a-z]+/\d+$', 'type' => 'string'],
+        'hashtag' => ['pattern' => '^#\w+$', 'type' => 'string'],
+        'caseless' => ['type' => 'string'],
+        'handle' => ['type' => 'string'],
+        'letter' => ['enum' => ['a', 'b'], 'type' => 'string'],
+        'nickname' => ['default' => '', 'type' => 'string'],
+    ])->and($object['required'])->toContain('nickname');
+});
+
+it('throws for a class that contains itself', function (string $class) {
+    expect(fn () => ClassSchema::properties($class))
+        ->toThrow(RuntimeException::class, 'contains itself');
+})->with([Comment::class, Thread::class]);
+
+it('throws for a file upload', function () {
+    expect(fn () => ClassSchema::object(SchemaFile::class))
+        ->toThrow(RuntimeException::class, 'file upload');
+});
+
+it('rejects an HTTP source', function () {
+    expect(fn () => ClassSchema::object(SchemaFromQuery::class))
+        ->toThrow(RuntimeException::class, 'ArrayPolicy does not allow');
+});
+
+it('serializes through Laravel to the expected JSON Schema', function () {
+    $object = ClassSchema::object(SchemaAddress::class);
+
+    expect(json_decode((string) $object, true))->toBe([
+        'description' => 'A postal address.',
+        'properties' => [
+            'city' => ['type' => 'string'],
+            'postcode' => ['type' => ['string', 'null']],
+        ],
+        'type' => 'object',
+        'required' => ['city'],
+    ])->and(JsonSchema::object(ClassSchema::properties(SchemaAddress::class))->toArray())->toBe([
+        'properties' => [
+            'city' => ['type' => 'string'],
+            'postcode' => ['type' => ['string', 'null']],
+        ],
+        'type' => 'object',
+        'required' => ['city'],
+    ]);
+});
