@@ -2,12 +2,12 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Attributes\Guard;
+use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
-use BYanelli\Roma\Request\Attributes\Guard;
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Tests\TestCase;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\ValidationException;

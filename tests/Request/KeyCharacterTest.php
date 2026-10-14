@@ -3,9 +3,9 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\Attributes\Input;
+use BYanelli\Roma\Http\Attributes\Body;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Input;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 

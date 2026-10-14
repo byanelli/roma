@@ -2,9 +2,9 @@
 
 namespace BYanelli\Roma\Discovery;
 
-use BYanelli\Roma\Request\ContextualBinding\Request;
-use BYanelli\Roma\Response\IsResponsable;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Request\Injection\Request;
+use BYanelli\Roma\Http\Response\IsResponsable;
+use BYanelli\Roma\Http\Response\Response;
 use ReflectionClass;
 use Spatie\StructureDiscoverer\Discover;
 

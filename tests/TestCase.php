@@ -2,8 +2,8 @@
 
 namespace BYanelli\Roma\Tests;
 
-use BYanelli\Roma\Request\Contracts\RequestMapper;
-use BYanelli\Roma\Request\RomaServiceProvider;
+use BYanelli\Roma\Http\Request\Contracts\RequestMapper;
+use BYanelli\Roma\RomaServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 use Illuminate\Validation\ValidationException;

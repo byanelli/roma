@@ -2,9 +2,9 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Enums\AuthScheme;
-use BYanelli\Roma\Request\Values\Authorization;
-use BYanelli\Roma\Request\Values\BasicCredentials;
+use BYanelli\Roma\Http\Enums\AuthScheme;
+use BYanelli\Roma\Http\Values\Authorization;
+use BYanelli\Roma\Http\Values\BasicCredentials;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 

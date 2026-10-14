@@ -3,12 +3,12 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Response\Attributes\Optional;
-use BYanelli\Roma\Response\Attributes\Status;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Http\Attributes\Body;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Attributes\Status;
+use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
 use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;

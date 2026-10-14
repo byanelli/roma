@@ -33,8 +33,8 @@ Mark the class `#[Request]` and type-hint it in your controller — Roma maps an
 it before your action runs:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Rule;
-use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Request\Injection\Request;
 
 #[Request]
 readonly class CreateContactRequest {

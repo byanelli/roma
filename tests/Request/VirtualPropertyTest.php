@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Tests\TestCase;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 

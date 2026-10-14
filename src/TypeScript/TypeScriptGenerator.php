@@ -2,13 +2,13 @@
 
 namespace BYanelli\Roma\TypeScript;
 
+use BYanelli\Roma\Attributes\Optional as ResponseOptional;
 use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
 use BYanelli\Roma\Data\Property as PhpProperty;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\RequestSourcePolicy;
-use BYanelli\Roma\Request\Sources;
-use BYanelli\Roma\Response\Attributes\Optional as ResponseOptional;
-use BYanelli\Roma\Response\Attributes\Status as ResponseStatus;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Status as ResponseStatus;
+use BYanelli\Roma\Http\Request\RequestSourcePolicy;
+use BYanelli\Roma\Http\Request\Sources;
 use BYanelli\Roma\TypeScript\Attributes\InputMapsToTypeScriptQuery;
 use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;

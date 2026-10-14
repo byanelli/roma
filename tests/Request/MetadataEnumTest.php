@@ -2,11 +2,11 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Accessors\Method as MethodAccessor;
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Request\Enums\ContentType;
-use BYanelli\Roma\Request\Enums\Method;
-use BYanelli\Roma\Request\Enums\Scheme;
+use BYanelli\Roma\Http\Attributes\Accessors\Method as MethodAccessor;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Enums\ContentType;
+use BYanelli\Roma\Http\Enums\Method;
+use BYanelli\Roma\Http\Enums\Scheme;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 

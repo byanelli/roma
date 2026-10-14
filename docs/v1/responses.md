@@ -21,7 +21,7 @@ Extend `Response`, declare typed public properties, and return the object. Roma 
 it to a `JsonResponse`:
 
 ```php
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 
 class UserResponse extends Response {
     public function __construct(
@@ -70,7 +70,7 @@ that sets a key when mapping input, so a class used both ways reads and writes t
 
 ```php
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 
 class UserResponse extends Response {
     #[Key('user_id')]
@@ -87,8 +87,8 @@ surfacing a field you forgot to populate. Mark it `#[Optional]` to omit it when 
 give it an explicit default to serialize that value:
 
 ```php
-use BYanelli\Roma\Response\Attributes\Optional;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Http\Response\Response;
 
 class ContactResponse extends Response {
     public string $name;
@@ -106,9 +106,9 @@ Mark an `int` property `#[Status]` to make its value the HTTP status code, or a 
 `#[Header('Name')]` to emit it as a response header. Both are lifted out of the body:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Response\Attributes\Status;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Status;
+use BYanelli\Roma\Http\Response\Response;
 
 class CreatedResponse extends Response {
     public string $name = 'Bill';
@@ -155,7 +155,7 @@ so pass the profile on to keep the caller's enum style and date format:
 
 ```php
 use BYanelli\Roma\Facades\Serializer;
-use BYanelli\Roma\Response\IsArrayable;
+use BYanelli\Roma\Serialization\IsArrayable;
 use BYanelli\Roma\Serialization\Profile;
 use Illuminate\Contracts\Support\Arrayable;
 

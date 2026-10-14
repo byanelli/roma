@@ -2,12 +2,12 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Response\Attributes\DateFormat;
-use BYanelli\Roma\Response\Attributes\Optional;
-use BYanelli\Roma\Response\Attributes\Status;
-use BYanelli\Roma\Response\IsArrayable;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Attributes\DateFormat;
+use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Status;
+use BYanelli\Roma\Http\Response\Response;
+use BYanelli\Roma\Serialization\IsArrayable;
 use BYanelli\Roma\Serialization\Serialized;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\JsonResponse;

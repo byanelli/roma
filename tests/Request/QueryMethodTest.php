@@ -2,10 +2,10 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Request\ContextualBinding\Request as RomaRequest;
-use BYanelli\Roma\Request\Enums\Method;
+use BYanelli\Roma\Http\Attributes\Body;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Enums\Method;
+use BYanelli\Roma\Http\Request\Injection\Request as RomaRequest;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;

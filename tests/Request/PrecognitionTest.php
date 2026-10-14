@@ -2,10 +2,10 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Guard;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\Attributes\Rule;
-use BYanelli\Roma\Request\ContextualBinding\Request as RomaRequest;
+use BYanelli\Roma\Attributes\Guard;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Request\Injection\Request as RomaRequest;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Support\Facades\Route;

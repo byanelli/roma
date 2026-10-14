@@ -7,9 +7,9 @@ use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\Attributes\Input;
-use BYanelli\Roma\Request\Attributes\Query;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Input;
+use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 

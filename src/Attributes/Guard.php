@@ -1,0 +1,17 @@
+<?php
+
+namespace BYanelli\Roma\Attributes;
+
+use Attribute;
+use BYanelli\Roma\Data\Attributes\GuardAttribute;
+
+/**
+ * Marks a method to run after the mapped object validates successfully. The
+ * method is called through the container, so it may type-hint dependencies
+ * (services, the current user, the underlying request) and they are injected.
+ * A guard signals rejection by throwing (e.g. a ValidationException or
+ * AuthorizationException); its return value is ignored. Multiple guards run in
+ * declaration order.
+ */
+#[Attribute(Attribute::TARGET_METHOD)]
+class Guard implements GuardAttribute {}

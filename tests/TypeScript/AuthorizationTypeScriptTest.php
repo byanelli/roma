@@ -2,8 +2,8 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Values\Authorization;
+use BYanelli\Roma\Http\Attributes\Body;
+use BYanelli\Roma\Http\Values\Authorization;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 
 class TsAuthRequest

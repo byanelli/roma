@@ -2,12 +2,12 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
-use BYanelli\Roma\Request\Attributes\Accessors\Method;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\Attributes\Headers\ContentType;
-use BYanelli\Roma\Request\Attributes\Rule;
-use BYanelli\Roma\Request\Enums\ContentType as RomaContentType;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Attributes\Accessors\Ajax;
+use BYanelli\Roma\Http\Attributes\Accessors\Method;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Headers\ContentType;
+use BYanelli\Roma\Http\Enums\ContentType as RomaContentType;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Validation\ValidationException;

@@ -3,10 +3,10 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Facades\Serializer;
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Response\Attributes\Status;
-use BYanelli\Roma\Response\IsArrayable;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Status;
+use BYanelli\Roma\Http\Response\Response;
+use BYanelli\Roma\Serialization\IsArrayable;
 use BYanelli\Roma\Serialization\Profile;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;

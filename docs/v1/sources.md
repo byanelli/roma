@@ -20,8 +20,8 @@ Use `#[Query]` or `#[Body]` to pin a property to one bag — handy when the same
 appear in both:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Attributes\Query;
+use BYanelli\Roma\Http\Attributes\Body;
+use BYanelli\Roma\Http\Attributes\Query;
 
 readonly class SearchRequest {
     #[Query]
@@ -40,7 +40,7 @@ an object mapped from input serializes back to the same keys:
 
 ```php
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Request\Attributes\Query;
+use BYanelli\Roma\Http\Attributes\Query;
 
 readonly class SearchRequest {
     #[Query('page_num')]
@@ -63,8 +63,8 @@ body". Roma treats that content as the body, so `#[Body]` and the default input 
 both read it, and `#[Query]` still means the query string:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Request\Enums\Method;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Enums\Method;
 
 // QUERY /search?page=3  with  {"term": "roma"}
 readonly class SearchRequest {
@@ -90,7 +90,7 @@ unless you pass an explicit one. Route parameters arrive as strings, so scalar a
 coercion applies:
 
 ```php
-use BYanelli\Roma\Request\Attributes\RouteParameter;
+use BYanelli\Roma\Http\Attributes\RouteParameter;
 
 // Route: /users/{id}/posts/{post_slug}
 readonly class ShowPostRequest {
@@ -112,7 +112,7 @@ Cookie names may contain literal dots, so pass one explicitly when the name isn'
 PHP property name:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Cookie;
+use BYanelli\Roma\Http\Attributes\Cookie;
 
 readonly class PreferencesRequest {
     #[Cookie]

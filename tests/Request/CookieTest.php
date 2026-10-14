@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Cookie;
+use BYanelli\Roma\Http\Attributes\Cookie;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 

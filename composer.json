@@ -68,7 +68,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "BYanelli\\Roma\\Request\\RomaServiceProvider"
+                "BYanelli\\Roma\\RomaServiceProvider"
             ]
         }
     },

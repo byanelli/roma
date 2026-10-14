@@ -2,8 +2,8 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Guard;
-use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Attributes\Guard;
+use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 

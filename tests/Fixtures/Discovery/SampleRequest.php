@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\Fixtures\Discovery;
 
-use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Http\Request\Injection\Request;
 
 #[Request]
 class SampleRequest

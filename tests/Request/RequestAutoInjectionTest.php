@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Http\Request\Injection\Request;
 use BYanelli\Roma\Tests\TestCase;
 
 #[Request]

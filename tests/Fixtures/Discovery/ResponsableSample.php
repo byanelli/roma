@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\Fixtures\Discovery;
 
-use BYanelli\Roma\Response\IsResponsable;
+use BYanelli\Roma\Http\Response\IsResponsable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Responsable;
 

@@ -14,7 +14,7 @@ A request object is a class whose typed properties you want populated from the r
 Constructor-promoted properties and plain class properties can be used interchangeably.
 
 ```php
-use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Attributes\Rule;
 
 readonly class CreateContactRequest {
     public function __construct(
@@ -37,7 +37,7 @@ resolves it from the container, maps the request onto it, and validates it befor
 action runs:
 
 ```php
-use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Http\Request\Injection\Request;
 
 #[Request]
 readonly class CreateContactRequest { /* properties as above */ }
@@ -64,7 +64,7 @@ and can coexist — reach for the parameter attribute when auto-injection is off
 one-off request you'd rather not mark at the class level:
 
 ```php
-use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Http\Request\Injection\Request;
 
 class CreateContactController {
     public function __invoke(#[Request] CreateContactRequest $request) {
@@ -78,7 +78,7 @@ class CreateContactController {
 Common properties can be factored into a trait and mixed into any request:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Attributes\Rule;
 
 trait HasPagination {
     #[Rule('integer|min:1')]

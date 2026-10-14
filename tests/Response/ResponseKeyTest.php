@@ -3,8 +3,8 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Response\Attributes\Optional;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Http\Response\Response;
 
 class TestKeyRemapResponse extends Response
 {

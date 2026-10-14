@@ -6,7 +6,7 @@ use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;

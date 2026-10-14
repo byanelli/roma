@@ -2,9 +2,9 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Request\Attributes\Rule;
-use BYanelli\Roma\Request\Enums\Method;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Enums\Method;
 use BYanelli\Roma\Tests\TestCase;
 
 readonly class TestNestedQuerySourceChild

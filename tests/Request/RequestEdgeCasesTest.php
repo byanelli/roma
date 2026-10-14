@@ -2,13 +2,13 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
-use BYanelli\Roma\Request\Attributes\Body;
-use BYanelli\Roma\Request\Attributes\Present;
-use BYanelli\Roma\Request\Attributes\Query;
-use BYanelli\Roma\Request\Attributes\Rule;
-use BYanelli\Roma\Request\ContextualBinding\ContextualBindingException;
-use BYanelli\Roma\Request\ContextualBinding\Request as RequestAttribute;
+use BYanelli\Roma\Attributes\Present;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Attributes\Accessors\Ajax;
+use BYanelli\Roma\Http\Attributes\Body;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Request\Injection\ContextualBindingException;
+use BYanelli\Roma\Http\Request\Injection\Request as RequestAttribute;
 use BYanelli\Roma\Tests\Support\NamespacedArrayRequest;
 use BYanelli\Roma\Tests\Support\NamespacedItem;
 use BYanelli\Roma\Tests\Support\Nested\FqcnArrayRequest;

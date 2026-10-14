@@ -18,8 +18,8 @@ you'd normally reach into `$request` for — onto typed properties.
 Map a header with `#[Header]`, or use a pre-made shortcut like `#[ContentType]`:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Header;
-use BYanelli\Roma\Request\Attributes\Headers\ContentType;
+use BYanelli\Roma\Http\Attributes\Header;
+use BYanelli\Roma\Http\Attributes\Headers\ContentType;
 
 readonly class ApiRequest {
     #[Header('X-API-Key')]
@@ -37,7 +37,7 @@ object** and Roma parses the header for you. `Authorization` splits the header i
 scheme and credentials, and self-locates — no attribute needed:
 
 ```php
-use BYanelli\Roma\Request\Values\Authorization;
+use BYanelli\Roma\Http\Values\Authorization;
 
 readonly class ApiRequest {
     public Authorization $auth;
@@ -62,9 +62,9 @@ Some metadata has a small fixed set of values. Roma ships enums for these, and t
 property as one is enough — the enum knows which request source it comes from:
 
 ```php
-use BYanelli\Roma\Request\Enums\ContentType;
-use BYanelli\Roma\Request\Enums\Method;
-use BYanelli\Roma\Request\Enums\Scheme;
+use BYanelli\Roma\Http\Enums\ContentType;
+use BYanelli\Roma\Http\Enums\Method;
+use BYanelli\Roma\Http\Enums\Scheme;
 
 readonly class MetadataEnumRequest {
     public Method $method;           // Method::Get, Method::Post, Method::Query, ...
@@ -82,9 +82,9 @@ enum's cases can be mapped as a plain string via the accessor/header attribute d
 Roma wraps most of the Laravel request surface with accessor attributes:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Accessors\Ip;
-use BYanelli\Roma\Request\Attributes\Accessors\Segments;
-use BYanelli\Roma\Request\Attributes\Accessors\UserAgent;
+use BYanelli\Roma\Http\Attributes\Accessors\Ip;
+use BYanelli\Roma\Http\Attributes\Accessors\Segments;
+use BYanelli\Roma\Http\Attributes\Accessors\UserAgent;
 
 readonly class RequestInfo {
     #[Ip]        public string $ip;
@@ -110,7 +110,7 @@ reproduce the original spacing or key order. The parsed fields can be mapped in 
 class:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Accessors\Content;
+use BYanelli\Roma\Http\Attributes\Accessors\Content;
 
 readonly class WebhookRequest {
     #[Content]

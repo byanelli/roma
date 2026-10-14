@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\Query;
+use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Tests\TestCase;
 
 readonly class TestCachedDefinitionRequest

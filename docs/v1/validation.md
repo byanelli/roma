@@ -14,7 +14,7 @@ Attach validation rules with the `#[Rule]` attribute. Pass a single rule string,
 pipe-delimited string, or a list:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Attributes\Rule;
 
 readonly class CreateContactRequest {
     #[Rule('max:255')]
@@ -35,7 +35,7 @@ container at validation time, so the rule can depend on runtime state — a serv
 current user, config. It may return a single rule or a list, which is spread in place:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Rule;
+use BYanelli\Roma\Attributes\Rule;
 
 readonly class UpdateBioRequest {
     public function __construct(
@@ -56,7 +56,7 @@ container, so they can type-hint dependencies and have them injected. A guard re
 request by throwing; its return value is ignored. Multiple guards run in declaration order.
 
 ```php
-use BYanelli\Roma\Request\Attributes\Guard;
+use BYanelli\Roma\Attributes\Guard;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Container\Attributes\CurrentUser;
 
@@ -81,9 +81,9 @@ Some accessor and header attributes can be applied at the class level to enforce
 requirement on every request mapped to the class:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Accessors\Ajax;
-use BYanelli\Roma\Request\Attributes\Headers\ContentType;
-use BYanelli\Roma\Request\Enums\ContentType as ContentTypeEnum;
+use BYanelli\Roma\Http\Attributes\Accessors\Ajax;
+use BYanelli\Roma\Http\Attributes\Headers\ContentType;
+use BYanelli\Roma\Http\Enums\ContentType as ContentTypeEnum;
 
 #[Ajax]                              // requires an AJAX request
 #[ContentType(ContentTypeEnum::Json)] // requires a JSON Content-Type
@@ -126,7 +126,7 @@ class ProductSearchRequest {
 Use `#[Present]` on a nullable property when the key _must_ appear but may be `null`:
 
 ```php
-use BYanelli\Roma\Request\Attributes\Present;
+use BYanelli\Roma\Attributes\Present;
 
 readonly class UpdateNoteRequest {
     #[Present]

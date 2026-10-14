@@ -4,6 +4,18 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: classes are grouped by the kind of data they handle, and `src/Request` and
+  `src/Response` are gone. Generic attributes (`Key`, `Rule`, `Present`, `Guard`,
+  `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`) are in
+  `BYanelli\Roma\Attributes`. HTTP attributes (`Header`, `Status`, `Query`, `Body`, `Cookie`,
+  `Input`, `RouteParameter`, `Accessors\*`, `Headers\*`) are in `BYanelli\Roma\Http\Attributes`;
+  `Method`, `ContentType`, `Scheme`, `AuthScheme` and `HasRequestSource` in
+  `BYanelli\Roma\Http\Enums`; `Authorization` and `BasicCredentials` in
+  `BYanelli\Roma\Http\Values`. Request mapping (`RequestMapper`, `RequestResolver`,
+  `Contracts\*`, `Sources\*`) is in `BYanelli\Roma\Http\Request`, with the `#[Request]`
+  marker in `Http\Request\Injection` and precognition in `Http\Request\Precognition`.
+  `Response` and `IsResponsable` are in `BYanelli\Roma\Http\Response`, `IsArrayable` in
+  `BYanelli\Roma\Serialization`, and the service provider is `BYanelli\Roma\RomaServiceProvider`.
 - Breaking: the request and response `#[Header]` attributes are merged into one class that is
   both a mapping source and a serialization destination, so a class mapped from a request
   header writes the property back to the same header.

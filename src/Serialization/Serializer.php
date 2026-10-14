@@ -3,16 +3,15 @@
 namespace BYanelli\Roma\Serialization;
 
 use BackedEnum;
+use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\PhpDocTypeParser;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\UnresolvableClassName;
-use BYanelli\Roma\Response\Attributes\DateFormat;
-use BYanelli\Roma\Response\Attributes\Optional;
-use BYanelli\Roma\Response\IsArrayable;
 use DateTimeInterface;
 use Generator;
 use Illuminate\Contracts\Support\Arrayable;

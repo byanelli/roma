@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\Support\Recursive;
 
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 
 class CommentResponse extends Response
 {

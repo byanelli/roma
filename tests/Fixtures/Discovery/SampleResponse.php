@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\Fixtures\Discovery;
 
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 
 class SampleResponse extends Response
 {

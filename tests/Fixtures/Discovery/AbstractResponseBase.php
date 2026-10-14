@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\Fixtures\Discovery;
 
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 
 /**
  * An abstract response base — a response by type, but not concrete, so

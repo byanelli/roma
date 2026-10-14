@@ -3,7 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Discriminated;
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;
 use BYanelli\Roma\Tests\Support\Discriminated\Checkout;

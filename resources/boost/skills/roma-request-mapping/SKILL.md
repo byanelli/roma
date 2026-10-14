@@ -22,6 +22,17 @@ Full documentation is online, and available as plain Markdown you can fetch and 
 directly: **https://yanelli.dev/docs/roma.md** (human-facing: https://yanelli.dev/docs/roma).
 Fetch it when you need detail beyond this skill.
 
+## Namespaces
+
+| Namespace | Contents |
+| --- | --- |
+| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue` |
+| `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `RouteParameter`; `Accessors\*`, `Headers\*` |
+| `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
+| `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
+| `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
+| `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
+
 ## Defining and injecting a request
 
 A request is a class of typed properties. Attach validation with `#[Rule]`. **Mark the
@@ -29,8 +40,8 @@ class `#[Request]` and inject it by type-hint** — a request class is almost al
 as a request, so this is the default. `#[Request]` also works on the controller parameter.
 
 ```php
-use BYanelli\Roma\Request\Attributes\Rule;
-use BYanelli\Roma\Request\ContextualBinding\Request;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Request\Injection\Request;
 
 #[Request] // class-level: enables type-hint-only injection + TypeScript auto-detection
 readonly class CreateContactRequest {
@@ -73,8 +84,8 @@ Default source is the merged input bag (query + body). Bind explicitly:
 ## Headers & metadata — prefer the value objects over hand-parsing
 
 ```php
-use BYanelli\Roma\Request\Values\Authorization;
-use BYanelli\Roma\Request\Enums\{Method, ContentType, Scheme};
+use BYanelli\Roma\Http\Values\Authorization;
+use BYanelli\Roma\Http\Enums\{Method, ContentType, Scheme};
 
 readonly class ApiRequest {
     public Authorization $auth; // parses the Authorization header; self-locates

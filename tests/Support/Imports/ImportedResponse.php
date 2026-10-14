@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\Support\Imports;
 
-use BYanelli\Roma\Response\Response;
+use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Tests\Support\Discriminated\PaymentMethod;
 
 class ImportedResponse extends Response

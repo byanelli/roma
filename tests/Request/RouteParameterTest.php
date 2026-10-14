@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Request\Attributes\RouteParameter;
+use BYanelli\Roma\Http\Attributes\RouteParameter;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
