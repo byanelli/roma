@@ -203,6 +203,30 @@ class ClassMapping
         return Arr::map($rawValue, fn ($value) => $this->castValue($property, $type->memberType, $value));
     }
 
+    /**
+     * @return array<mixed>
+     */
+    private function toShape(Property $property, Types\Shape $type, mixed $rawValue): array
+    {
+        if (! is_array($rawValue)) {
+            throw new CoercionException('Expected array, got '.get_debug_type($rawValue));
+        }
+
+        $result = $type->sealed ? [] : $rawValue;
+
+        foreach ($type->items as $item) {
+            if (! array_key_exists($item->key, $rawValue)) {
+                continue;
+            }
+
+            $value = $rawValue[$item->key];
+
+            $result[$item->key] = $value === null ? null : $this->castValue($property, $item->type, $value);
+        }
+
+        return $result;
+    }
+
     private function toEnum(Types\Enum $type, mixed $val): mixed
     {
         // Be liberal in what we accept: a backed enum serializes out as a
@@ -322,6 +346,7 @@ class ClassMapping
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($property, $type, $rawValue),
+            $type instanceof Types\Shape => $this->toShape($property, $type, $rawValue),
             $type instanceof Class_ => $this->castObjectValue($property, $type, $rawValue),
             $type instanceof Types\File => $rawValue,
             $type instanceof Types\Mixed_ => $rawValue,

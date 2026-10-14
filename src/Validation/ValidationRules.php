@@ -9,6 +9,7 @@ use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Values\HasValidationRules;
 use BYanelli\Roma\Data\Values\ParsesStringValue;
+use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use Illuminate\Validation\Rule;
 
@@ -95,8 +96,12 @@ readonly class ValidationRules
             $type instanceof Types\Float_ => ['numeric'],
             $type instanceof Types\Date => ['date'],
             $type instanceof Types\String_ => ['string'],
-            $type instanceof Types\Array_ => $type->isList ? ['array', 'list'] : ['array'],
-            $type instanceof Class_ => ['array'],
+            $type instanceof Types\Array_ => match (true) {
+                $type->isList => ['array', 'list'],
+                $type->keyType instanceof Types\Integer => ['array', new IntegerKeys],
+                default => ['array'],
+            },
+            $type instanceof Class_, $type instanceof Types\Shape => ['array'],
             $type instanceof Types\Enum => [Rule::enum($type->class)],
             default => [],
         };
@@ -105,7 +110,7 @@ readonly class ValidationRules
     /**
      * The presence rules that lead every value's rule list: "nullable"
      * (allow an explicit null) and the requiredness rule. A required member of
-     * a nested object becomes a RequiredWithinObject rule keyed on
+     * a nested object or shape becomes a RequiredWithinObject rule keyed on
      * that object, so it is only required when the object is actually present —
      * an absent or null object doesn't trip its members.
      *
@@ -181,6 +186,7 @@ readonly class ValidationRules
 
         return match (true) {
             $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $keySegments, $name)],
+            $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $keySegments, $name)],
             $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, [...$keySegments, '*'], "$name.*", [])],
             default => [$entry],
         };
@@ -208,6 +214,26 @@ readonly class ValidationRules
                 [...$keySegments, $key],
                 "$name.$key",
                 [...$this->leadingRules($member->nullable, $member->isRequired, $keySegments), ...$member->rules],
+            )];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param  list<string>  $keySegments
+     * @return list<Entry>
+     */
+    private function shapeItemEntries(Types\Shape $shape, array $keySegments, string $name): array
+    {
+        $entries = [];
+
+        foreach ($shape->items as $item) {
+            $entries = [...$entries, ...$this->valueEntries(
+                $item->type,
+                [...$keySegments, $item->key],
+                "$name.$item->key",
+                $this->leadingRules($item->nullable, ! $item->optional, $keySegments),
             )];
         }
 

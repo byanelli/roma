@@ -22,6 +22,12 @@ All notable changes to `roma` will be documented in this file.
   Breaking: `responseStatus()` and `responseHeaders()` are public and take the `Serialized`
   result, and `CustomizesSerialization::dateFormat()` replaces the protected
   `IsArrayable::dateFormat()` override.
+- Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
+  in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
+  are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's
+  required keys apply only when the shape is present. The property receives a plain array.
+  TypeScript emits `Record<string, T>` and inline object types. `mixed` is accepted as an
+  element type.
 - A required property of an object nested in an array member is now enforced; it is
   required only when that object is present and an array.
 - `list<T>` array element types in `@var` and `@param`, alongside `array<T>`. A `list<T>`

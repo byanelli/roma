@@ -50,7 +50,8 @@ readonly class Interface_ extends Type
     }
 
     /**
-     * The interfaces a property type refers to by name, looking through arrays.
+     * The interfaces a property type refers to by name, looking through arrays,
+     * records and inline objects.
      * A union's members are interfaces in their own right: each is emitted at
      * the top level and referenced by name.
      *
@@ -62,6 +63,8 @@ readonly class Interface_ extends Type
             $type instanceof self => [$type],
             $type instanceof Union => $type->members,
             $type instanceof Array_ => self::referencedBy($type->memberType),
+            $type instanceof Record_ => self::referencedBy($type->valueType),
+            $type instanceof Object_ => array_merge(...array_map(fn (Property $p) => self::referencedBy($p->type), $type->properties)),
             default => [],
         };
     }

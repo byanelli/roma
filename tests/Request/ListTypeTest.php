@@ -163,19 +163,19 @@ it('maps a non-empty-list<T>', function () {
     expect($request->ids)->toBe([4]);
 });
 
-readonly class KeyedArrayRequest
+readonly class FloatKeyedArrayRequest
 {
-    /** @var array<string, int> */
+    /** @var array<float, int> */
     public array $counts;
 }
 
-it('rejects array<K, T> with a parse error', function () {
+it('rejects an array key type other than int or string', function () {
     /** @var TestCase $this */
     $this->setRequest(
         headers: ['Content-Type' => 'application/json'],
         json: ['counts' => ['a' => 1]],
     );
 
-    expect(fn () => $this->mapRequest(KeyedArrayRequest::class))
-        ->toThrow(RuntimeException::class, 'Error parsing array element type from type declaration: array<string, int>');
+    expect(fn () => $this->mapRequest(FloatKeyedArrayRequest::class))
+        ->toThrow(RuntimeException::class, 'Array keys must be int or string: array<float, int>');
 });

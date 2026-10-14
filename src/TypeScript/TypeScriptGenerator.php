@@ -15,6 +15,8 @@ use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;
 use BYanelli\Roma\TypeScript\Types\Enum;
 use BYanelli\Roma\TypeScript\Types\Interface_;
+use BYanelli\Roma\TypeScript\Types\Object_;
+use BYanelli\Roma\TypeScript\Types\Record_;
 
 /**
  * Emits TypeScript definitions for Roma request and response objects by walking
@@ -61,8 +63,8 @@ readonly class TypeScriptGenerator
     }
 
     /**
-     * The distinct enums referenced (directly or through arrays) by any emitted
-     * interface, ordered by their TypeScript name.
+     * The distinct enums referenced (directly or through arrays, records and
+     * inline objects) by any emitted interface, ordered by their TypeScript name.
      *
      * @param  list<Interface_>  $interfaces
      * @return list<class-string<\UnitEnum>>
@@ -94,6 +96,12 @@ readonly class TypeScriptGenerator
             $classes[] = $type->class;
         } elseif ($type instanceof Array_) {
             $this->collectEnumsFromType($type->memberType, $classes);
+        } elseif ($type instanceof Record_) {
+            $this->collectEnumsFromType($type->valueType, $classes);
+        } elseif ($type instanceof Object_) {
+            foreach ($type->properties as $property) {
+                $this->collectEnumsFromType($property->type, $classes);
+            }
         }
     }
 

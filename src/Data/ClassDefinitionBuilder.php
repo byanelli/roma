@@ -292,13 +292,11 @@ readonly class ClassDefinitionBuilder
         ];
     }
 
-    private function getArrayType(Source $parent, string $key, ReflectionParameter|ReflectionProperty $obj): Types\Array_
+    private function getArrayType(Source $parent, string $key, ReflectionParameter|ReflectionProperty $obj): Types\Array_|Types\Shape
     {
-        $arrayType = $this->phpDocTypeParser->getArrayType($obj);
-
-        return new Types\Array_(
-            $this->getTypeByName($parent, $key, $obj, $arrayType['elementTypeName']),
-            $arrayType['isList'],
+        return $this->phpDocTypeParser->getArrayType(
+            $obj,
+            fn (string $name) => $this->getTypeByName($parent, $key, $obj, $name),
         );
     }
 
@@ -313,6 +311,7 @@ readonly class ClassDefinitionBuilder
             'int' => new Types\Integer,
             'bool' => new Types\Boolean,
             'float' => new Types\Float_,
+            'mixed' => new Mixed_,
             'array' => $this->getArrayType($parent, $key, $obj),
             UploadedFile::class, SymfonyUploadedFile::class => new Types\File,
             default => match (true) {

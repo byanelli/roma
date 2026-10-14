@@ -134,7 +134,27 @@ class OrderRequest {
 
 An `array` property or constructor parameter needs its element type in PHPDoc: `@var` on a
 property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list<T>` (and
-`non-empty-array<T>` / `non-empty-list<T>`), where `T` is a scalar, an enum, or a class
-written as a fully-qualified name or a short name in the declaring class's namespace. A
-`list<T>` also validates that the input keys are sequential (Laravel's `list` rule). Keyed
-forms such as `array<string, T>` are not supported.
+`non-empty-array<T>` / `non-empty-list<T>`), where `T` is a scalar, `mixed`, an enum, a
+class written as a fully-qualified name or a short name in the declaring class's namespace,
+or another array type. A `list<T>` also validates that the input keys are sequential
+(Laravel's `list` rule).
+
+Maps and array shapes are supported too, and the property receives a plain array:
+
+```php
+class PricingRequest {
+    /** @var array<string, int> */
+    public array $limits;                  // ["daily" => "10"] -> ["daily" => 10]
+
+    /** @var array{min: int, max?: int} */
+    public array $range;                   // "min" is required, "max" may be omitted
+
+    /** @var array<string, array<string, array{input: float, output: float}>> */
+    public array $prices;
+}
+```
+
+A map's key type is `string` or `int`; `array<int, T>` rejects input with non-integer keys.
+Each value is coerced and validated, and errors are keyed by the full path, e.g.
+`input.prices.gemini.flash.input`. A shape's keys are required unless marked `?`, but only
+when the shape itself is present, the same as a nested object's properties.

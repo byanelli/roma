@@ -56,7 +56,9 @@ export interface SearchRequestQuery {
 ```
 
 Enums become a named `const` of `{ name, value }` objects plus a union type, emitted ahead
-of the interfaces that use them.
+of the interfaces that use them. A map such as `array<string, T>` becomes `Record<string, T>`
+(`Record<number, T>` for `int` keys), and an array shape becomes an inline object type such
+as `{ input: number; output?: number }`.
 
 ## Interfaces and abstract classes
 

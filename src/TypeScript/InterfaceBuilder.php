@@ -17,6 +17,8 @@ use BYanelli\Roma\Data\Types\Float_ as PhpFloat;
 use BYanelli\Roma\Data\Types\Integer as PhpInteger;
 use BYanelli\Roma\Data\Types\Mixed_ as PhpMixed;
 use BYanelli\Roma\Data\Types\Polymorphic as PhpPolymorphic;
+use BYanelli\Roma\Data\Types\Shape as PhpShape;
+use BYanelli\Roma\Data\Types\ShapeItem as PhpShapeItem;
 use BYanelli\Roma\Data\Types\String_ as PhpString;
 use BYanelli\Roma\TypeScript\Attributes\TypeScriptName;
 use BYanelli\Roma\TypeScript\Types\Array_;
@@ -27,6 +29,8 @@ use BYanelli\Roma\TypeScript\Types\File;
 use BYanelli\Roma\TypeScript\Types\Interface_;
 use BYanelli\Roma\TypeScript\Types\Mixed_;
 use BYanelli\Roma\TypeScript\Types\Number;
+use BYanelli\Roma\TypeScript\Types\Object_;
+use BYanelli\Roma\TypeScript\Types\Record_;
 use BYanelli\Roma\TypeScript\Types\String_;
 use BYanelli\Roma\TypeScript\Types\Union;
 use Closure;
@@ -175,7 +179,20 @@ readonly class InterfaceBuilder
             $type instanceof PhpBoolean => new Boolean,
             $type instanceof PhpDate => new Date,
             $type instanceof PhpEnum => new Enum($type->class),
+            $type instanceof PhpArray && $type->keyType !== null => new Record_(
+                $type->keyType instanceof PhpInteger ? new Number : new String_,
+                $this->buildType($type->memberType, $optional, $property),
+            ),
             $type instanceof PhpArray => new Array_($this->buildType($type->memberType, $optional, $property)),
+            $type instanceof PhpShape => new Object_(array_map(
+                fn (PhpShapeItem $item) => new Property(
+                    key: $item->key,
+                    type: $this->buildType($item->type, $optional, $property),
+                    optional: $item->optional,
+                    nullable: $item->nullable,
+                ),
+                $type->items,
+            )),
             $type instanceof PhpPolymorphic => $this->buildPolymorphicType($type, $optional, $property),
             $type instanceof PhpFile => new File,
             $type instanceof PhpMixed => new Mixed_,

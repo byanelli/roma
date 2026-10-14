@@ -56,6 +56,8 @@ readonly class TypeScriptRenderer
             // Enums are emitted as their own named types; reference by name.
             $type instanceof Types\Enum => $this->namesBag->nameForEnum($type->class),
             $type instanceof Types\Array_ => $this->renderArrayType($type->memberType),
+            $type instanceof Types\Record_ => 'Record<'.$this->renderType($type->keyType).', '.$this->renderType($type->valueType).'>',
+            $type instanceof Types\Object_ => $this->renderObjectType($type),
             $type instanceof Interface_ => $this->namesBag->nameFor($type),
             $type instanceof Types\Union => $this->renderUnionType($type),
             $type instanceof Types\File => 'Blob',
@@ -66,6 +68,17 @@ readonly class TypeScriptRenderer
     private function renderArrayType(Type $member): string
     {
         return $this->renderType($member).'[]';
+    }
+
+    private function renderObjectType(Types\Object_ $type): string
+    {
+        if ($type->properties === []) {
+            return '{}';
+        }
+
+        $properties = array_map(fn (Property $p) => rtrim($this->renderProperty($p), ';'), $type->properties);
+
+        return '{ '.implode('; ', $properties).' }';
     }
 
     /**
