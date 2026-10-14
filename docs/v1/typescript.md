@@ -61,6 +61,16 @@ of the interfaces that use them. A map such as `array<string, T>` becomes `Recor
 as `{ input: number; output?: number }`. A class that contains itself refers to its own
 interface by name, e.g. `replies?: Comment[]`.
 
+A `#[Description]` on a class or property becomes a doc comment:
+
+```typescript
+/** Search the catalog. */
+export interface SearchRequestBody {
+  /** Words to match against titles. */
+  query: string;
+}
+```
+
 ## Discriminated unions
 
 A [discriminated union](/docs/roma/v1/nested-objects#discriminated-unions) becomes a union of

@@ -18,15 +18,37 @@ readonly class TypeScriptRenderer
         $name = $this->namesBag->nameFor($interface);
 
         $properties = array_map(
-            fn (Property $p) => '  '.$this->renderProperty($p),
+            fn (Property $p) => $this->renderDocComment($p->description, '  ').'  '.$this->renderProperty($p),
             $interface->properties,
         );
 
+        $doc = $this->renderDocComment($interface->description, '');
+
         if ($properties === []) {
-            return "export interface $name {}";
+            return "{$doc}export interface $name {}";
         }
 
-        return "export interface $name {\n".implode("\n", $properties)."\n}";
+        return "{$doc}export interface $name {\n".implode("\n", $properties)."\n}";
+    }
+
+    /**
+     * A TSDoc comment and newline, or an empty string when there is no description.
+     */
+    private function renderDocComment(?string $description, string $indent): string
+    {
+        if ($description === null || trim($description) === '') {
+            return '';
+        }
+
+        $lines = explode("\n", str_replace(["\r\n", '*/'], ["\n", '*\/'], trim($description)));
+
+        if (count($lines) === 1) {
+            return "{$indent}/** {$lines[0]} */\n";
+        }
+
+        $body = array_map(fn (string $line) => rtrim("{$indent} * {$line}"), $lines);
+
+        return "{$indent}/**\n".implode("\n", $body)."\n{$indent} */\n";
     }
 
     private function renderProperty(Property $property): string

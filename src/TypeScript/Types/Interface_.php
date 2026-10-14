@@ -18,6 +18,7 @@ readonly class Interface_ extends Type
         public string $name,
         public array $properties,
         public string $phpFqcn,
+        public ?string $description = null,
     ) {
         $this->isEmpty = $this->properties === [];
         $this->uniqueKey = $this->phpFqcn.'/'.$this->name;

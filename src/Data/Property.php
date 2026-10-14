@@ -82,7 +82,24 @@ readonly class Property
      */
     public function hasAttribute(string $class): bool
     {
-        return array_filter($this->rawAttributes, fn ($attribute) => $attribute instanceof $class) !== [];
+        return $this->attribute($class) !== null;
+    }
+
+    /**
+     * @template T of object
+     *
+     * @param  class-string<T>  $class
+     * @return ?T
+     */
+    public function attribute(string $class): ?object
+    {
+        foreach ($this->rawAttributes as $attribute) {
+            if ($attribute instanceof $class) {
+                return $attribute;
+            }
+        }
+
+        return null;
     }
 
     /**

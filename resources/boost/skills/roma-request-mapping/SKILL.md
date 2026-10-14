@@ -26,7 +26,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue` |
+| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
@@ -168,6 +168,7 @@ outside a response.
 `php artisan roma:typescript` writes `.d.ts` interfaces (`{Name}Body`/`{Name}Query`/
 `{Name}Headers` for requests). Requests are auto-detected by a class-level `#[Request]`;
 responses by extending `Response`/using `IsResponsable`. No manual list to maintain.
+`#[Description('...')]` on a class or property becomes a `/** ... */` doc comment.
 
 ## Precognition
 

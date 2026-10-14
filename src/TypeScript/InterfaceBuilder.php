@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\TypeScript;
 
+use BYanelli\Roma\Attributes\Description;
 use BYanelli\Roma\Data\Property as PhpProperty;
 use BYanelli\Roma\Data\Role as PhpRole;
 use BYanelli\Roma\Data\Type as PhpType;
@@ -95,6 +96,7 @@ readonly class InterfaceBuilder
                 type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional, $ancestors),
                 optional: $isPropertyOptional($property),
                 nullable: $property->nullable,
+                description: $property->attribute(Description::class)?->text,
             );
         }
 
@@ -102,6 +104,7 @@ readonly class InterfaceBuilder
             name: $name ?: TypeScriptName::for($class->class),
             properties: $properties,
             phpFqcn: $class->class,
+            description: Description::ofClass($class->class),
         );
     }
 

@@ -4,6 +4,8 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Description('...')]` on a class or property is written as a doc comment in generated
+  TypeScript.
 - Breaking: `ObjectMapper` throws `BYanelli\Roma\Data\MappingValidationException` instead of
   Laravel's `ValidationException`, so a mapping failure that escapes a controller is a 500,
   not a 422. It contains the re-keyed errors (`errors()`) and the class being mapped

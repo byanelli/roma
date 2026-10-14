@@ -9,5 +9,6 @@ readonly class Property
         public Type $type,
         public bool $optional,
         public bool $nullable,
+        public ?string $description = null,
     ) {}
 }
