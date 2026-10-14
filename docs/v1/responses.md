@@ -138,15 +138,15 @@ class EventResponse extends Response implements CustomizesSerialization {
 
 ## Serializing without a response
 
-The `Roma` facade serializes any object, with or without the traits:
+The `Serializer` facade serializes any object, with or without the traits:
 
 ```php
-use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Profile;
 
-Roma::toArray($object);                      // the body, as a response would send it
-Roma::serialize($object);                    // body, headers, status, query and path
-Roma::toArray($object, Profile::storage());  // output ObjectMapper can map back
+Serializer::toArray($object);                      // the body, as a response would send it
+Serializer::serialize($object);                    // body, headers, status, query and path
+Serializer::toArray($object, Profile::storage());  // output ObjectMapper can map back
 ```
 
 A `Profile` sets the enum style, the default date format and which destinations are allowed:

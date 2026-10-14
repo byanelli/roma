@@ -5,7 +5,7 @@
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
-use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Response\Attributes\DateFormat;
 use BYanelli\Roma\Response\Attributes\Header;
 use BYanelli\Roma\Response\Attributes\Status;
@@ -18,7 +18,7 @@ use BYanelli\Roma\Serialization\DestinationAttribute;
 use BYanelli\Roma\Serialization\EnumStyle;
 use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Serialization\Serialized;
-use BYanelli\Roma\Serialization\Serializer;
+use BYanelli\Roma\Serialization\Serializer as SerializerService;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Http\Request;
@@ -86,15 +86,15 @@ function palette(): SerializedPalette
 it('applies the profile enum style to the same object', function () {
     $nameAndValue = ['name' => 'Red', 'value' => 'red'];
 
-    expect(Roma::toArray(palette())['primary'])->toBe($nameAndValue)
-        ->and(Roma::toArray(palette(), Profile::clientRequest())['primary'])->toBe('red')
-        ->and(Roma::toArray(palette(), Profile::storage())['primary'])->toBe('red')
-        ->and(Roma::toArray(palette(), new Profile(EnumStyle::Name, DATE_ATOM, BoolStyle::Native, [Destination::Body]))['primary'])->toBe('Red')
-        ->and(Roma::toArray(palette(), Profile::clientRequest())['size'])->toBe('Large');
+    expect(Serializer::toArray(palette())['primary'])->toBe($nameAndValue)
+        ->and(Serializer::toArray(palette(), Profile::clientRequest())['primary'])->toBe('red')
+        ->and(Serializer::toArray(palette(), Profile::storage())['primary'])->toBe('red')
+        ->and(Serializer::toArray(palette(), new Profile(EnumStyle::Name, DATE_ATOM, BoolStyle::Native, [Destination::Body]))['primary'])->toBe('Red')
+        ->and(Serializer::toArray(palette(), Profile::clientRequest())['size'])->toBe('Large');
 });
 
 it('applies the profile to nested objects, arrays, plain objects and foreign arrayables', function () {
-    expect(Roma::toArray(palette(), Profile::clientRequest()))->toBe([
+    expect(Serializer::toArray(palette(), Profile::clientRequest()))->toBe([
         'primary' => 'red',
         'size' => 'Large',
         'swatch' => ['color' => 'red'],
@@ -109,7 +109,7 @@ it('serializes a plain nested object without the trait under the response profil
 });
 
 it('serializes a plain object passed to the facade', function () {
-    expect(Roma::serialize(new SerializedPlainPoint(1, SerializedColor::Red), Profile::storage()))
+    expect(Serializer::serialize(new SerializedPlainPoint(1, SerializedColor::Red), Profile::storage()))
         ->toEqual(new Serialized(['x' => 1, 'color' => 'red']));
 });
 
@@ -128,15 +128,15 @@ class SerializedHeaderResponse extends Response
 }
 
 it('throws for a destination the profile does not allow', function () {
-    expect(fn () => Roma::serialize(new SerializedStatusResponse, Profile::clientRequest()))
+    expect(fn () => Serializer::serialize(new SerializedStatusResponse, Profile::clientRequest()))
         ->toThrow(RuntimeException::class, 'SerializedStatusResponse::$status is written to the Status destination')
-        ->and(fn () => Roma::toArray(new SerializedHeaderResponse, Profile::storage()))
+        ->and(fn () => Serializer::toArray(new SerializedHeaderResponse, Profile::storage()))
         ->toThrow(RuntimeException::class, 'SerializedHeaderResponse::$color is written to the Header destination');
 });
 
 it('returns the status and headers separately from the body', function () {
-    expect(Roma::serialize(new SerializedStatusResponse))->toEqual(new Serialized(['name' => 'Bill'], status: 201))
-        ->and(Roma::serialize(new SerializedHeaderResponse))->toEqual(new Serialized([], ['X-Color' => 'red']));
+    expect(Serializer::serialize(new SerializedStatusResponse))->toEqual(new Serialized(['name' => 'Bill'], status: 201))
+        ->and(Serializer::serialize(new SerializedHeaderResponse))->toEqual(new Serialized([], ['X-Color' => 'red']));
 });
 
 #[Attribute(Attribute::TARGET_PROPERTY)]
@@ -168,7 +168,7 @@ class SerializedSearch
 it('writes query booleans in the profile style', function () {
     $search = new SerializedSearch(true, [false], true);
 
-    expect(Roma::serialize($search, Profile::clientRequest()))
+    expect(Serializer::serialize($search, Profile::clientRequest()))
         ->toEqual(new Serialized(['inBody' => true], query: ['exact' => 'true', 'flags' => ['false']]));
 });
 
@@ -275,7 +275,7 @@ it('produces storage output that maps back to an equal object', function () {
         colors: [SerializedColor::Red],
     );
 
-    $stored = Roma::toArray($order, Profile::storage());
+    $stored = Serializer::toArray($order, Profile::storage());
 
     expect(app(ObjectMapper::class)->map(StoredOrder::class, new ArrayPayload($stored), new ArrayPolicy))
         ->toEqual($order);
@@ -287,7 +287,7 @@ class SerializedCountingSubject
 }
 
 it('builds each class plan once', function () {
-    $serializer = new Serializer;
+    $serializer = new SerializerService;
     $plans = new ReflectionProperty($serializer, 'plans');
 
     $serializer->toArray(new SerializedCountingSubject);

@@ -11,9 +11,10 @@ All notable changes to `roma` will be documented in this file.
   `RulesAttribute`, etc.) moved to `BYanelli\Roma\Data\Attributes`, `ParsesStringValue` and
   `HasValidationRules` to `BYanelli\Roma\Data\Values`, and `NormalizesRawValue` to
   `BYanelli\Roma\Data\Enums`. The public attributes are unchanged.
-- Serialization moves out of `IsArrayable` into a `Serializer` service behind the `Roma`
-  facade: `Roma::serialize($obj, $profile)` returns a `Serialized` (body, headers, status,
-  query, path) and `Roma::toArray()` returns the body. A `Profile` sets the enum style, the
+- Serialization moves out of `IsArrayable` into a `Serializer` service behind the
+  `BYanelli\Roma\Facades\Serializer` facade: `Serializer::serialize($obj, $profile)` returns
+  a `Serialized` (body, headers, status, query, path) and `Serializer::toArray()` returns the
+  body. A `Profile` sets the enum style, the
   default date format, the query boolean style and the allowed destinations;
   `Profile::response()` is the default and matches the previous output, while
   `clientRequest()` and `storage()` write backed enums as their value. The profile applies

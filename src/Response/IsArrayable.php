@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Response;
 
-use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Facades\Serializer;
 
 /**
  * Serializes the object with the Roma serializer and the response profile.
@@ -16,7 +16,7 @@ trait IsArrayable
      */
     public function toArray(): array
     {
-        return Roma::toArray($this);
+        return Serializer::toArray($this);
     }
 
     /**

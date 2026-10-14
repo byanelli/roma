@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Response;
 
-use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Serialized;
 use Illuminate\Http\JsonResponse;
 
@@ -16,7 +16,7 @@ trait IsResponsable
 
     public function toResponse(mixed $request): JsonResponse
     {
-        $serialized = Roma::serialize($this);
+        $serialized = Serializer::serialize($this);
 
         return new JsonResponse($serialized->body, $this->responseStatus($serialized), $this->responseHeaders($serialized));
     }

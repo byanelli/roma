@@ -5,7 +5,7 @@
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
-use BYanelli\Roma\Facades\Roma;
+use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Response\Response;
 use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
@@ -32,7 +32,7 @@ function fullCheckout(): Checkout
 }
 
 it('writes the discriminator first for values serialized through a discriminated property', function () {
-    expect(Roma::toArray(fullCheckout(), Profile::storage()))->toBe([
+    expect(Serializer::toArray(fullCheckout(), Profile::storage()))->toBe([
         'payment' => ['type' => 'bank', 'iban' => 'DE89370400440532013000'],
         'shipping' => ['kind' => 'Express', 'carrier' => 'DHL', 'surcharge' => ['type' => 'Card', 'last4' => '9999', 'saved' => true]],
         'refundTo' => ['type' => 'Voucher', 'code' => 'THANKS'],
@@ -50,7 +50,7 @@ it('writes the discriminator first for values serialized through a discriminated
 });
 
 it('writes the discriminator for elements of a PHPDoc union', function () {
-    expect(Roma::toArray(new Refunds([new Voucher('A')])))->toBe(['refunds' => [['type' => 'Voucher', 'code' => 'A']]]);
+    expect(Serializer::toArray(new Refunds([new Voucher('A')])))->toBe(['refunds' => [['type' => 'Voucher', 'code' => 'A']]]);
 });
 
 class DirectCardResponse extends Response
@@ -59,14 +59,14 @@ class DirectCardResponse extends Response
 }
 
 it('omits the discriminator when the member is serialized directly or through its own class', function () {
-    expect(Roma::toArray(new Card('4242')))->toBe(['last4' => '4242', 'saved' => false])
-        ->and(Roma::toArray(new DirectCardResponse(new Card('4242'))))->toBe(['card' => ['last4' => '4242', 'saved' => false]]);
+    expect(Serializer::toArray(new Card('4242')))->toBe(['last4' => '4242', 'saved' => false])
+        ->and(Serializer::toArray(new DirectCardResponse(new Card('4242'))))->toBe(['card' => ['last4' => '4242', 'saved' => false]]);
 });
 
 it('maps the storage output back to an equal object', function () {
     $checkout = fullCheckout();
 
-    $stored = json_decode(json_encode(Roma::toArray($checkout, Profile::storage())), true);
+    $stored = json_decode(json_encode(Serializer::toArray($checkout, Profile::storage())), true);
 
     $mapped = app(ObjectMapper::class)->map(Checkout::class, new ArrayPayload($stored), new ArrayPolicy);
 
@@ -76,7 +76,7 @@ it('maps the storage output back to an equal object', function () {
 it('maps the storage output of a minimal object back to an equal object', function () {
     $checkout = new Checkout(new Card('4242'), new Standard(3), new Card('1111'));
 
-    $mapped = app(ObjectMapper::class)->map(Checkout::class, new ArrayPayload(Roma::toArray($checkout, Profile::storage())), new ArrayPolicy);
+    $mapped = app(ObjectMapper::class)->map(Checkout::class, new ArrayPayload(Serializer::toArray($checkout, Profile::storage())), new ArrayPolicy);
 
     expect($mapped)->toEqual($checkout);
 });
@@ -92,7 +92,7 @@ class UnlistedPaymentResponse extends Response
 }
 
 it('refuses to serialize a value that is not a member of the union', function () {
-    expect(fn () => Roma::toArray(new UnlistedPaymentResponse(new UnlistedMethod('tok'))))->toThrow(
+    expect(fn () => Serializer::toArray(new UnlistedPaymentResponse(new UnlistedMethod('tok'))))->toThrow(
         RuntimeException::class,
         'Cannot serialize UnlistedMethod through UnlistedPaymentResponse::$payment: it is not a member of the discriminated union.',
     );
@@ -118,7 +118,7 @@ class LooseResponse extends Response
 }
 
 it('serializes an undiscriminated interface and undocumented arrays as before', function () {
-    expect(Roma::toArray(new LooseResponse(new LooseImplementation(1), ['a' => 1], [new LooseImplementation(2)])))->toBe([
+    expect(Serializer::toArray(new LooseResponse(new LooseImplementation(1), ['a' => 1], [new LooseImplementation(2)])))->toBe([
         'item' => ['id' => 1],
         'tags' => ['a' => 1],
         'untyped' => [['id' => 2]],
