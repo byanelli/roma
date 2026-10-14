@@ -101,8 +101,9 @@ class ContactResponse extends Response {
 }
 ```
 
-A property whose value is `BYanelli\Roma\Missing::instance()` is omitted too, which is how a
-promoted constructor parameter typed `string|Missing` can be left out.
+A property typed with `BYanelli\Roma\Missing`, such as `string|Missing`, is optional without
+the attribute: it is omitted when unset or when its value is `Missing::instance()`, and
+TypeScript marks it optional.
 
 ## Status and headers
 

@@ -2,7 +2,6 @@
 
 namespace BYanelli\Roma\TypeScript;
 
-use BYanelli\Roma\Attributes\Optional as ResponseOptional;
 use BYanelli\Roma\Data\ClassDefinitionBuilder as PhpClassDefinitionBuilder;
 use BYanelli\Roma\Data\Property as PhpProperty;
 use BYanelli\Roma\Http\Attributes\Header;
@@ -262,11 +261,11 @@ readonly class TypeScriptGenerator
     }
 
     /**
-     * A response field is optional only when marked #[Optional].
+     * A response field is optional only when marked #[Optional] or typed with Missing.
      */
     private function isResponsePropertyOptional(PhpProperty $property): bool
     {
-        return $property->hasAttribute(ResponseOptional::class);
+        return $property->optional;
     }
 
     /**

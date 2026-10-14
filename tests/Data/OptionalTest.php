@@ -4,6 +4,7 @@
 
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
@@ -166,3 +167,64 @@ it('emits an #[Optional] Missing-typed property as an optional TypeScript field'
         ->toContain('  website?: string;')
         ->toContain('  name: string;');
 });
+
+class TestMissingTyped
+{
+    public int|Missing $age;
+
+    public function __construct(
+        public string $name,
+        public string|Missing $bio,
+        public Card|Missing|null $card,
+        #[Optional] public string|Missing $title,
+    ) {}
+}
+
+class TestMissingTypedWithPresent
+{
+    public function __construct(#[Present] public string|Missing|null $bio) {}
+}
+
+it('treats a type with Missing as optional without #[Optional]', function () {
+    $mapped = app(ObjectMapper::class)->map(TestMissingTyped::class, new ArrayPayload(['name' => 'Bill']), new ArrayPolicy);
+
+    expect($mapped->bio)->toBe(Missing::instance())
+        ->and($mapped->card)->toBe(Missing::instance())
+        ->and($mapped->title)->toBe(Missing::instance())
+        ->and($mapped->age)->toBe(Missing::instance())
+        ->and(Serializer::toArray($mapped))->toBe(['name' => 'Bill']);
+});
+
+it('validates a present value of a type with Missing', function () {
+    $map = fn () => app(ObjectMapper::class)->map(TestMissingTyped::class, new ArrayPayload(['name' => 'Bill', 'bio' => 5, 'age' => 'old']), new ArrayPolicy);
+
+    expect($map)->toThrow(fn (MappingValidationException $e) => expect($e->errors())->toEqual([
+        'data.bio' => ['The data.bio field must be a string.'],
+        'data.age' => ['The data.age field must be an integer.'],
+    ]));
+});
+
+it('rejects #[Present] on a type with Missing', function () {
+    expect(fn () => app(ObjectMapper::class)->map(TestMissingTypedWithPresent::class, new ArrayPayload([]), new ArrayPolicy))
+        ->toThrow(RuntimeException::class, 'is typed with Missing, which allows the key to be absent, and has #[Present]');
+});
+
+it('omits an unset property typed with Missing when serializing', function () {
+    $object = new class
+    {
+        public string|Missing $bio;
+
+        public string $name = 'Bill';
+    };
+
+    expect(Serializer::toArray($object))->toBe(['name' => 'Bill']);
+});
+
+it('emits a type with Missing as an optional TypeScript field', function (array $requests, array $responses) {
+    $ts = new TypeScriptGenerator($requests, $responses)->generate();
+
+    expect($ts)->toContain("export interface TestMissingTypedBody {\n  name: string;\n  bio?: string;\n  card?: Card | null;\n  title?: string;\n  age?: number;\n}");
+})->with([
+    'request' => [[TestMissingTyped::class], []],
+    'response' => [[], [TestMissingTyped::class]],
+]);

@@ -345,3 +345,23 @@ it('serializes through Laravel to the expected JSON Schema', function () {
         'required' => ['city'],
     ]);
 });
+
+readonly class SchemaMissingTyped
+{
+    public function __construct(
+        public string $name,
+        public string|Missing $bio,
+        public int|Missing|null $age,
+    ) {}
+}
+
+it('leaves a type with Missing out of the required list', function () {
+    $object = ClassSchema::object(SchemaMissingTyped::class)->toArray();
+
+    expect($object['required'])->toBe(['name'])
+        ->and($object['properties'])->toBe([
+            'name' => ['type' => 'string'],
+            'bio' => ['type' => 'string'],
+            'age' => ['type' => ['integer', 'null']],
+        ]);
+});

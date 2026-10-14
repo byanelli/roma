@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Data;
 use BackedEnum;
 use BYanelli\Roma\Data\Enums\NormalizesRawValue;
 use BYanelli\Roma\Data\Types\Class_;
+use BYanelli\Roma\Missing;
 use BYanelli\Roma\Validation\ValidationRules;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
@@ -97,7 +98,8 @@ class ClassMapping
 
     /**
      * Get a map/associative array of values and/or nested class mappings to be assigned to
-     * class properties. An absent #[Optional] property is left out, so it stays unset.
+     * class properties. An absent optional property is left out, so it stays unset, unless it
+     * takes Missing.
      *
      * @return array<string, mixed>
      */
@@ -105,7 +107,7 @@ class ClassMapping
     {
         $present = array_filter(
             $this->getClassProperties(),
-            fn (Property $p) => ! $p->optional || $this->dataHas($this->data, $p->getKeySegments()),
+            fn (Property $p) => ! $p->optional || $p->default instanceof Missing || $this->dataHas($this->data, $p->getKeySegments()),
         );
 
         return Arr::mapWithKeys($present, fn (Property $p) => [$p->name => $this->getMappedValue($p)]);

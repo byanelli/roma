@@ -4,6 +4,12 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- A property or parameter typed with `Missing` (`string|Missing`, `Card|Missing|null`) is
+  optional without `#[Optional]`: it is never required, an absent key maps to
+  `Missing::instance()`, JSON Schema leaves it out of `required`, TypeScript marks it
+  optional in requests and responses, and the serializer omits it when unset. `#[Optional]`
+  is still allowed on it. An absent non-promoted property typed with `Missing` is set to
+  `Missing::instance()`, and `#[Present]` on such a type throws.
 - Breaking: `#[Header]` or `#[Status]` on a property of a nested object throws when the
   definition is built, in mapping and TypeScript generation, and when the object is
   serialized, including through its own `toArray()`. The serializer used to drop it. The
@@ -52,11 +58,11 @@ All notable changes to `roma` will be documented in this file.
 - `#[Optional]` applies when mapping, and a property with it is never required. An absent
   constructor parameter takes its default, else the new `BYanelli\Roma\Missing::instance()`
   when its type includes `Missing` (`string|Missing`, `Card|Missing|null`), else `null`; one
-  with none of these throws when the definition is built. An absent non-promoted property is
-  left unset. A union with `Missing` is treated as its other type for coercion, validation,
-  TypeScript (`bio?: string`) and serialization, and doesn't need `#[Discriminated]`. The
-  serializer omits a property whose value is `Missing`, so a mapped object serializes back
-  to its input.
+  with none of these throws when the definition is built. An absent non-promoted property
+  without `Missing` in its type is left unset. A union with `Missing` is treated as its other
+  type for coercion, validation, TypeScript (`bio?: string`) and serialization, and doesn't
+  need `#[Discriminated]`. The serializer omits a property whose value is `Missing`, so a
+  mapped object serializes back to its input.
 - `#[DateFormat('Y-m-d')]` applies when mapping: the input must match the format, validated
   with Laravel's `date_format` rule in place of `date`, and is parsed with `createFromFormat`
   into the declared class (`Carbon`, `CarbonImmutable`, `DateTimeImmutable`, …). Fields the

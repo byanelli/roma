@@ -352,7 +352,7 @@ class Serializer
                 key: $destination?->destinationKey() ?? $key ?? $property->getName(),
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $this->attribute($property, DateFormat::class)?->format,
-                optional: $this->attribute($property, Optional::class) !== null,
+                optional: $this->attribute($property, Optional::class) !== null || Missing::isInType($property->getType()),
                 discriminated: $this->discriminatedType($property),
             );
         }

@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Data;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
@@ -194,7 +195,15 @@ class ClassDefinitionBuilder
         }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
-        $optional = collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
+        $acceptsMissing = Missing::isInType($obj->getType());
+        $optional = $acceptsMissing || collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
+
+        if ($acceptsMissing && collect($attributes)->contains(fn (object $attr) => $attr instanceof Present)) {
+            throw new RuntimeException(
+                "Roma property \"{$this->subject($obj)}\" is typed with Missing, which allows the key to be absent, "
+                .'and has #[Present], which requires it. Remove one of them.'
+            );
+        }
         $nullable = $obj->getType()?->allowsNull() ?? true;
 
         return new Property(
@@ -221,22 +230,22 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * An absent #[Optional] parameter takes its default, else Missing when its type allows it,
-     * else null. An absent property is left as it is, so it needs none.
+     * An absent optional property takes its default, else Missing when its type allows it. A
+     * parameter then takes null; a property is left unset, so it needs none.
      */
     private function getOptionalDefault(ReflectionParameter|ReflectionProperty $obj, bool $nullable): mixed
     {
         $default = $this->getDefault($obj);
 
-        if (! $obj instanceof ReflectionParameter || ! $default instanceof NoDefault) {
+        if (! $default instanceof NoDefault) {
             return $default;
         }
 
-        if ($this->acceptsMissing($obj)) {
+        if (Missing::isInType($obj->getType())) {
             return Missing::instance();
         }
 
-        if ($nullable) {
+        if (! $obj instanceof ReflectionParameter || $nullable) {
             return $default;
         }
 
@@ -244,23 +253,6 @@ class ClassDefinitionBuilder
             "Roma parameter \"{$this->subject($obj)}\" is #[Optional] but has no value for when it is absent. "
             .'Make it nullable (?string), add Missing to its type (string|Missing), or give it a default.'
         );
-    }
-
-    private function acceptsMissing(ReflectionParameter|ReflectionProperty $obj): bool
-    {
-        $type = $obj->getType();
-
-        if (! $type instanceof ReflectionUnionType) {
-            return false;
-        }
-
-        foreach ($type->getTypes() as $member) {
-            if ($member instanceof ReflectionNamedType && $member->getName() === Missing::class) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

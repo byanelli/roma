@@ -63,9 +63,10 @@ class CreateContactController {
   as an integer without an `integer` rule.
 - Required = non-nullable with no default. Optional = has a default OR is nullable (`?T`).
 - `#[Present]` on a nullable property requires the key to appear but allows `null`.
-- `#[Optional]` is never required. Type a constructor parameter `T|Missing` to tell an
-  absent key (`Missing::instance()`) from `null`; a non-promoted `#[Optional]` property stays
-  unset when absent. An `#[Optional]` parameter that is not nullable, has no `Missing` and no
+- `#[Optional]` is never required. Type a property `T|Missing` to tell an absent key
+  (`Missing::instance()`) from `null`; the type alone makes it optional, so `#[Optional]` is
+  redundant there. A non-promoted `#[Optional]` property without `Missing` stays unset when
+  absent. An `#[Optional]` parameter that is not nullable, has no `Missing` and no
   default throws. The serializer omits `Missing` values and TypeScript emits `x?: T`.
 - `#[DateFormat('Y-m-d')]` on a date property requires input in that format (`date_format`
   rule), parses it with `createFromFormat`, and serializes it in the same format.

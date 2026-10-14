@@ -76,8 +76,8 @@ the discriminator key as a required property whose `enum` is its one value:
 }
 ```
 
-A property is required when it has no default, isn't nullable and isn't `#[Optional]`, as
-when mapping. A nullable property allows `null`. A default that JSON can represent, such as a
+A property is required when it has no default, isn't nullable, isn't `#[Optional]` and
+isn't typed with `Missing`, as when mapping. A nullable property allows `null`. A default that JSON can represent, such as a
 scalar, an enum or an array of them, becomes the schema's `default`.
 
 ## Descriptions
