@@ -69,7 +69,9 @@ class CreateContactController {
   non-promoted `#[Optional]` property without `Missing` stays unset when absent. An
   `#[Optional]` parameter that is not nullable, has no `Missing` and no default throws. The serializer omits `Missing` values and TypeScript emits `x?: T`.
 - `#[DateFormat('Y-m-d')]` on a date property requires input in that format (`date_format`
-  rule), parses it with `createFromFormat`, and serializes it in the same format.
+  rule), parses it with `createFromFormat`, and serializes it in the same format. It covers
+  the dates in an array, map or shape property, never those inside a nested object, and
+  throws on a type with no date.
 - An `array` property needs its element type in PHPDoc (`@var` on a property, `@param` on
   a constructor parameter): `array<T>`, `list<T>`, `array<string, T>` / `array<int, T>`, or
   an array shape such as `array{min: int, max?: int}`. `list<T>` also requires sequential

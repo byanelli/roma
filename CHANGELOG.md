@@ -4,6 +4,12 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `#[DateFormat]` applies only to the property's own value: a date, or the dates in
+  an array, map or shape. When serializing, a nested object's dates use its own formats,
+  including a nested object with its own `toArray()`, an `Arrayable` or a `stdClass`, which
+  used to get the parent's format. Mapping, JSON Schema and TypeScript already followed this
+  rule. `#[DateFormat]` on a type with no date of its own, such as `string`, a nested class
+  or `list<Event>`, throws when the definition is built and when serializing.
 - A property typed with nothing but `Missing` and `null` (`Missing`, `?Missing`,
   `Missing|null`) throws when the definition is built and when serializing. The message
   says to add the type of the value, e.g. `string|Missing`.

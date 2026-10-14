@@ -195,8 +195,8 @@ class ClassDefinitionBuilder
         }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
-        Missing::assertNotAlone($obj->getType(), $this->subject($obj));
 
+        Missing::assertNotAlone($obj->getType(), $this->subject($obj));
         $acceptsMissing = Missing::isInType($obj->getType());
         $optional = $acceptsMissing || collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
 
@@ -206,16 +206,21 @@ class ClassDefinitionBuilder
                 .'and has #[Present], which requires it. Remove one of them.'
             );
         }
+
         $nullable = $obj->getType()?->allowsNull() ?? true;
+
+        $type = $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes));
+        $dateFormat = collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format;
+
+        if ($dateFormat !== null && ! Types\Date::isIn($type)) {
+            throw PropertyAttributes::dateFormatWithoutDate($this->subject($obj));
+        }
 
         return new Property(
             name: $obj->getName(),
             key: $key,
             wireKey: $this->getWireKey($attributes) ?: $key,
-            type: $this->withDateFormat(
-                $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes)),
-                collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format,
-            ),
+            type: $this->withDateFormat($type, $dateFormat),
             role: $this->getRole($obj),
             default: $optional ? $this->getOptionalDefault($obj, $nullable) : $this->getDefault($obj),
             parent: $parent,

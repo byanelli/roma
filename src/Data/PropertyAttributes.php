@@ -87,6 +87,14 @@ final class PropertyAttributes
         );
     }
 
+    public static function dateFormatWithoutDate(string $subject): RuntimeException
+    {
+        return new RuntimeException(
+            "Roma property \"{$subject}\" has #[DateFormat], but its type is not a date or an array, map or shape "
+            .'of dates. A nested object sets the formats of its own dates.'
+        );
+    }
+
     /**
      * The key an attribute declares, if any. A KeyAttribute (e.g. a header or accessor) always
      * declares one; an ExplicitKeyAttribute (e.g. a source attribute or #[Key]) may leave it

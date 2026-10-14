@@ -192,13 +192,14 @@ class Serializer
             $value instanceof DateTimeInterface => $value->format($dateFormat),
             is_array($value) => array_map(fn (mixed $item): mixed => $this->normalizeValue($item, $profile, $dateFormat), $value),
             ! is_object($value) => $value,
-            $this->overridesToArray($value) => $this->normalizeValue($this->ownToArray($value, $profile), $profile, $dateFormat),
+            // A nested object's dates use its own formats, so #[DateFormat] stops here.
+            $this->overridesToArray($value) => $this->normalizeValue($this->ownToArray($value, $profile), $profile, $profile->dateFormat),
             $this->usesTrait($value) => $this->body($value, $profile),
-            $value instanceof Arrayable => $this->normalizeValue($value->toArray(), $profile, $dateFormat),
+            $value instanceof Arrayable => $this->normalizeValue($value->toArray(), $profile, $profile->dateFormat),
             // These already define their JSON form.
             $value instanceof JsonSerializable => $value,
             $value instanceof Stringable => (string) $value,
-            $value instanceof stdClass => $this->normalizeValue(get_object_vars($value), $profile, $dateFormat),
+            $value instanceof stdClass => $this->normalizeValue(get_object_vars($value), $profile, $profile->dateFormat),
             default => $this->body($value, $profile),
         };
     }
@@ -347,18 +348,66 @@ class Serializer
 
             $destination = $this->attribute($property, DestinationAttribute::class);
             $key = $this->attribute($property, Key::class)?->key;
+            $dateFormat = $this->attribute($property, DateFormat::class)?->format;
+
+            if ($dateFormat !== null && ! $this->mayHoldDate($property)) {
+                throw PropertyAttributes::dateFormatWithoutDate($subject);
+            }
 
             $plan[] = new PropertyPlan(
                 reflection: $property,
                 key: $destination?->destinationKey() ?? $key ?? $property->getName(),
                 destination: $destination?->destination() ?? Destination::Body,
-                dateFormat: $this->attribute($property, DateFormat::class)?->format,
+                dateFormat: $dateFormat,
                 optional: $this->attribute($property, Optional::class) !== null || Missing::isInType($property->getType()),
                 discriminated: $this->discriminatedType($property),
             );
         }
 
         return $plan;
+    }
+
+    /**
+     * Whether the declared type allows a date, or an array that may contain one. An array
+     * without a supported PHPDoc type may.
+     */
+    private function mayHoldDate(ReflectionProperty $property): bool
+    {
+        $type = $property->getType();
+
+        $names = match (true) {
+            $type instanceof ReflectionNamedType => [$type->getName()],
+            $type instanceof ReflectionUnionType => array_map(fn ($member) => $member instanceof ReflectionNamedType ? $member->getName() : 'mixed', $type->getTypes()),
+            default => ['mixed'],
+        };
+
+        foreach ($names as $name) {
+            if (in_array($name, ['mixed', 'object'], true) || is_a($name, DateTimeInterface::class, true)) {
+                return true;
+            }
+
+            if ($name === 'array' && $this->arrayMayHoldDate($property)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function arrayMayHoldDate(ReflectionProperty $property): bool
+    {
+        try {
+            $type = $this->phpDocTypeParser->getArrayType(
+                $this->documentedProperty($property),
+                fn (array $names): Type => array_any($names, fn (string $name) => $name === 'mixed' || is_a($name, DateTimeInterface::class, true))
+                    ? new Types\Date
+                    : new Types\String_,
+            );
+        } catch (RuntimeException) {
+            return true;
+        }
+
+        return Types\Date::isIn($type);
     }
 
     /**

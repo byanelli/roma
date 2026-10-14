@@ -160,8 +160,7 @@ class OrderRequest {
 A date property accepts anything Laravel's `date` rule does. With `#[DateFormat('Y-m-d')]`
 it must match that format instead, validated by `date_format:Y-m-d`, and is parsed with
 `createFromFormat` into the declared class. Fields the format doesn't contain are zero, so
-`Y-m-d` gives midnight. The serializer writes the date in the same format, and the attribute
-also applies to the dates in an array property such as `list<DateTimeImmutable>`:
+`Y-m-d` gives midnight. The serializer writes the date in the same format:
 
 ```php
 use BYanelli\Roma\Attributes\DateFormat;
@@ -171,6 +170,12 @@ class BookingRequest {
     public CarbonImmutable $checkIn;   // "2024-03-05" -> 2024-03-05 00:00:00
 }
 ```
+
+The attribute applies to the property's own value, which includes the elements of a
+`list<DateTimeImmutable>`, the values of an `array<string, DateTimeImmutable>` and the dates
+in an array shape. It doesn't apply to the dates inside a nested object, which follow the
+nested class's own attributes. On a type with no date of its own, such as `string` or a
+nested class, it throws.
 
 A `bool` accepts `true`, `1`, `"true"`, `"1"`, `"yes"` and `"on"` as true, and `false`, `0`,
 `"false"`, `"0"`, `"no"` and `"off"` as false, ignoring case. Any other value, including an

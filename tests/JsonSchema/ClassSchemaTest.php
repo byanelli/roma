@@ -365,3 +365,28 @@ it('leaves a type with Missing out of the required list', function () {
             'age' => ['type' => ['integer', 'null']],
         ]);
 });
+
+readonly class SchemaDatedEvent
+{
+    public function __construct(public DateTimeImmutable $at) {}
+}
+
+readonly class SchemaDateFormatScope
+{
+    /**
+     * @param  list<DateTimeImmutable>  $days
+     * @param  array{day: DateTimeImmutable, event: SchemaDatedEvent}  $slot
+     */
+    public function __construct(
+        #[DateFormat('Y-m-d')] public array $days,
+        #[DateFormat('Y-m-d')] public array $slot,
+    ) {}
+}
+
+it('applies #[DateFormat] to array elements but not to a nested object\'s dates', function () {
+    $properties = ClassSchema::object(SchemaDateFormatScope::class)->toArray()['properties'];
+
+    expect($properties['days']['items'])->toBe(['format' => 'date', 'type' => 'string'])
+        ->and($properties['slot']['properties']['day'])->toBe(['format' => 'date', 'type' => 'string'])
+        ->and($properties['slot']['properties']['event']['properties']['at'])->toBe(['format' => 'date-time', 'type' => 'string']);
+});

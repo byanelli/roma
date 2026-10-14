@@ -8,6 +8,8 @@ use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
+use BYanelli\Roma\Serialization\IsArrayable;
+use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Tests\TestCase;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -120,3 +122,126 @@ it('applies #[DateFormat] to a request property', function () {
 
     $this->fail('Exception was not thrown');
 });
+
+class TestDatedEvent
+{
+    public function __construct(
+        public string $name,
+        public CarbonImmutable $at,
+        #[DateFormat('H:i')] public ?CarbonImmutable $ends = null,
+    ) {}
+}
+
+class TestDatedEventWithOwnToArray
+{
+    use IsArrayable;
+
+    public function __construct(public CarbonImmutable $at) {}
+
+    public function toArray(?Profile $profile = null): array
+    {
+        return ['at' => $this->at];
+    }
+}
+
+class TestDateCollections
+{
+    /**
+     * @param  list<CarbonImmutable>  $days
+     * @param  array<string, CarbonImmutable>  $deadlines
+     * @param  array{day: CarbonImmutable, event: TestDatedEvent}  $slot
+     */
+    public function __construct(
+        #[DateFormat('Y-m-d')] public array $days,
+        #[DateFormat('Y-m-d')] public array $deadlines,
+        #[DateFormat('Y-m-d')] public array $slot,
+    ) {}
+}
+
+it('applies #[DateFormat] to array elements and map values in both directions', function () {
+    $data = [
+        'days' => ['2024-03-05', '2024-03-06'],
+        'deadlines' => ['draft' => '2024-04-01'],
+        'slot' => ['day' => '2024-05-01', 'event' => ['name' => 'Launch', 'at' => '2024-05-01T09:00:00+00:00', 'ends' => '17:00']],
+    ];
+
+    $mapped = app(ObjectMapper::class)->map(TestDateCollections::class, new ArrayPayload($data), new ArrayPolicy);
+
+    expect($mapped->days[1]->toDateTimeString())->toBe('2024-03-06 00:00:00')
+        ->and($mapped->deadlines['draft']->toDateTimeString())->toBe('2024-04-01 00:00:00')
+        ->and($mapped->slot['event']->at->toDateTimeString())->toBe('2024-05-01 09:00:00')
+        ->and(Serializer::toArray($mapped))->toBe($data);
+});
+
+it('validates a nested object\'s dates with its own formats', function () {
+    $map = fn () => app(ObjectMapper::class)->map(TestDateCollections::class, new ArrayPayload([
+        'days' => ['2024-03-05'],
+        'deadlines' => ['draft' => '2024-04-01'],
+        'slot' => ['day' => '2024-05-01', 'event' => ['name' => 'Launch', 'at' => '2024-05-01T09:00:00+00:00', 'ends' => '2024-05-01']],
+    ]), new ArrayPolicy);
+
+    expect($map)->toThrow(fn (MappingValidationException $e) => expect($e->errors())->toBe([
+        'data.slot.event.ends' => ['The data.slot.event.ends field must match the format H:i.'],
+    ]));
+});
+
+class TestDateFormatOverNested
+{
+    /**
+     * @param  array{day: DateTimeImmutable, event: object}  $slot
+     */
+    public function __construct(
+        #[DateFormat('Y-m-d')] public array $slot,
+        #[DateFormat('Y-m-d')] public mixed $any,
+    ) {}
+}
+
+it('does not apply #[DateFormat] to dates inside a nested object when serializing', function (object $event, array $expected) {
+    $at = new CarbonImmutable('2024-05-01 09:00:00', 'UTC');
+    $object = new TestDateFormatOverNested(['day' => $at, 'event' => $event], $event);
+
+    expect(Serializer::toArray($object))->toBe([
+        'slot' => ['day' => '2024-05-01', 'event' => $expected],
+        'any' => $expected,
+    ]);
+})->with([
+    'plain object' => [
+        fn () => new TestDatedEvent('Launch', new CarbonImmutable('2024-05-01 09:00:00', 'UTC')),
+        ['name' => 'Launch', 'at' => '2024-05-01T09:00:00+00:00', 'ends' => null],
+    ],
+    'own toArray()' => [
+        fn () => new TestDatedEventWithOwnToArray(new CarbonImmutable('2024-05-01 09:00:00', 'UTC')),
+        ['at' => '2024-05-01T09:00:00+00:00'],
+    ],
+    'stdClass' => [
+        fn () => (object) ['at' => new CarbonImmutable('2024-05-01 09:00:00', 'UTC')],
+        ['at' => '2024-05-01T09:00:00+00:00'],
+    ],
+]);
+
+class TestDateFormatOnString
+{
+    public function __construct(#[DateFormat('Y-m-d')] public string $day = '') {}
+}
+
+class TestDateFormatOnObject
+{
+    public function __construct(#[DateFormat('Y-m-d')] public ?TestDatedEvent $event = null) {}
+}
+
+class TestDateFormatOnObjectList
+{
+    /**
+     * @param  list<TestDatedEvent>  $events
+     */
+    public function __construct(#[DateFormat('Y-m-d')] public array $events = []) {}
+}
+
+it('rejects #[DateFormat] on a type with no date of its own', function (string $class) {
+    $message = "Roma property \"{$class}::\$";
+
+    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload([]), new ArrayPolicy))
+        ->toThrow(RuntimeException::class, 'has #[DateFormat], but its type is not a date or an array, map or shape of dates')
+        ->and(fn () => Serializer::toArray(new $class))
+        ->toThrow(RuntimeException::class, $message);
+})->with([TestDateFormatOnString::class, TestDateFormatOnObject::class, TestDateFormatOnObjectList::class]);
