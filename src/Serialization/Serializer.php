@@ -343,6 +343,7 @@ class Serializer
 
             $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
             PropertyAttributes::assertCombinable($this->checkedAttributes($property), $subject);
+            Missing::assertNotAlone($property->getType(), $subject);
 
             $destination = $this->attribute($property, DestinationAttribute::class);
             $key = $this->attribute($property, Key::class)?->key;

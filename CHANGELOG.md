@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- A property typed with nothing but `Missing` and `null` (`Missing`, `?Missing`,
+  `Missing|null`) throws when the definition is built and when serializing. The message
+  says to add the type of the value, e.g. `string|Missing`.
 - A property or parameter typed with `Missing` (`string|Missing`, `Card|Missing|null`) is
   optional without `#[Optional]`: it is never required, an absent key maps to
   `Missing::instance()`, JSON Schema leaves it out of `required`, TypeScript marks it

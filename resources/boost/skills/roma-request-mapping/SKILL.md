@@ -65,9 +65,9 @@ class CreateContactController {
 - `#[Present]` on a nullable property requires the key to appear but allows `null`.
 - `#[Optional]` is never required. Type a property `T|Missing` to tell an absent key
   (`Missing::instance()`) from `null`; the type alone makes it optional, so `#[Optional]` is
-  redundant there. A non-promoted `#[Optional]` property without `Missing` stays unset when
-  absent. An `#[Optional]` parameter that is not nullable, has no `Missing` and no
-  default throws. The serializer omits `Missing` values and TypeScript emits `x?: T`.
+  redundant there. `Missing` alone (`Missing`, `?Missing`) throws; write `string|Missing`. A
+  non-promoted `#[Optional]` property without `Missing` stays unset when absent. An
+  `#[Optional]` parameter that is not nullable, has no `Missing` and no default throws. The serializer omits `Missing` values and TypeScript emits `x?: T`.
 - `#[DateFormat('Y-m-d')]` on a date property requires input in that format (`date_format`
   rule), parses it with `createFromFormat`, and serializes it in the same format.
 - An `array` property needs its element type in PHPDoc (`@var` on a property, `@param` on

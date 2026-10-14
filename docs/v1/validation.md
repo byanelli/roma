@@ -176,7 +176,8 @@ present value must still be a valid string. TypeScript emits `bio?: string`, and
 serializer omits a property whose value is `Missing`, so the object serializes back to the
 input it was mapped from. An `#[Optional]` constructor parameter must be nullable, include
 `Missing` or have a default; otherwise it throws when the class definition is built.
-`#[Present]` on a type with `Missing` throws too.
+`#[Present]` on a type with `Missing` throws too, and so does a type with nothing but
+`Missing` and `null`, such as `?Missing`: add the type of the value, e.g. `string|Missing`.
 
 Use `#[Present]` on a nullable property when the key _must_ appear but may be `null`:
 

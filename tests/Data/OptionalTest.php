@@ -228,3 +228,27 @@ it('emits a type with Missing as an optional TypeScript field', function (array 
     'request' => [[TestMissingTyped::class], []],
     'response' => [[], [TestMissingTyped::class]],
 ]);
+
+class TestOnlyMissing
+{
+    public function __construct(public Missing $bio) {}
+}
+
+class TestNullableMissing
+{
+    public function __construct(public ?Missing $bio) {}
+}
+
+class TestMissingOrNull
+{
+    public function __construct(public ?Missing $bio) {}
+}
+
+it('rejects a type with nothing but Missing', function (string $class) {
+    $message = "Roma property \"{$class}::\$bio\" has no type besides Missing. Add the type of its value, e.g. string|Missing.";
+
+    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload([]), new ArrayPolicy))
+        ->toThrow(RuntimeException::class, $message)
+        ->and(fn () => Serializer::toArray(new $class(Missing::instance())))
+        ->toThrow(RuntimeException::class, $message);
+})->with([TestOnlyMissing::class, TestNullableMissing::class, TestMissingOrNull::class]);

@@ -195,6 +195,8 @@ class ClassDefinitionBuilder
         }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
+        Missing::assertNotAlone($obj->getType(), $this->subject($obj));
+
         $acceptsMissing = Missing::isInType($obj->getType());
         $optional = $acceptsMissing || collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
 
