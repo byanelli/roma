@@ -60,7 +60,8 @@ The same object serialized directly, or through a property typed as `Card`, has 
 key. The value must be one of the union's classes.
 
 `Response` implements `JsonSerializable`, and `IsArrayable` provides `jsonSerialize()`, so
-`json_encode($response)` produces the same output as `toArray()`.
+`json_encode($response)` produces the same output as `toArray()`, or as an overridden
+`toArray()` after normalization (see below).
 
 ## Omit unset properties with `#[Optional]`
 
@@ -159,6 +160,11 @@ serialize the object they are given by its properties, which is why the override
 them without recursing. A `Response`'s HTTP body is its override's output, normalized with
 the response profile; the status and headers still come from its `#[Status]` and `#[Header]`
 properties.
+
+Wherever Roma consumes an override's output (`json_encode`, `toResponse()` and nesting), it
+converts the values the same way as property values, so an enum, a date or a nested object
+added as an extra key comes out in its JSON form. Calling `$object->toArray()` directly
+returns exactly what the override returns.
 
 ## Date formats
 

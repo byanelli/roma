@@ -56,6 +56,9 @@ All notable changes to `roma` will be documented in this file.
   object passed to `Serializer::toArray()` or `serialize()` is always serialized by its
   properties. `toResponse()` sends an override's output as the body, normalized with
   `Profile::response()`, and takes the status and headers from the properties.
+  `jsonSerialize()` also normalizes an override's output, so an enum, date or nested object
+  it adds is converted as a property value would be. `Serializer::normalize()` and
+  `Serializer::overridesToArray()` are public.
 - Maps (`array<string, T>`, `array<int, T>`) and array shapes (`array{a: int, b?: string}`)
   in `@var` and `@param`, nested to any depth along with `array<T>` and `list<T>`. Values
   are coerced and validated per key; `array<int, T>` rejects non-integer keys, and a shape's

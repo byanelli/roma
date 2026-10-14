@@ -142,3 +142,75 @@ it('takes the status from the properties when the override replaces the body', f
     expect($response->getData(true))->toBe(['replaced' => true])
         ->and($response->getStatusCode())->toBe(202);
 });
+
+function annotations(): array
+{
+    return [
+        'shade' => OverrideColor::Red,
+        'at' => new DateTimeImmutable('2025-01-02 03:04:05', new DateTimeZone('UTC')),
+        'plain' => new PlainSwatch(OverrideColor::Red),
+    ];
+}
+
+class AnnotatedSwatch implements Arrayable, JsonSerializable
+{
+    use IsArrayable;
+
+    public function __construct(public OverrideColor $color) {}
+
+    public function toArray(?Profile $profile = null): array
+    {
+        return [...Serializer::toArray($this, $profile), ...annotations()];
+    }
+}
+
+class AnnotatedResponse extends Response
+{
+    public function __construct(public OverrideColor $color) {}
+
+    public function toArray(?Profile $profile = null): array
+    {
+        return [...Serializer::toArray($this, $profile), ...annotations()];
+    }
+}
+
+class AnnotatedSwatchHolder
+{
+    public function __construct(public AnnotatedSwatch $swatch) {}
+}
+
+function normalizedAnnotations(): array
+{
+    $red = ['name' => 'Red', 'value' => 'red'];
+
+    return ['color' => $red, 'shade' => $red, 'at' => '2025-01-02T03:04:05+00:00', 'plain' => ['color' => $red]];
+}
+
+it('returns the override\'s output unchanged from a direct toArray() call', function () {
+    $array = new AnnotatedSwatch(OverrideColor::Red)->toArray();
+
+    expect($array['shade'])->toBe(OverrideColor::Red)
+        ->and($array['at'])->toBeInstanceOf(DateTimeImmutable::class)
+        ->and($array['plain'])->toBeInstanceOf(PlainSwatch::class);
+});
+
+it('normalizes the override\'s output in json_encode', function () {
+    expect(json_decode(json_encode(new AnnotatedSwatch(OverrideColor::Red)), true))->toBe(normalizedAnnotations())
+        ->and(json_decode(json_encode(new AnnotatedResponse(OverrideColor::Red)), true))->toBe(normalizedAnnotations());
+});
+
+it('normalizes the override\'s output in toResponse()', function () {
+    expect(new AnnotatedResponse(OverrideColor::Red)->toResponse(new Request)->getData(true))->toBe(normalizedAnnotations());
+});
+
+it('normalizes the override\'s output when the object is nested', function () {
+    $holder = new AnnotatedSwatchHolder(new AnnotatedSwatch(OverrideColor::Red));
+
+    expect(Serializer::toArray($holder))->toBe(['swatch' => normalizedAnnotations()])
+        ->and(Serializer::toArray($holder, Profile::clientRequest()))->toBe(['swatch' => [
+            'color' => 'red',
+            'shade' => 'red',
+            'at' => '2025-01-02T03:04:05+00:00',
+            'plain' => ['color' => 'red'],
+        ]]);
+});

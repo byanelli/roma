@@ -24,10 +24,16 @@ trait IsArrayable
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public function jsonSerialize(): array
     {
-        return $this->toArray();
+        if (! Serializer::overridesToArray($this)) {
+            return $this->toArray();
+        }
+
+        $profile = Profile::response();
+
+        return Serializer::normalize($this->toArray($profile), $profile);
     }
 }
