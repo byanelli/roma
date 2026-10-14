@@ -66,6 +66,28 @@ final class PropertyAttributes
     }
 
     /**
+     * Headers and the status belong to the top-level class.
+     *
+     * @param  list<object>  $attributes
+     */
+    public static function assertAllowedInNestedObject(array $attributes, string $subject): void
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof DestinationAttribute) {
+                throw self::topLevelOnly($attribute::class, $subject);
+            }
+        }
+    }
+
+    public static function topLevelOnly(string $attribute, string $subject): RuntimeException
+    {
+        return new RuntimeException(
+            "Roma property \"{$subject}\" has #[".class_basename($attribute).'] but is inside a nested object. '
+            .'Headers and #[Status] can only be declared on the top-level class.'
+        );
+    }
+
+    /**
      * The key an attribute declares, if any. A KeyAttribute (e.g. a header or accessor) always
      * declares one; an ExplicitKeyAttribute (e.g. a source attribute or #[Key]) may leave it
      * null to use the property name.

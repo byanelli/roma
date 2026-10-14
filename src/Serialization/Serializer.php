@@ -98,12 +98,14 @@ class Serializer
     }
 
     /**
-     * The body of a nested object. Its other destinations apply only at the top level and are dropped.
+     * The body of a nested object.
      *
      * @return array<string, mixed>
      */
     private function body(object $object, Profile $profile): array
     {
+        $this->assertNestable($object);
+
         $body = [];
 
         foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
@@ -113,6 +115,20 @@ class Serializer
         }
 
         return $body;
+    }
+
+    private function assertNestable(object $object): void
+    {
+        foreach ($this->plan($object::class) as $property) {
+            if ($property->destination !== Destination::Body) {
+                $reflection = $property->reflection;
+
+                throw PropertyAttributes::topLevelOnly(
+                    $reflection->getAttributes(DestinationAttribute::class, ReflectionAttribute::IS_INSTANCEOF)[0]->getName(),
+                    $reflection->getDeclaringClass()->getShortName().'::$'.$reflection->getName(),
+                );
+            }
+        }
     }
 
     /**
@@ -289,6 +305,8 @@ class Serializer
      */
     private function ownToArray(object $object, Profile $profile): mixed
     {
+        $this->assertNestable($object);
+
         if (! method_exists($object, 'toArray')) {
             throw new RuntimeException($object::class.' has no toArray() method.');
         }

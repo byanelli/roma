@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `#[Header]` or `#[Status]` on a property of a nested object throws when the
+  definition is built, in mapping and TypeScript generation, and when the object is
+  serialized, including through its own `toArray()`. The serializer used to drop it. The
+  message says headers and `#[Status]` can only be declared on the top-level class.
 - Breaking: attribute combinations with no meaning throw when the definition is built and
   when serializing, instead of being ignored: `#[Key]` with `#[Status]`, `#[Status]` with
   `#[Header]`, two source attributes such as `#[Query]` with `#[Body]`, and `#[Optional]` with

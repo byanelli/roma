@@ -143,6 +143,10 @@ class ClassDefinitionBuilder
         $typeAttributes = $typeName !== null ? $this->policy->attributesForType($typeName) : [];
         $typeSource = $typeName !== null ? $this->policy->sourceForType($typeName) : null;
 
+        if ($this->nested) {
+            PropertyAttributes::assertAllowedInNestedObject($attributes, $this->subject($obj));
+        }
+
         // A nested object always inherits its location from the parent, so a
         // property inside one cannot declare its own source: it would silently
         // relocate the property and fail validation as "required". To override

@@ -125,8 +125,9 @@ class CreatedResponse extends Response {
 }
 ```
 
-A property can have only one of `#[Status]` and `#[Header]`. Without a `#[Status]` property
-the response defaults to 200. For values computed at
+A property can have only one of `#[Status]` and `#[Header]`, and both can only be declared
+on the top-level class: a nested object with either throws when it is serialized or its
+definition is built. Without a `#[Status]` property the response defaults to 200. For values computed at
 runtime, override the public `responseStatus()` or `responseHeaders()` methods. Both receive
 the serialized object, which contains the attribute values:
 

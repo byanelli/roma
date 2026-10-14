@@ -31,7 +31,8 @@ A nested object inherits its location from the parent property, so source attrib
 (`#[Input]`, `#[Query]`, `#[Body]`, `#[Header]`, `#[Path]`, `#[Cookie]`,
 accessors) and self-sourcing metadata enums are only valid on **top-level** request
 classes. Declaring one on a nested property throws — its data always comes from within the
-parent's slice.
+parent's slice. `#[Header]` and `#[Status]` in a nested object also throw when serializing,
+since a nested object has no headers or status of its own.
 
 ## Nullable nested objects
 
