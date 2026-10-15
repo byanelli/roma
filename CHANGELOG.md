@@ -4,6 +4,8 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Present]` on a property or parameter with a default value throws when the definition is
+  built and when serializing, since the default is never used.
 - `#[Discriminated]` or `#[AutoDiscriminated]` on a concrete class throws when the definition
   is built, in mapping, TypeScript and JSON Schema, and when serializing. It used to be
   ignored.

@@ -165,3 +165,35 @@ it('rejects #[Status] on a property not typed int', function (string $class, str
     [TestMissingStatus::class, ', not BYanelli\Roma\Missing|int'],
     [TestUntypedStatus::class, '.'],
 ]);
+
+class TestPresentWithDefaultParameter
+{
+    public function __construct(#[Present] public ?string $bio = null) {}
+}
+
+class TestPresentWithDefaultProperty
+{
+    #[Present]
+    public ?string $bio = 'none';
+}
+
+class TestPresentWithoutDefault
+{
+    #[Present]
+    public ?string $bio;
+}
+
+it('rejects #[Present] on a property with a default value', function (string $class) {
+    $message = "Roma property \"{$class}::\$bio\" has #[Present] and a default value, which is never used";
+
+    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload(['bio' => 'x']), new ArrayPolicy))
+        ->toThrow(RuntimeException::class, $message)
+        ->and(fn () => Serializer::toArray(new $class))->toThrow(RuntimeException::class, $message);
+})->with([TestPresentWithDefaultParameter::class, TestPresentWithDefaultProperty::class]);
+
+it('allows #[Present] on a property without a default', function () {
+    $mapped = app(ObjectMapper::class)->map(TestPresentWithoutDefault::class, new ArrayPayload(['bio' => null]), new ArrayPolicy);
+
+    expect($mapped->bio)->toBeNull()
+        ->and(Serializer::toArray($mapped))->toBe(['bio' => null]);
+});

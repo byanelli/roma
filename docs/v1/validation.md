@@ -191,4 +191,5 @@ readonly class UpdateNoteRequest {
 ```
 
 `#[Present]` together with `#[Optional]` throws, since one requires the key and the other
-allows it to be absent.
+allows it to be absent. `#[Present]` on a property with a default value throws too, since the
+default would never be used.

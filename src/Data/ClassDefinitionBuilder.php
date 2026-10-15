@@ -216,6 +216,8 @@ class ClassDefinitionBuilder
             );
         }
 
+        PropertyAttributes::assertPresentWithoutDefault($attributes, ! $this->getDefault($obj) instanceof NoDefault, $this->subject($obj));
+
         $nullable = $obj->getType()?->allowsNull() ?? true;
 
         $type = $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes));

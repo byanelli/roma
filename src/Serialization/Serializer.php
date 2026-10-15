@@ -347,6 +347,7 @@ class Serializer
             $attributes = $this->checkedAttributes($property);
             PropertyAttributes::assertCombinable($attributes, $subject);
             PropertyAttributes::assertStatusType($attributes, $property->getType(), $subject);
+            PropertyAttributes::assertPresentWithoutDefault($attributes, $this->hasDefault($property), $subject);
 
             if ($property->isVirtual()) {
                 PropertyAttributes::assertAllowedOnVirtual($attributes, $subject);
@@ -519,6 +520,16 @@ class Serializer
 
         /** @var list<class-string> $names */
         return $names;
+    }
+
+    /**
+     * A promoted property's default is the constructor parameter's.
+     */
+    private function hasDefault(ReflectionProperty $property): bool
+    {
+        $documented = $this->documentedProperty($property);
+
+        return $documented instanceof ReflectionParameter ? $documented->isDefaultValueAvailable() : $documented->hasDefaultValue();
     }
 
     /**

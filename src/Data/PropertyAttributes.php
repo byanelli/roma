@@ -70,6 +70,21 @@ final class PropertyAttributes
     }
 
     /**
+     * #[Present] requires the key, so a default would never be used.
+     *
+     * @param  list<object>  $attributes
+     */
+    public static function assertPresentWithoutDefault(array $attributes, bool $hasDefault, string $subject): void
+    {
+        if ($hasDefault && self::first($attributes, Present::class) !== null) {
+            throw new RuntimeException(
+                "Roma property \"{$subject}\" has #[Present] and a default value, which is never used since #[Present] "
+                .'requires the key. Remove the default or #[Present].'
+            );
+        }
+    }
+
+    /**
      * A status is always written, so its property is a plain int. A status that varies takes a
      * default, such as 200, instead of null or Missing.
      *
