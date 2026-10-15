@@ -27,6 +27,7 @@ All notable changes to `roma` will be documented in this file.
   `getRootSource()`, `getFullKey()` and `KeyAttribute::getFullKey()` are removed, and
   `Class_::sources()` replaces `rootSources()`. `RequiredWithinObject` and `DiscriminatorIn`
   take the object's `KeyPath`.
+- Breaking: `ClassDefinitionBuilder::getTypeFromReflectionObject()` is private.
 - Breaking: `SourcePolicy::allowsSource()` is replaced by `payloadType()`. A policy allows a
   source when its payload type is the source's payload type or a subtype of it, and the
   message for a source it doesn't allow states both payload types.
