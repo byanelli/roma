@@ -2,8 +2,9 @@
 
 namespace BYanelli\Roma\Validation;
 
+use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Property;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\Types\Class_;
@@ -16,10 +17,10 @@ use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use Illuminate\Validation\Rule;
 
 /**
- * The rules for the data of one root source, keyed relative to the source: "email",
+ * The rules for the data of one source, keyed relative to the source: "email",
  * "address.city", "items.*.code". Error keys are the source's prefix followed by the rule key.
  *
- * @phpstan-type Entry array{keySegments: list<string>, rules: list<mixed>, name: string}
+ * @phpstan-type Entry array{path: KeyPath, rules: list<mixed>, name: string}
  */
 readonly class ValidationRules
 {
@@ -52,7 +53,7 @@ readonly class ValidationRules
     private array $dataDependent;
 
     /**
-     * The prefix of the error keys, e.g. "input", or "request" for "request.ip".
+     * The prefix of the error keys, e.g. "input", or "" for a single-value source.
      */
     private string $prefix;
 
@@ -75,18 +76,18 @@ readonly class ValidationRules
      * `$data` is the coerced data of `$source`. The rules for a union depend on its
      * discriminator, and the rules for a class that contains itself are only as deep as the
      * data, so an array that contains either gets rules per element. A single-value source's
-     * value is validated under its own key, e.g. "ip" for "request.ip".
+     * value is validated under the source's key as one segment, e.g. "request.ip".
      */
-    public function __construct(Class_ $class, public RootSource $source, mixed $data)
+    public function __construct(Class_ $class, public Source $source, mixed $data)
     {
         $dataDependent = [];
         $this->findDataDependent($class, [], $dataDependent);
         $this->dataDependent = $dataDependent;
 
         $single = $source->isSingleValue();
-        $base = $single ? [$source->getOwnKey()] : [];
-        $this->prefix = implode('.', $single ? array_slice($source->getKeySegments(), 0, -1) : $source->getKeySegments());
-        $this->data = $single ? [$source->getOwnKey() => $data] : (is_array($data) ? $data : []);
+        $base = $single ? new KeyPath([$source->getKey()]) : new KeyPath;
+        $this->prefix = $single ? '' : $source->getKey();
+        $this->data = $single ? [$source->getKey() => $data] : (is_array($data) ? $data : []);
 
         $rules = [];
         $names = [];
@@ -94,16 +95,13 @@ readonly class ValidationRules
         $wildcards = [];
 
         foreach ($class->properties as $index => $property) {
-            if ($property->isVirtual || $property->getRootSource()->getKey() !== $source->getKey()) {
+            if ($property->isVirtual || $property->source?->getKey() !== $source->getKey()) {
                 continue;
             }
 
             foreach ($this->entryFromProperty($property, $base) as $entryIndex => $entry) {
-                // The rule key given to the validator escapes literal dots within
-                // each key segment as "\." so Laravel matches the real (possibly dotted)
-                // array key instead of walking structural nesting.
-                $key = $this->escapedKey($entry['keySegments']);
-                $plainKey = $this->plainKey($entry['keySegments']);
+                $key = $entry['path']->toRuleKey();
+                $plainKey = $entry['path']->toKey();
 
                 // Two properties, or a property and a class attribute, may validate the same key.
                 $rules[$key] = [...($rules[$key] ?? []), ...$entry['rules']];
@@ -111,7 +109,7 @@ readonly class ValidationRules
                 // The attribute-name key is the unescaped join, matching what
                 // Laravel puts in the error bag and looks up for :attribute. A
                 // wildcard key gets no name, so messages show the concrete key.
-                if (in_array('*', $entry['keySegments'], true)) {
+                if ($entry['path']->hasWildcard()) {
                     $wildcards[] = ['/^'.str_replace('\*', '[^.]*', preg_quote($plainKey, '/')).'\z/', [$index, $entryIndex]];
                 } else {
                     $names[$plainKey] ??= $entry['name'];
@@ -183,10 +181,9 @@ readonly class ValidationRules
      * that object, so it is only required when the object is actually present —
      * an absent or null object doesn't trip its members.
      *
-     * @param  list<string>|null  $objectKeySegments
      * @return list<mixed>
      */
-    private function leadingRules(bool $nullable, bool $required, ?array $objectKeySegments): array
+    private function leadingRules(bool $nullable, bool $required, ?KeyPath $object): array
     {
         $rules = [];
 
@@ -195,8 +192,8 @@ readonly class ValidationRules
         }
 
         if ($required) {
-            $rules[] = $objectKeySegments !== null
-                ? new RequiredWithinObject($objectKeySegments)
+            $rules[] = $object !== null
+                ? new RequiredWithinObject($object)
                 : 'required';
         }
 
@@ -204,29 +201,27 @@ readonly class ValidationRules
     }
 
     /**
-     * @param  list<string>  $base  the key a single-value source's value is validated under
+     * @param  KeyPath  $base  the key a single-value source's value is validated under
      * @return list<Entry>
      */
-    private function entryFromProperty(Property $property, array $base): array
+    private function entryFromProperty(Property $property, KeyPath $base): array
     {
         return $this->valueEntries(
             $property->type,
-            [...$base, ...$property->getKeySegments()],
+            $base->concat($property->keyPath),
             $property->errorKey,
             [...$this->leadingRules($property->nullable, $property->isRequired, null), ...$property->rules],
         );
     }
 
     /**
-     * The entries for a value of `$type` at `$keySegments`, followed by those
-     * of its members. A '*' key segment stands for the members of an
-     * enclosing array.
+     * The entries for a value of `$type` at `$path`, followed by those of its members. A '*'
+     * segment stands for the members of an enclosing array.
      *
-     * @param  list<string>  $keySegments
      * @param  list<mixed>  $rules  the presence and declared rules, which precede the type's rules
      * @return list<Entry>
      */
-    private function valueEntries(Type $type, array $keySegments, string $name, array $rules): array
+    private function valueEntries(Type $type, KeyPath $path, string $name, array $rules): array
     {
         // A value object that parses from a raw string and vets it with its own
         // rule is validated as a leaf string at its own key — the input is one
@@ -234,7 +229,7 @@ readonly class ValidationRules
         // object's fields are not recursed into.
         if ($type instanceof Class_ && $this->validatesAsString($type->class)) {
             return [[
-                'keySegments' => $keySegments,
+                'path' => $path,
                 'rules' => [...$rules, 'string', ...$this->stringValueRules($type->class)],
                 'name' => $name,
             ]];
@@ -247,18 +242,18 @@ readonly class ValidationRules
         }
 
         $entry = [
-            'keySegments' => $keySegments,
+            'path' => $path,
             'rules' => [...$rules, ...$typeRules],
             'name' => $name,
         ];
 
         return match (true) {
-            $type instanceof Class_ && $this->dependsOnData($type) && ! is_array($this->valueAt($keySegments)) => [$entry],
-            $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $keySegments, $name)],
-            $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $keySegments, $name)],
-            $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $keySegments, $name)],
-            $type instanceof Types\Array_ && $this->dependsOnData($type->memberType) => [$entry, ...$this->elementEntries($type, $keySegments, $name)],
-            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, [...$keySegments, '*'], "$name.*", [])],
+            $type instanceof Class_ && $this->dependsOnData($type) && ! is_array($path->getFrom($this->data)) => [$entry],
+            $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $path, $name)],
+            $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $path, $name)],
+            $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $path, $name)],
+            $type instanceof Types\Array_ && $this->dependsOnData($type->memberType) => [$entry, ...$this->elementEntries($type, $path, $name)],
+            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, $path->append('*'), "$name.*", [])],
             default => [$entry],
         };
     }
@@ -266,33 +261,31 @@ readonly class ValidationRules
     /**
      * The discriminator entry, followed by the entries of the member it selects.
      *
-     * @param  list<string>  $keySegments
      * @return list<Entry>
      */
-    private function unionEntries(Types\Union $union, array $keySegments, string $name): array
+    private function unionEntries(Types\Union $union, KeyPath $path, string $name): array
     {
-        $object = $this->valueAt($keySegments);
+        $object = $path->getFrom($this->data);
         $member = is_array($object) ? $union->memberFor($object[$union->key] ?? null) : null;
 
         return [
             [
-                'keySegments' => [...$keySegments, $union->key],
-                'rules' => [new DiscriminatorIn($keySegments, $union->values())],
+                'path' => $path->append($union->key),
+                'rules' => [new DiscriminatorIn($path, $union->values())],
                 'name' => "$name.$union->key",
             ],
-            ...($member !== null ? $this->objectMemberEntries($member, $keySegments, $name) : []),
+            ...($member !== null ? $this->objectMemberEntries($member, $path, $name) : []),
         ];
     }
 
     /**
      * Entries for each element present in the data, under its own key.
      *
-     * @param  list<string>  $keySegments
      * @return list<Entry>
      */
-    private function elementEntries(Types\Array_ $array, array $keySegments, string $name): array
+    private function elementEntries(Types\Array_ $array, KeyPath $path, string $name): array
     {
-        $elements = $this->valueAt($keySegments);
+        $elements = $path->getFrom($this->data);
 
         if (! is_array($elements)) {
             return [];
@@ -301,7 +294,7 @@ readonly class ValidationRules
         $entries = [];
 
         foreach (array_keys($elements) as $key) {
-            $entries = [...$entries, ...$this->valueEntries($array->memberType, [...$keySegments, (string) $key], "$name.$key", [])];
+            $entries = [...$entries, ...$this->valueEntries($array->memberType, $path->append((string) $key), "$name.$key", [])];
         }
 
         return $entries;
@@ -375,24 +368,6 @@ readonly class ValidationRules
     }
 
     /**
-     * @param  list<string>  $keySegments
-     */
-    private function valueAt(array $keySegments): mixed
-    {
-        $value = $this->data;
-
-        foreach ($keySegments as $keySegment) {
-            if (! is_array($value) || ! array_key_exists($keySegment, $value)) {
-                return null;
-            }
-
-            $value = $value[$keySegment];
-        }
-
-        return $value;
-    }
-
-    /**
      * @param  list<mixed>  $rules
      */
     private function hasPresenceRule(array $rules): bool
@@ -407,10 +382,9 @@ readonly class ValidationRules
     }
 
     /**
-     * @param  list<string>  $keySegments
      * @return list<Entry>
      */
-    private function objectMemberEntries(Class_ $class, array $keySegments, string $name): array
+    private function objectMemberEntries(Class_ $class, KeyPath $path, string $name): array
     {
         $entries = [];
 
@@ -421,13 +395,11 @@ readonly class ValidationRules
                 continue;
             }
 
-            $key = $member->source->getOwnKey();
-
             $entries = [...$entries, ...$this->valueEntries(
                 $member->type,
-                [...$keySegments, $key],
-                "$name.$key",
-                [...$this->leadingRules($member->nullable, $member->isRequired, $keySegments), ...$member->rules],
+                $path->concat($member->keyPath),
+                "$name.{$member->keyPath->toKey()}",
+                [...$this->leadingRules($member->nullable, $member->isRequired, $path), ...$member->rules],
             )];
         }
 
@@ -435,49 +407,22 @@ readonly class ValidationRules
     }
 
     /**
-     * @param  list<string>  $keySegments
      * @return list<Entry>
      */
-    private function shapeItemEntries(Types\Shape $shape, array $keySegments, string $name): array
+    private function shapeItemEntries(Types\Shape $shape, KeyPath $path, string $name): array
     {
         $entries = [];
 
         foreach ($shape->items as $item) {
             $entries = [...$entries, ...$this->valueEntries(
                 $item->type,
-                [...$keySegments, $item->key],
+                $path->append($item->key),
                 "$name.$item->key",
-                $this->leadingRules($item->nullable, ! $item->optional, $keySegments),
+                $this->leadingRules($item->nullable, ! $item->optional, $path),
             )];
         }
 
         return $entries;
-    }
-
-    /**
-     * Join keySegments into a rule key, escaping any literal dot within a segment
-     * as "\." so Laravel treats it as one key rather than structural nesting.
-     * The synthetic "*" wildcard key segment contains no dot and passes through.
-     *
-     * @param  list<string>  $keySegments
-     */
-    private function escapedKey(array $keySegments): string
-    {
-        return implode('.', array_map(
-            fn (string $keySegment) => str_replace('.', '\\.', $keySegment),
-            $keySegments
-        ));
-    }
-
-    /**
-     * Join keySegments into the unescaped key Laravel emits in the error bag and
-     * matches for :attribute lookups.
-     *
-     * @param  list<string>  $keySegments
-     */
-    private function plainKey(array $keySegments): string
-    {
-        return implode('.', $keySegments);
     }
 
     /**
@@ -505,7 +450,7 @@ readonly class ValidationRules
     }
 
     /**
-     * The prefix of the error keys, e.g. "input", or "request" for "request.ip".
+     * The prefix of the error keys, e.g. "input", or "" for a single-value source.
      */
     public function errorPrefix(): string
     {

@@ -6,7 +6,7 @@ use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Payload;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Attributes\Accessors\Ajax;
 use BYanelli\Roma\Http\Attributes\Query;
@@ -15,9 +15,9 @@ use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-final readonly class Tenant extends RootSource
+final readonly class Tenant extends Source
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'tenant';
     }
@@ -42,7 +42,7 @@ readonly class FromTenant implements ExplicitKeyAttribute, SourceAttribute
 {
     public function __construct(public ?string $key = null) {}
 
-    public function getSource(): RootSource
+    public function getSource(): Source
     {
         return new Tenant;
     }
@@ -56,9 +56,9 @@ readonly class FromTenant implements ExplicitKeyAttribute, SourceAttribute
 /**
  * A source under a key that #[Query] already uses.
  */
-final readonly class QueryLookalike extends RootSource
+final readonly class QueryLookalike extends Source
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'query';
     }
@@ -77,7 +77,7 @@ final readonly class QueryLookalike extends RootSource
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
 readonly class FromQueryLookalike implements SourceAttribute
 {
-    public function getSource(): RootSource
+    public function getSource(): Source
     {
         return new QueryLookalike;
     }

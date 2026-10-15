@@ -28,14 +28,13 @@ class ClassMapping
     private ?array $validationRules = null;
 
     /**
-     * At the top level `$data` is keyed by root source key; a nested object's data is its own slice.
+     * At the top level `$data` is keyed by source key; a nested object's data is its own slice.
      *
      * @param  array<string, mixed>  $data
      */
     private function __construct(
         private readonly Class_ $class,
         array $data,
-        private readonly bool $nested,
         private readonly DateFactory $dateFactory,
     ) {
         $this->data = $data;
@@ -44,29 +43,17 @@ class ClassMapping
     }
 
     /**
-     * Reads only the root sources the class's properties map from.
+     * Reads only the sources the class's properties map from.
      */
     public static function fromPayload(Class_ $class, Payload $payload, DateFactory $dateFactory = new DateFactory): self
     {
         $data = [];
 
-        foreach ($class->rootSources() as $key => $source) {
+        foreach ($class->sources() as $key => $source) {
             $data[$key] = $source->readFrom($payload);
         }
 
-        return new self($class, $data, false, $dateFactory);
-    }
-
-    /**
-     * Where the property's value is in `$data`.
-     *
-     * @return list<string>
-     */
-    private function dataPath(Property $property): array
-    {
-        return $this->nested
-            ? $property->getKeySegments()
-            : [$property->getRootSource()->getKey(), ...$property->getKeySegments()];
+        return new self($class, $data, $dateFactory);
     }
 
     /**
@@ -115,7 +102,7 @@ class ClassMapping
     {
         $present = array_filter(
             $this->getClassProperties(),
-            fn (Property $p) => ! $p->optional || $p->default instanceof Missing || $this->dataHas($this->data, $this->dataPath($p)),
+            fn (Property $p) => ! $p->optional || $p->default instanceof Missing || $p->fullKey()->existsIn($this->data),
         );
 
         return Arr::mapWithKeys($present, fn (Property $p) => [$p->name => $this->getMappedValue($p)]);
@@ -379,7 +366,7 @@ class ClassMapping
     private function castData(): void
     {
         foreach ($this->class->properties as $property) {
-            [$role, $type, $keySegments] = [$property->role, $property->type, $this->dataPath($property)];
+            [$role, $type, $path] = [$property->role, $property->type, $property->fullKey()];
 
             if ($property->isVirtual || $role == Role::ValidationOnly) {
                 continue;
@@ -389,11 +376,11 @@ class ClassMapping
                 continue;
             }
 
-            if (! $this->dataHas($this->data, $keySegments)) {
+            if (! $path->existsIn($this->data)) {
                 continue;
             }
 
-            $rawValue = $this->dataGet($this->data, $keySegments);
+            $rawValue = $path->getFrom($this->data);
 
             // Leave nulls alone; a nullable property keeps its null value and
             // coercion has nothing to do.
@@ -410,7 +397,7 @@ class ClassMapping
                 $typedValue = $rawValue;
             }
 
-            $this->dataSet($this->data, $keySegments, $typedValue);
+            $path->setIn($this->data, $typedValue);
         }
     }
 
@@ -433,81 +420,9 @@ class ClassMapping
         };
     }
 
-    /**
-     * Exact-key existence check for an ordered key-segment list. Unlike Arr::has,
-     * a key segment such as "a.b" is looked up as one literal key, never walked as
-     * nested "a" -> "b".
-     *
-     * @param  array<array-key, mixed>  $data
-     * @param  list<string>  $keySegments
-     */
-    private function dataHas(array $data, array $keySegments): bool
-    {
-        $sub = $data;
-
-        foreach ($keySegments as $keySegment) {
-            if (! is_array($sub) || ! array_key_exists($keySegment, $sub)) {
-                return false;
-            }
-
-            $sub = $sub[$keySegment];
-        }
-
-        return true;
-    }
-
-    /**
-     * Exact-key read for an ordered key-segment list.
-     *
-     * @param  array<array-key, mixed>  $data
-     * @param  list<string>  $keySegments
-     */
-    private function dataGet(array $data, array $keySegments, mixed $default = null): mixed
-    {
-        $sub = $data;
-
-        foreach ($keySegments as $keySegment) {
-            if (! is_array($sub) || ! array_key_exists($keySegment, $sub)) {
-                return $default;
-            }
-
-            $sub = $sub[$keySegment];
-        }
-
-        return $sub;
-    }
-
-    /**
-     * Exact-key write for an ordered key-segment list, creating intermediate arrays
-     * as needed.
-     *
-     * @param  array<array-key, mixed>  $data
-     * @param  list<string>  $keySegments
-     */
-    private function dataSet(array &$data, array $keySegments, mixed $value): void
-    {
-        $ref = &$data;
-
-        $last = count($keySegments) - 1;
-
-        foreach ($keySegments as $i => $keySegment) {
-            if ($i === $last) {
-                $ref[$keySegment] = $value;
-
-                return;
-            }
-
-            if (! isset($ref[$keySegment]) || ! is_array($ref[$keySegment])) {
-                $ref[$keySegment] = [];
-            }
-
-            $ref = &$ref[$keySegment];
-        }
-    }
-
     public function getMappedValue(Property $property): mixed
     {
-        $value = $this->dataGet($this->data, $this->dataPath($property), $property->default);
+        $value = $property->fullKey()->getFrom($this->data, $property->default);
 
         // A deferred string value (see castObjectValue) is parsed here, at
         // construction time, now that validation has accepted the raw string.
@@ -605,7 +520,7 @@ class ClassMapping
      */
     private function toNestedClass(Class_ $class_, array $data): ClassMapping
     {
-        return new ClassMapping($class_, $data, true, $this->dateFactory);
+        return new ClassMapping($class_, $data, $this->dateFactory);
     }
 
     /**
@@ -617,15 +532,15 @@ class ClassMapping
     }
 
     /**
-     * The rules for each root source the class maps from, in the order the sources are first used.
+     * The rules for each source the class maps from, in the order the sources are first used.
      *
      * @return list<ValidationRules>
      */
     public function validationRules(): array
     {
         return $this->validationRules ??= array_values(array_map(
-            fn (RootSource $source) => new ValidationRules($this->class, $source, $this->normalizeValue($this->data[$source->getKey()] ?? null)),
-            $this->class->rootSources(),
+            fn (Source $source) => new ValidationRules($this->class, $source, $this->normalizeValue($this->data[$source->getKey()] ?? null)),
+            $this->class->sources(),
         ));
     }
 }

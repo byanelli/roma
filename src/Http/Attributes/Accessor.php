@@ -7,7 +7,7 @@ use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\Sources;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -19,17 +19,12 @@ abstract readonly class Accessor implements ErrorKeyAttribute, KeyAttribute, Rul
         return Str::camel(class_basename($this));
     }
 
-    public function getFullKey(): string
-    {
-        return $this->getKey();
-    }
-
     public function getErrorKey(): string
     {
         return $this->getSource()->getKey();
     }
 
-    public function getSource(): RootSource
+    public function getSource(): Source
     {
         return new Sources\Accessor($this);
     }

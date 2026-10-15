@@ -12,7 +12,6 @@ use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
-use BYanelli\Roma\Data\Sources\Nested;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
@@ -35,8 +34,8 @@ class ClassDefinitionBuilder
     private static array $cache = [];
 
     /**
-     * `$nested` builds the definitions of nested objects, whose property sources are relative
-     * to the object, into `$definitions`.
+     * `$nested` builds the definitions of nested objects, whose properties have no source and
+     * key paths relative to the object, into `$definitions`.
      */
     public function __construct(
         private readonly SourcePolicy $policy,
@@ -48,7 +47,7 @@ class ClassDefinitionBuilder
     /**
      * @param  array<int, object>  $attributes
      */
-    private function getSourceFromAttributes(array $attributes): RootSource
+    private function getSourceFromAttributes(array $attributes): Source
     {
         return collect($attributes)
             ->whereInstanceOf(SourceAttribute::class)
@@ -184,10 +183,10 @@ class ClassDefinitionBuilder
         PropertyAttributes::assertStatusType($attributes, $obj->getType(), $this->subject($obj));
 
         if ($this->nested) {
-            $parent = new Nested;
+            $source = null;
         } else {
-            $parent = $typeSource ?? $this->getSourceFromAttributes($attributes);
-            $this->assertSourceAllowed($parent, "property \"{$declaringClass}::\${$obj->getName()}\"");
+            $source = $typeSource ?? $this->getSourceFromAttributes($attributes);
+            $this->assertSourceAllowed($source, "property \"{$declaringClass}::\${$obj->getName()}\"");
             $this->assertDestinationAllowed($attributes, $this->subject($obj));
         }
 
@@ -217,12 +216,12 @@ class ClassDefinitionBuilder
 
         return new Property(
             name: $obj->getName(),
-            key: $key,
+            keyPath: $this->keyPath($source, $key, $obj->getName()),
             wireKey: $this->getWireKey($attributes) ?: $key,
             type: $this->withDateFormat($type, $dateFormat),
             role: $this->getRole($obj),
             default: $optional ? $this->getOptionalDefault($obj, $nullable) : $this->getDefault($obj),
-            parent: $parent,
+            source: $source,
             rules: $this->getRulesForParameterOrProperty($attributes),
             nullable: $nullable,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
@@ -231,6 +230,23 @@ class ClassDefinitionBuilder
             isVirtual: $isVirtual,
             optional: $optional,
         );
+    }
+
+    /**
+     * A single-value source's property is the whole value, so its key path is empty.
+     */
+    private function keyPath(?Source $source, string $key, string $name): KeyPath
+    {
+        // '*' is Laravel's array wildcard and can't be escaped in a rule key.
+        if (str_contains($key, '*')) {
+            throw new RuntimeException("Roma key \"$key\" (property \"$name\") may not contain '*'.");
+        }
+
+        return match (true) {
+            $source === null => new KeyPath([$key]),
+            $source->isSingleValue() => new KeyPath,
+            default => new KeyPath([$source->normalizeKey($key)]),
+        };
     }
 
     /**
@@ -321,7 +337,7 @@ class ClassDefinitionBuilder
         return null;
     }
 
-    private function assertSourceAllowed(RootSource $source, string $subject): void
+    private function assertSourceAllowed(Source $source, string $subject): void
     {
         if (! is_a($this->policy->payloadType(), $source->payloadType(), true)) {
             $policy = class_basename($this->policy);
@@ -345,9 +361,9 @@ class ClassDefinitionBuilder
         $sources = [];
 
         foreach ($properties as $property) {
-            $source = $property->getRootSource();
+            $source = $property->source;
 
-            if ($property->isVirtual || ! $source instanceof RootSource) {
+            if ($property->isVirtual || $source === null) {
                 continue;
             }
 
@@ -565,7 +581,7 @@ class ClassDefinitionBuilder
             // A member that contains this union is still being built.
             $this->definitions->whenBuilt($class, function (Class_ $definition) use ($class, $discriminator): void {
                 foreach ($definition->properties as $property) {
-                    if (in_array($discriminator->key, [$property->source->getOwnKey(), $property->wireKey], true)) {
+                    if (in_array($discriminator->key, [$property->keyPath->toKey(), $property->wireKey], true)) {
                         throw new RuntimeException(
                             'Roma property "'.class_basename($class)."::\${$property->name}\" uses the key \"{$discriminator->key}\", "
                             .'which is the discriminator key of a union the class belongs to.'
@@ -712,12 +728,12 @@ class ClassDefinitionBuilder
 
             $result[] = new Property(
                 name: $attr->getKey(),
-                key: $attr->getKey(),
+                keyPath: $this->keyPath($attr->getSource(), $attr->getKey(), $attr->getKey()),
                 wireKey: $this->getWireKey($attributes) ?: $attr->getKey(),
                 type: $attr->getType(),
                 role: Role::ValidationOnly,
                 default: new NoDefault,
-                parent: $attr->getSource(),
+                source: $attr->getSource(),
                 rules: $attr->getRules(AttributeTarget::Class_),
                 errorKey: ($attr instanceof ErrorKeyAttribute) ? $attr->getErrorKey() : null,
                 rawAttributes: $attributes,

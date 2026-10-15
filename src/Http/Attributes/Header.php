@@ -9,7 +9,7 @@ use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types\String_;
 use BYanelli\Roma\Http\Request\Sources;
@@ -43,7 +43,7 @@ readonly class Header implements DestinationAttribute, ErrorKeyAttribute, KeyAtt
         return "{$this->getSource()->getKey()}.{$this->name}";
     }
 
-    public function getSource(): RootSource
+    public function getSource(): Source
     {
         return new Sources\Header;
     }
@@ -59,11 +59,6 @@ readonly class Header implements DestinationAttribute, ErrorKeyAttribute, KeyAtt
     public function getType(): Type
     {
         return new String_;
-    }
-
-    public function getFullKey(): string
-    {
-        return "{$this->getSource()->getKey()}.{$this->getKey()}";
     }
 
     public function destination(): Destination

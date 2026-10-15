@@ -11,15 +11,22 @@ All notable changes to `roma` will be documented in this file.
   `#[Guard]` to compare values across sources. Error keys, messages and their order are
   unchanged (`input.email`, `header.X-Flag`, `request.ip`, "The input.email field is
   required."), and so are precognitive responses.
-- Breaking: a root source extends `BYanelli\Roma\Data\RootSource`. Its key is the prefix
-  of its error keys, `payloadType()` returns the payload class it reads from, and `read()`
-  returns its data. `Payload` has no `data()` method: `RequestPayload::$request` contains the
-  request and `ArrayPayload::$data` the array. The HTTP sources extend
-  `Http\Request\Sources\RequestSource`, and each accessor, such as `#[Ip]`, is its own
-  `Sources\Accessor` source under `request.ip`, replacing `Sources\RequestObject_`. Only the
-  sources a class uses are read, so a class with only `#[Query]` properties doesn't decode
-  the JSON body. `SourceAttribute::getSource()`, `SourcePolicy::defaultSource()` and
-  `sourceForType()` return a `RootSource`.
+- Breaking: a source extends `BYanelli\Roma\Data\Source`, which is a part of the payload
+  and no longer a step in a property's key. Its key, from `getKey()` (formerly
+  `getOwnKey()`), is the prefix of its error keys, `payloadType()` returns the payload class
+  it reads from, and `read()` returns its data. `Payload` has no `data()` method:
+  `RequestPayload::$request` contains the request and `ArrayPayload::$data` the array. The
+  HTTP sources extend `Http\Request\Sources\RequestSource`, and each accessor, such as
+  `#[Ip]`, is its own `Sources\Accessor` source under `request.ip`, replacing
+  `Sources\RequestObject_`. Only the sources a class uses are read, so a class with only
+  `#[Query]` properties doesn't decode the JSON body. `SourceAttribute::getSource()`,
+  `SourcePolicy::defaultSource()` and `sourceForType()` return a `Source`.
+- Breaking: a property's position is a `BYanelli\Roma\Data\KeyPath`, a list of keys, in
+  `Property::$keyPath`, relative to `Property::$source`, which is null in a nested object.
+  `Source::$parent`, `Sources\Property`, `Property::$key`, `getKeySegments()`,
+  `getRootSource()`, `getFullKey()` and `KeyAttribute::getFullKey()` are removed, and
+  `Class_::sources()` replaces `rootSources()`. `RequiredWithinObject` and `DiscriminatorIn`
+  take the object's `KeyPath`.
 - Breaking: `SourcePolicy::allowsSource()` is replaced by `payloadType()`. A policy allows a
   source when its payload type is the source's payload type or a subtype of it, and the
   message for a source it doesn't allow states both payload types.

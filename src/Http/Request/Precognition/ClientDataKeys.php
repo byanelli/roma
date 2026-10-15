@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Http\Request\Precognition;
 
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\Sources;
 
 /**
@@ -16,7 +16,7 @@ readonly class ClientDataKeys
 {
     private const array SOURCES = [Sources\Input::class, Sources\Query::class, Sources\Body::class, Sources\File::class];
 
-    public function isClientData(RootSource $source): bool
+    public function isClientData(Source $source): bool
     {
         return in_array($source::class, self::SOURCES, true);
     }
@@ -24,7 +24,7 @@ readonly class ClientDataKeys
     /**
      * The name as the client knows it: "email" for "input.email".
      */
-    public function stripSourcePrefix(RootSource $source, string $name): string
+    public function stripSourcePrefix(Source $source, string $name): string
     {
         $prefix = $source->getKey().'.';
 

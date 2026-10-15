@@ -81,7 +81,7 @@ readonly class ObjectMapper
     }
 
     /**
-     * Validates each root source's data with its own validator and throws the errors of all of them.
+     * Validates each source's data with its own validator and throws the errors of all of them.
      *
      * @throws MappingValidationException
      */

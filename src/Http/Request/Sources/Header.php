@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 final readonly class Header extends RequestSource
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'header';
     }

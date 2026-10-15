@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Validation\Rules;
 
+use BYanelli\Roma\Data\KeyPath;
 use Closure;
 
 /**
@@ -11,12 +12,11 @@ use Closure;
 class DiscriminatorIn extends RequiredWithinObject
 {
     /**
-     * @param  list<string>  $objectKeySegments
      * @param  list<string>  $values
      */
-    public function __construct(array $objectKeySegments, private readonly array $values)
+    public function __construct(KeyPath $object, private readonly array $values)
     {
-        parent::__construct($objectKeySegments);
+        parent::__construct($object);
     }
 
     public function validate(string $attribute, mixed $value, Closure $fail): void

@@ -7,7 +7,7 @@ use Illuminate\Routing\Route;
 
 final readonly class Path extends RequestSource
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'path';
     }

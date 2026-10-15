@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Attributes\Accessor as AccessorAttribute;
 use Illuminate\Http\Request;
 
@@ -12,19 +12,11 @@ use Illuminate\Http\Request;
  */
 final readonly class Accessor extends RequestSource
 {
-    public function __construct(private AccessorAttribute $accessor)
-    {
-        parent::__construct();
-    }
+    public function __construct(private AccessorAttribute $accessor) {}
 
-    public function getOwnKey(): string
+    public function getKey(): string
     {
-        return $this->accessor->getKey();
-    }
-
-    public function getKeySegments(): array
-    {
-        return ['request', $this->getOwnKey()];
+        return 'request.'.$this->accessor->getKey();
     }
 
     public function isSingleValue(): bool
@@ -32,7 +24,7 @@ final readonly class Accessor extends RequestSource
         return true;
     }
 
-    public function isSameAs(RootSource $other): bool
+    public function isSameAs(Source $other): bool
     {
         return parent::isSameAs($other)
             && $other instanceof self

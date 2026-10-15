@@ -4,16 +4,16 @@ namespace BYanelli\Roma\Data\Sources;
 
 use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\Payload;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 
 /**
- * The single root of a plain array mapped with ArrayPolicy.
+ * The whole plain array mapped with ArrayPolicy.
  *
  * @internal
  */
-final readonly class Data extends RootSource
+final readonly class Data extends Source
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'data';
     }

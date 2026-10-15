@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 
 final readonly class Input extends RequestSource
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'input';
     }

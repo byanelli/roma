@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 
 final readonly class Body extends RequestSource
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'body';
     }

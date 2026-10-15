@@ -91,7 +91,7 @@ final readonly class ClassSchema
                 continue;
             }
 
-            $properties[$property->source->getOwnKey()] = $this->propertySchema($property, $ancestors);
+            $properties[$property->keyPath->toKey()] = $this->propertySchema($property, $ancestors);
         }
 
         return $properties;

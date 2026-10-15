@@ -22,7 +22,7 @@ readonly class ArrayPolicy implements SourcePolicy
         return ArrayPayload::class;
     }
 
-    public function defaultSource(): RootSource
+    public function defaultSource(): Source
     {
         return new Data;
     }
@@ -32,7 +32,7 @@ readonly class ArrayPolicy implements SourcePolicy
         return [];
     }
 
-    public function sourceForType(string $typeName): ?RootSource
+    public function sourceForType(string $typeName): ?Source
     {
         return null;
     }

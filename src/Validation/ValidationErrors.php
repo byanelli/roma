@@ -7,7 +7,7 @@ use Closure;
 use Illuminate\Contracts\Validation\Validator;
 
 /**
- * The errors of the validators of a class's root sources, keyed by client-facing name.
+ * The errors of the validators of a class's sources, keyed by client-facing name.
  *
  * @internal
  */

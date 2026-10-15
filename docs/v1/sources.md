@@ -143,7 +143,7 @@ nested object is not supported and throws.
 
 ## Custom sources
 
-A source is a class that extends `BYanelli\Roma\Data\RootSource`, used through an attribute
+A source is a class that extends `BYanelli\Roma\Data\Source`, used through an attribute
 that implements `SourceAttribute`. This one reads the request attributes, which middleware
 often sets:
 
@@ -152,12 +152,12 @@ use Attribute;
 use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Payload;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\RequestPayload;
 
-final readonly class Tenant extends RootSource
+final readonly class Tenant extends Source
 {
-    public function getOwnKey(): string
+    public function getKey(): string
     {
         return 'tenant';                  // the prefix of its error keys
     }
@@ -179,7 +179,7 @@ readonly class FromTenant implements ExplicitKeyAttribute, SourceAttribute
 {
     public function __construct(public ?string $key = null) {}
 
-    public function getSource(): RootSource
+    public function getSource(): Source
     {
         return new Tenant;
     }
@@ -203,6 +203,11 @@ readonly class InvoiceRequest {
 with a property from the source, and only with an instance of `payloadType()`. A source is
 allowed wherever the payload is of that type, so `Tenant` works in a request, and a class
 that uses it throws under `Mapper::fromArray()`.
+
+Two methods are optional. `normalizeKey()` converts a property's key to its key in `read()`'s
+array, as the header source does with `Content-Type` and `content_type`. `isSingleValue()`
+returns true when `read()` returns one value for the property instead of an array, as for an
+accessor such as `#[Ip]`; that property's error key is the source's key.
 
 The source's data is validated on its own, and its errors are keyed under its key, such as
 `tenant.tenant_id`. Two different sources with the same key in one class throw when the

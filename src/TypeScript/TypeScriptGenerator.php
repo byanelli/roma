@@ -153,7 +153,7 @@ readonly class TypeScriptGenerator
             $phpClass = $requestDefinitions->buildClassDefinition($request);
 
             foreach ($phpClass->properties as $property) {
-                $tsInterfaceBuilder->assertBucketAttribute($request, $property, $property->getRootSource() instanceof Sources\Input);
+                $tsInterfaceBuilder->assertBucketAttribute($request, $property, $property->source instanceof Sources\Input);
             }
 
             foreach ([Bucket::Body, Bucket::Query, Bucket::Headers] as $bucket) {
@@ -204,13 +204,13 @@ readonly class TypeScriptGenerator
      */
     private function getRequestBucket(PhpProperty $property): ?Bucket
     {
-        return match ($property->getRootSource()::class) {
-            Sources\Body::class => Bucket::Body,
-            Sources\Query::class => Bucket::Query,
-            Sources\Header::class => Bucket::Headers,
+        return match (true) {
+            $property->source instanceof Sources\Body => Bucket::Body,
+            $property->source instanceof Sources\Query => Bucket::Query,
+            $property->source instanceof Sources\Header => Bucket::Headers,
             // #[Input] reads body ∪ query, so it is ambiguous: it maps to Body
             // by default, or to Query when annotated to move there.
-            Sources\Input::class => $property->hasAttribute(InputMapsToTypeScriptQuery::class)
+            $property->source instanceof Sources\Input => $property->hasAttribute(InputMapsToTypeScriptQuery::class)
                 ? Bucket::Query
                 : Bucket::Body,
             default => null,

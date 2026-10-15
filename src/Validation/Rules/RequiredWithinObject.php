@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Validation\Rules;
 
+use BYanelli\Roma\Data\KeyPath;
 use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -29,10 +30,10 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
     private array $data = [];
 
     /**
-     * @param  list<string>  $objectKeySegments  Exact key keySegments locating the containing object in the validated data.
-     *                                           A '*' segment matches the array index in the validated attribute.
+     * @param  KeyPath  $object  the containing object in the validated data, where a '*' segment
+     *                           matches the array index in the validated attribute
      */
-    public function __construct(private readonly array $objectKeySegments) {}
+    public function __construct(private readonly KeyPath $object) {}
 
     /**
      * @param  array<array-key, mixed>  $data
@@ -57,44 +58,22 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
         }
     }
 
-    /**
-     * Walk the object's key keySegments with exact-key access so a literal dot in
-     * a key segment isn't mistaken for structural nesting.
-     */
     protected function containingObject(string $attribute): mixed
     {
-        $keySegments = in_array('*', $this->objectKeySegments, true)
-            ? $this->resolveWildcards($attribute)
-            : $this->objectKeySegments;
+        $object = $this->object->hasWildcard() ? $this->resolveWildcards($attribute) : $this->object;
 
-        if ($keySegments === null) {
-            return null;
-        }
-
-        $sub = $this->data;
-
-        foreach ($keySegments as $keySegment) {
-            if (! is_array($sub) || ! array_key_exists($keySegment, $sub)) {
-                return null;
-            }
-
-            $sub = $sub[$keySegment];
-        }
-
-        return $sub;
+        return $object?->getFrom($this->data);
     }
 
     /**
-     * The object's key segments with each '*' replaced by the index it matched in
-     * `$attribute`, e.g. "input.items.2.city" for ["input", "items", "*"].
-     *
-     * @return list<string>|null
+     * The object's path with each '*' replaced by the index it matched in `$attribute`, e.g.
+     * ["items", "2"] for ["items", "*"] and "items.2.city".
      */
-    private function resolveWildcards(string $attribute): ?array
+    private function resolveWildcards(string $attribute): ?KeyPath
     {
         $pattern = implode('\.', array_map(
-            fn (string $keySegment) => $keySegment === '*' ? '([^.]+)' : preg_quote($keySegment, '/'),
-            $this->objectKeySegments,
+            fn (string $segment) => $segment === '*' ? '([^.]+)' : preg_quote($segment, '/'),
+            $this->object->segments,
         ));
 
         if (preg_match('/^'.$pattern.'\./', $attribute, $matches) !== 1) {
@@ -102,12 +81,12 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
         }
 
         $index = 1;
-        $keySegments = [];
+        $segments = [];
 
-        foreach ($this->objectKeySegments as $keySegment) {
-            $keySegments[] = $keySegment === '*' ? $matches[$index++] : $keySegment;
+        foreach ($this->object->segments as $segment) {
+            $segments[] = $segment === '*' ? $matches[$index++] : $segment;
         }
 
-        return $keySegments;
+        return new KeyPath($segments);
     }
 }

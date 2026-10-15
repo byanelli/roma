@@ -73,7 +73,7 @@ it('prefixes ContextualBindingException messages', function () {
 | Query / Body source selection
 |--------------------------------------------------------------------------
 |
-| Regression guard: Sources\Query::getOwnKey() previously returned 'header'
+| Regression guard: Sources\Query::getKey() previously returned 'header'
 | (copy-paste bug), colliding with the Header bucket in flattenRequest.
 */
 

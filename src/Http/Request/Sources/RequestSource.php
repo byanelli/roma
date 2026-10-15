@@ -3,14 +3,14 @@
 namespace BYanelli\Roma\Http\Request\Sources;
 
 use BYanelli\Roma\Data\Payload;
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\RequestPayload;
 use Illuminate\Http\Request;
 
 /**
- * A root source that reads part of an HTTP request.
+ * A source that reads part of an HTTP request.
  */
-abstract readonly class RequestSource extends RootSource
+abstract readonly class RequestSource extends Source
 {
     public function payloadType(): string
     {

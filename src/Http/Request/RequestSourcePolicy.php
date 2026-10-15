@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Http\Request;
 
-use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Http\Enums\HasRequestSource;
 use BYanelli\Roma\Serialization\Destination;
@@ -21,7 +21,7 @@ readonly class RequestSourcePolicy implements SourcePolicy
         return RequestPayload::class;
     }
 
-    public function defaultSource(): RootSource
+    public function defaultSource(): Source
     {
         return new Sources\Input;
     }
@@ -37,7 +37,7 @@ readonly class RequestSourcePolicy implements SourcePolicy
             : [];
     }
 
-    public function sourceForType(string $typeName): ?RootSource
+    public function sourceForType(string $typeName): ?Source
     {
         return in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class], true)
             ? new Sources\File
