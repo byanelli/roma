@@ -359,7 +359,7 @@ class Serializer
             $key = PropertyAttributes::explicitKey($attributes);
             $dateFormat = $this->attribute($property, DateFormat::class)?->format;
 
-            if ($dateFormat !== null && ! $this->mayHoldDate($property)) {
+            if ($dateFormat !== null && ! $this->hasDate($property)) {
                 throw PropertyAttributes::dateFormatWithoutDate($subject);
             }
 
@@ -377,25 +377,24 @@ class Serializer
     }
 
     /**
-     * Whether the declared type allows a date, or an array that may contain one. An array
-     * without a supported PHPDoc type may.
+     * Whether the declared type allows a date, or an array whose PHPDoc type contains one.
      */
-    private function mayHoldDate(ReflectionProperty $property): bool
+    private function hasDate(ReflectionProperty $property): bool
     {
         $type = $property->getType();
 
         $names = match (true) {
             $type instanceof ReflectionNamedType => [$type->getName()],
             $type instanceof ReflectionUnionType => array_map(fn ($member) => $member instanceof ReflectionNamedType ? $member->getName() : 'mixed', $type->getTypes()),
-            default => ['mixed'],
+            default => [],
         };
 
         foreach ($names as $name) {
-            if (in_array($name, ['mixed', 'object'], true) || is_a($name, DateTimeInterface::class, true)) {
+            if (is_a($name, DateTimeInterface::class, true)) {
                 return true;
             }
 
-            if ($name === 'array' && $this->arrayMayHoldDate($property)) {
+            if ($name === 'array' && $this->arrayHasDate($property)) {
                 return true;
             }
         }
@@ -403,17 +402,19 @@ class Serializer
         return false;
     }
 
-    private function arrayMayHoldDate(ReflectionProperty $property): bool
+    private function arrayHasDate(ReflectionProperty $property): bool
     {
         try {
             $type = $this->phpDocTypeParser->getArrayType(
                 $this->documentedProperty($property),
-                fn (array $names): Type => array_any($names, fn (string $name) => $name === 'mixed' || is_a($name, DateTimeInterface::class, true))
+                fn (array $names): Type => array_any($names, fn (string $name) => is_a($name, DateTimeInterface::class, true))
                     ? new Types\Date
                     : new Types\String_,
             );
+        } catch (UnresolvableClassName $e) {
+            throw $e;
         } catch (RuntimeException) {
-            return true;
+            return false;
         }
 
         return Types\Date::isIn($type);

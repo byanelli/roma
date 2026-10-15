@@ -192,7 +192,7 @@ class TestDateFormatOverNested
      */
     public function __construct(
         #[DateFormat('Y-m-d')] public array $slot,
-        #[DateFormat('Y-m-d')] public mixed $any,
+        public ?object $event = null,
     ) {}
 }
 
@@ -202,7 +202,7 @@ it('does not apply #[DateFormat] to dates inside a nested object when serializin
 
     expect(Serializer::toArray($object))->toBe([
         'slot' => ['day' => '2024-05-01', 'event' => $expected],
-        'any' => $expected,
+        'event' => $expected,
     ]);
 })->with([
     'plain object' => [
@@ -237,6 +237,32 @@ class TestDateFormatOnObjectList
     public function __construct(#[DateFormat('Y-m-d')] public array $events = []) {}
 }
 
+class TestDateFormatOnMixed
+{
+    public function __construct(#[DateFormat('Y-m-d')] public mixed $at = null) {}
+}
+
+class TestDateFormatOnUntyped
+{
+    #[DateFormat('Y-m-d')]
+    public $at;
+}
+
+class TestDateFormatOnUndocumentedArray
+{
+    #[DateFormat('Y-m-d')]
+    public array $at = [];
+}
+
+class TestDateFormatOnMixedMap
+{
+    /**
+     * @var array<string, mixed>
+     */
+    #[DateFormat('Y-m-d')]
+    public array $at = [];
+}
+
 it('rejects #[DateFormat] on a type with no date of its own', function (string $class) {
     $message = "Roma property \"{$class}::\$";
 
@@ -244,4 +270,28 @@ it('rejects #[DateFormat] on a type with no date of its own', function (string $
         ->toThrow(RuntimeException::class, 'has #[DateFormat], but its type is not a date or an array, map or shape of dates')
         ->and(fn () => Serializer::toArray(new $class))
         ->toThrow(RuntimeException::class, $message);
-})->with([TestDateFormatOnString::class, TestDateFormatOnObject::class, TestDateFormatOnObjectList::class]);
+})->with([
+    TestDateFormatOnString::class,
+    TestDateFormatOnObject::class,
+    TestDateFormatOnObjectList::class,
+    TestDateFormatOnMixed::class,
+    TestDateFormatOnUntyped::class,
+    TestDateFormatOnMixedMap::class,
+]);
+
+it('rejects #[DateFormat] on an array without a PHPDoc type when serializing', function () {
+    expect(fn () => Serializer::toArray(new TestDateFormatOnUndocumentedArray))
+        ->toThrow(RuntimeException::class, 'TestDateFormatOnUndocumentedArray::$at" has #[DateFormat], but its type is not a date');
+});
+
+class TestDateFormatOnDateUnion
+{
+    public function __construct(#[DateFormat('Y-m-d')] public DateTimeImmutable|string $at) {}
+}
+
+it('applies #[DateFormat] to a union with a date', function () {
+    $mapped = app(ObjectMapper::class)->map(TestDateFormatOnDateUnion::class, new ArrayPayload(['at' => 'soon']), new ArrayPolicy);
+
+    expect($mapped->at)->toBe('soon')
+        ->and(Serializer::toArray(new TestDateFormatOnDateUnion(new DateTimeImmutable('2024-05-01 09:00:00'))))->toBe(['at' => '2024-05-01']);
+});

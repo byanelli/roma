@@ -9,7 +9,8 @@ use Attribute;
  * rule) and parses it with createFromFormat; fields the format lacks are zero. Serializing
  * writes the date in this format instead of the profile's. Both apply to the property's own
  * value: a date, or the dates in an array, map or shape. A nested object's dates use the
- * nested class's formats. On a type with no date this throws.
+ * nested class's formats. On a type with no date, including mixed and an array without a PHPDoc
+ * type, this throws.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class DateFormat

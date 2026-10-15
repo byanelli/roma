@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[DateFormat]` on `mixed`, an untyped property, an `array` without a PHPDoc type, or an
+  array of `mixed` throws when the definition is built and when serializing, as on other
+  types with no date. A union with a date, such as `DateTimeImmutable|string`, is still
+  allowed.
 - Breaking: an empty key, as in `#[Key('')]`, `#[Query('')]` or `#[Header('')]`, throws when
   the definition is built and when serializing. It used to fall back to the property name.
 - `#[Present]` on a property or parameter with a default value throws when the definition is

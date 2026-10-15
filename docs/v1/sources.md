@@ -175,8 +175,10 @@ class BookingRequest {
 The attribute applies to the property's own value, which includes the elements of a
 `list<DateTimeImmutable>`, the values of an `array<string, DateTimeImmutable>` and the dates
 in an array shape. It doesn't apply to the dates inside a nested object, which follow the
-nested class's own attributes. On a type with no date of its own, such as `string` or a
-nested class, it throws.
+nested class's own attributes. On a type with no date of its own, such as `string`, a nested
+class, `mixed`, no type, or an array without a PHPDoc type of dates, it throws. A union with a
+date, such as `DateTimeImmutable|string`, is allowed; it is mapped as given and serialized
+with the format.
 
 A `bool` accepts `true`, `1`, `"true"`, `"1"`, `"yes"` and `"on"` as true, and `false`, `0`,
 `"false"`, `"0"`, `"no"` and `"off"` as false, ignoring case. Any other value, including an

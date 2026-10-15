@@ -223,7 +223,7 @@ class ClassDefinitionBuilder
         $type = $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes));
         $dateFormat = collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format;
 
-        if ($dateFormat !== null && ! Types\Date::isIn($type)) {
+        if ($dateFormat !== null && ! Types\Date::isIn($type) && ! $this->isUnionWithDate($obj)) {
             throw PropertyAttributes::dateFormatWithoutDate($this->subject($obj));
         }
 
@@ -286,6 +286,20 @@ class ClassDefinitionBuilder
         $names = $type instanceof ReflectionUnionType ? $this->unionMemberNames($type) : [];
 
         return count($names) === 1 ? $names[0] : null;
+    }
+
+    /**
+     * Whether the declared type is a union with a date member, such as `DateTimeImmutable|string`,
+     * which is mapped as mixed and serialized with the format.
+     */
+    private function isUnionWithDate(ReflectionParameter|ReflectionProperty $obj): bool
+    {
+        $type = $obj->getType();
+
+        return $type instanceof ReflectionUnionType && array_any(
+            $type->getTypes(),
+            fn ($member) => $member instanceof ReflectionNamedType && is_a($member->getName(), \DateTimeInterface::class, true),
+        );
     }
 
     /**
