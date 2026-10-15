@@ -234,7 +234,7 @@ class Serializer
         $tag = $discriminator->valueFor($value) ?? throw new RuntimeException(sprintf(
             'Cannot serialize %s through %s: it is not a member of the discriminated union.',
             $value::class,
-            $type->subject,
+            $type->printableName,
         ));
 
         $body = $this->normalizeValue($value, $profile, $dateFormat);
@@ -243,7 +243,7 @@ class Serializer
             throw new RuntimeException(sprintf(
                 'Cannot serialize %s through %s: its output must be an object without a "%s" key.',
                 $value::class,
-                $type->subject,
+                $type->printableName,
                 $discriminator->key,
             ));
         }
@@ -343,25 +343,25 @@ class Serializer
                 continue;
             }
 
-            $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
-            PropertyAttributes::assertNotClassOnly($property->getAttributes(), $subject);
+            $printableName = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
+            PropertyAttributes::assertNotClassOnly($property->getAttributes(), $printableName);
             $attributes = $this->checkedAttributes($property);
-            PropertyAttributes::assertCombinable($attributes, $subject);
-            PropertyAttributes::assertStatusType($attributes, $property->getType(), $subject);
-            PropertyAttributes::assertPresentWithoutDefault($attributes, $this->hasDefault($property), $subject);
+            PropertyAttributes::assertCombinable($attributes, $printableName);
+            PropertyAttributes::assertStatusType($attributes, $property->getType(), $printableName);
+            PropertyAttributes::assertPresentWithoutDefault($attributes, $this->hasDefault($property), $printableName);
 
             if ($property->isVirtual()) {
-                PropertyAttributes::assertAllowedOnVirtual($attributes, $subject);
+                PropertyAttributes::assertAllowedOnVirtual($attributes, $printableName);
             }
 
-            Missing::assertNotAlone($property->getType(), $subject);
+            Missing::assertNotAlone($property->getType(), $printableName);
 
             $destination = $this->attribute($property, DestinationAttribute::class);
             $key = PropertyAttributes::explicitKey($attributes);
             $dateFormat = $this->attribute($property, DateFormat::class)?->format;
 
             if ($dateFormat !== null && ! $this->hasDate($property)) {
-                throw PropertyAttributes::dateFormatWithoutDate($subject);
+                throw PropertyAttributes::dateFormatWithoutDate($printableName);
             }
 
             $plan[] = new PropertyPlan(
@@ -430,7 +430,7 @@ class Serializer
     {
         $attribute = $this->attribute($property, Discriminated::class);
         $declared = $property->getType();
-        $subject = class_basename($property->getDeclaringClass()->getName()).'::$'.$property->getName();
+        $printableName = class_basename($property->getDeclaringClass()->getName()).'::$'.$property->getName();
 
         if ($declared instanceof ReflectionUnionType) {
             $names = array_values(array_filter(
@@ -438,7 +438,7 @@ class Serializer
                 fn (string $name) => ! in_array($name, ['null', Missing::class], true),
             ));
 
-            return $this->discriminatedValue($names, $attribute, $subject);
+            return $this->discriminatedValue($names, $attribute, $printableName);
         }
 
         if (! $declared instanceof ReflectionNamedType) {
@@ -446,7 +446,7 @@ class Serializer
         }
 
         if ($declared->getName() !== 'array') {
-            return $this->discriminatedValue([$declared->getName()], $attribute, $subject);
+            return $this->discriminatedValue([$declared->getName()], $attribute, $printableName);
         }
 
         $error = null;
@@ -455,9 +455,9 @@ class Serializer
         try {
             $type = $this->phpDocTypeParser->getArrayType(
                 $this->documentedProperty($property),
-                function (array $names) use ($attribute, $subject, &$error, &$found): Type {
+                function (array $names) use ($attribute, $printableName, &$error, &$found): Type {
                     try {
-                        $value = $this->discriminatedValue($names, $attribute, $subject);
+                        $value = $this->discriminatedValue($names, $attribute, $printableName);
                     } catch (RuntimeException $e) {
                         $error = $e;
                     }
@@ -484,12 +484,12 @@ class Serializer
     /**
      * @param  list<string>  $names
      */
-    private function discriminatedValue(array $names, ?Discriminated $attribute, string $subject): ?DiscriminatedValue
+    private function discriminatedValue(array $names, ?Discriminated $attribute, string $printableName): ?DiscriminatedValue
     {
         if (count($names) > 1) {
             return $attribute === null ? null : new DiscriminatedValue(
-                Discriminator::fromAttribute($attribute, $subject, union: $this->classNames($names, $subject)),
-                $subject,
+                Discriminator::fromAttribute($attribute, $printableName, union: $this->classNames($names, $printableName)),
+                $printableName,
             );
         }
 
@@ -500,23 +500,23 @@ class Serializer
         }
 
         if ($attribute !== null) {
-            return new DiscriminatedValue(Discriminator::fromAttribute($attribute, $subject, $name), $subject);
+            return new DiscriminatedValue(Discriminator::fromAttribute($attribute, $printableName, $name), $printableName);
         }
 
         $classLevel = Discriminator::ofContract($name);
 
-        return $classLevel === null ? null : new DiscriminatedValue($classLevel, $subject);
+        return $classLevel === null ? null : new DiscriminatedValue($classLevel, $printableName);
     }
 
     /**
      * @param  list<string>  $names
      * @return list<class-string>
      */
-    private function classNames(array $names, string $subject): array
+    private function classNames(array $names, string $printableName): array
     {
         foreach ($names as $name) {
             if (! class_exists($name)) {
-                throw new RuntimeException("Roma #[Discriminated] on {$subject} applies only to a union of classes.");
+                throw new RuntimeException("Roma #[Discriminated] on {$printableName} applies only to a union of classes.");
             }
         }
 

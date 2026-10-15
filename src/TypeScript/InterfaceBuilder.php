@@ -132,11 +132,11 @@ readonly class InterfaceBuilder
             return;
         }
 
-        $subject = class_basename($class).'::$'.$property->name;
+        $printableName = class_basename($class).'::$'.$property->name;
 
         throw new RuntimeException(count($attributes) > 1
-            ? "Roma property \"{$subject}\" has both #[InputMapsToTypeScriptBody] and #[InputMapsToTypeScriptQuery]. Remove one of them."
-            : "Roma property \"{$subject}\" has #[".class_basename($attributes[0]).'], which applies only to an #[Input] property of a top-level request class. Remove it.'
+            ? "Roma property \"{$printableName}\" has both #[InputMapsToTypeScriptBody] and #[InputMapsToTypeScriptQuery]. Remove one of them."
+            : "Roma property \"{$printableName}\" has #[".class_basename($attributes[0]).'], which applies only to an #[Input] property of a top-level request class. Remove it.'
         );
     }
 

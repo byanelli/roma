@@ -123,7 +123,7 @@ class ClassDefinitionBuilder
 
     private function getFromReflectionParameterOrProperty(ReflectionParameter|ReflectionProperty $obj): Property
     {
-        PropertyAttributes::assertNotClassOnly($obj->getAttributes(), $this->subject($obj));
+        PropertyAttributes::assertNotClassOnly($obj->getAttributes(), $this->printableName($obj));
         $attributes = $this->getAttributeInstances($obj->getAttributes());
 
         $typeName = $this->declaredTypeName($obj);
@@ -135,11 +135,11 @@ class ClassDefinitionBuilder
         $isVirtual = $obj instanceof ReflectionProperty && $obj->isVirtual();
 
         if ($isVirtual) {
-            PropertyAttributes::assertAllowedOnVirtual($attributes, $this->subject($obj));
+            PropertyAttributes::assertAllowedOnVirtual($attributes, $this->printableName($obj));
         }
 
         if ($this->nested) {
-            PropertyAttributes::assertAllowedInNestedObject($attributes, $this->subject($obj));
+            PropertyAttributes::assertAllowedInNestedObject($attributes, $this->printableName($obj));
         }
 
         // A nested object always inherits its location from the parent, so a
@@ -170,7 +170,7 @@ class ClassDefinitionBuilder
 
         if ($typeSource !== null && $sourceAttribute !== null) {
             throw new RuntimeException(
-                "Roma property \"{$this->subject($obj)}\" is typed as {$typeName}, which always maps from the "
+                "Roma property \"{$this->printableName($obj)}\" is typed as {$typeName}, which always maps from the "
                 ."\"{$typeSource->getKey()}\" source, so #[".class_basename($sourceAttribute).'] has no effect. Remove it.'
             );
         }
@@ -179,31 +179,31 @@ class ClassDefinitionBuilder
             $attributes = [...$attributes, ...$typeAttributes];
         }
 
-        PropertyAttributes::assertCombinable($attributes, $this->subject($obj));
-        PropertyAttributes::assertStatusType($attributes, $obj->getType(), $this->subject($obj));
+        PropertyAttributes::assertCombinable($attributes, $this->printableName($obj));
+        PropertyAttributes::assertStatusType($attributes, $obj->getType(), $this->printableName($obj));
 
         if ($this->nested) {
             $source = null;
         } else {
             $source = $typeSource ?? $this->getSourceFromAttributes($attributes);
             $this->assertSourceAllowed($source, "property \"{$declaringClass}::\${$obj->getName()}\"");
-            $this->assertDestinationAllowed($attributes, $this->subject($obj));
+            $this->assertDestinationAllowed($attributes, $this->printableName($obj));
         }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
 
-        Missing::assertNotAlone($obj->getType(), $this->subject($obj));
+        Missing::assertNotAlone($obj->getType(), $this->printableName($obj));
         $acceptsMissing = Missing::isInType($obj->getType());
         $optional = $acceptsMissing || collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
 
         if ($acceptsMissing && collect($attributes)->contains(fn (object $attr) => $attr instanceof Present)) {
             throw new RuntimeException(
-                "Roma property \"{$this->subject($obj)}\" is typed with Missing, which allows the key to be absent, "
+                "Roma property \"{$this->printableName($obj)}\" is typed with Missing, which allows the key to be absent, "
                 .'and has #[Present], which requires it. Remove one of them.'
             );
         }
 
-        PropertyAttributes::assertPresentWithoutDefault($attributes, ! $this->getDefault($obj) instanceof NoDefault, $this->subject($obj));
+        PropertyAttributes::assertPresentWithoutDefault($attributes, ! $this->getDefault($obj) instanceof NoDefault, $this->printableName($obj));
 
         $nullable = $obj->getType()?->allowsNull() ?? true;
 
@@ -211,7 +211,7 @@ class ClassDefinitionBuilder
         $dateFormat = collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format;
 
         if ($dateFormat !== null && ! Types\Date::isIn($type) && ! $this->isUnionWithDate($obj)) {
-            throw PropertyAttributes::dateFormatWithoutDate($this->subject($obj));
+            throw PropertyAttributes::dateFormatWithoutDate($this->printableName($obj));
         }
 
         return new Property(
@@ -270,7 +270,7 @@ class ClassDefinitionBuilder
         }
 
         throw new RuntimeException(
-            "Roma parameter \"{$this->subject($obj)}\" is #[Optional] but has no value for when it is absent. "
+            "Roma parameter \"{$this->printableName($obj)}\" is #[Optional] but has no value for when it is absent. "
             .'Make it nullable (?string), add Missing to its type (string|Missing), or give it a default.'
         );
     }
@@ -337,13 +337,13 @@ class ClassDefinitionBuilder
         return null;
     }
 
-    private function assertSourceAllowed(Source $source, string $subject): void
+    private function assertSourceAllowed(Source $source, string $description): void
     {
         if (! is_a($this->policy->payloadType(), $source->payloadType(), true)) {
             $policy = class_basename($this->policy);
 
             throw new RuntimeException(
-                "Roma {$subject} maps from the \"{$source->getKey()}\" source, which {$policy} does not allow: "
+                "Roma {$description} maps from the \"{$source->getKey()}\" source, which {$policy} does not allow: "
                 .'the source reads from '.class_basename($source->payloadType()).", and {$policy} maps from "
                 .class_basename($this->policy->payloadType()).'.'
             );
@@ -416,12 +416,12 @@ class ClassDefinitionBuilder
     /**
      * @param  list<object>  $attributes
      */
-    private function assertDestinationAllowed(array $attributes, string $subject): void
+    private function assertDestinationAllowed(array $attributes, string $printableName): void
     {
         foreach ($attributes as $attribute) {
             if ($attribute instanceof DestinationAttribute && ! $this->policy->allowsDestination($destination = $attribute->destination())) {
                 throw new RuntimeException(
-                    "Roma property \"{$subject}\" has #[".class_basename($attribute).'], which '.class_basename($this->policy)
+                    "Roma property \"{$printableName}\" has #[".class_basename($attribute).'], which '.class_basename($this->policy)
                     .' does not allow: the data it maps from has no '.strtolower($destination->name).'. Remove the attribute.'
                 );
             }
@@ -547,13 +547,13 @@ class ClassDefinitionBuilder
         ?Discriminated $discriminated,
     ): Types\Union {
         if ($discriminated !== null) {
-            $discriminator = Discriminator::fromAttribute($discriminated, $this->subject($obj), $contract);
+            $discriminator = Discriminator::fromAttribute($discriminated, $this->printableName($obj), $contract);
 
             return $this->buildUnion($discriminator, null);
         }
 
         $classLevel = Discriminator::ofContract($contract) ?? throw new RuntimeException(
-            "Roma property \"{$this->subject($obj)}\" is typed as {$contract}, an interface or abstract class. "
+            "Roma property \"{$this->printableName($obj)}\" is typed as {$contract}, an interface or abstract class. "
             ."Add #[Discriminated] or #[AutoDiscriminated] to {$contract}, add #[Discriminated] to the property, "
             .'or type the property with a concrete class.'
         );
@@ -583,11 +583,11 @@ class ClassDefinitionBuilder
         }
 
         $discriminated ??= throw new RuntimeException(
-            "Roma property \"{$this->subject($obj)}\" is typed as the union ".implode('|', $names).'. '
+            "Roma property \"{$this->printableName($obj)}\" is typed as the union ".implode('|', $names).'. '
             .'Add #[Discriminated(['.implode(', ', array_map(fn (string $c) => class_basename($c).'::class', $names)).'])] to the property.'
         );
 
-        return $this->buildUnion(Discriminator::fromAttribute($discriminated, $this->subject($obj), union: $classes), null);
+        return $this->buildUnion(Discriminator::fromAttribute($discriminated, $this->printableName($obj), union: $classes), null);
     }
 
     /**
@@ -628,7 +628,7 @@ class ClassDefinitionBuilder
         return new Types\Union($discriminator->key, $members, $contract);
     }
 
-    private function subject(ReflectionParameter|ReflectionProperty $obj): string
+    private function printableName(ReflectionParameter|ReflectionProperty $obj): string
     {
         return ($obj->getDeclaringClass()?->getShortName() ?? '').'::$'.$obj->getName();
     }
@@ -647,7 +647,7 @@ class ClassDefinitionBuilder
 
         if ($discriminated !== null && ! $this->appliesDiscriminator($type)) {
             throw new RuntimeException(
-                "Roma #[Discriminated] on \"{$this->subject($obj)}\" applies only to a property typed as an interface, "
+                "Roma #[Discriminated] on \"{$this->printableName($obj)}\" applies only to a property typed as an interface, "
                 .'an abstract class or a union of classes, or an array of one.'
             );
         }

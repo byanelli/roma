@@ -13,10 +13,10 @@ use BYanelli\Roma\Data\Type;
 final readonly class DiscriminatedValue extends Type
 {
     /**
-     * @param  string  $subject  the property or contract the union is declared on, for error messages
+     * @param  string  $printableName  the property or contract the union is declared on, for error messages
      */
     public function __construct(
         public Discriminator $discriminator,
-        public string $subject,
+        public string $printableName,
     ) {}
 }

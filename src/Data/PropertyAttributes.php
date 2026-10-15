@@ -39,19 +39,19 @@ final class PropertyAttributes
 
     /**
      * @param  list<object>  $attributes
-     * @param  string  $subject  e.g. `Order::$id`
+     * @param  string  $printableName  e.g. `Order::$id`
      */
-    public static function assertCombinable(array $attributes, string $subject): void
+    public static function assertCombinable(array $attributes, string $printableName): void
     {
-        self::assertNoEmptyKey($attributes, $subject);
-        self::assertAtMostOne($attributes, SourceAttribute::class, 'source', $subject);
-        self::assertAtMostOne($attributes, DestinationAttribute::class, 'destination', $subject);
+        self::assertNoEmptyKey($attributes, $printableName);
+        self::assertAtMostOne($attributes, SourceAttribute::class, 'source', $printableName);
+        self::assertAtMostOne($attributes, DestinationAttribute::class, 'destination', $printableName);
 
         $keyed = array_values(array_filter($attributes, fn (object $attribute) => self::declaredKey($attribute) !== null));
 
         if (count($keyed) > 1) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" gets a key from both #[".class_basename($keyed[0]).'] and #['
+                "Roma property \"{$printableName}\" gets a key from both #[".class_basename($keyed[0]).'] and #['
                 .class_basename($keyed[1]).']. Give the key in only one of them.'
             );
         }
@@ -60,14 +60,14 @@ final class PropertyAttributes
 
         if ($destination !== null && ! $destination->destination()->hasKey() && $keyed !== []) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has both #[".class_basename($destination).'] and #['.class_basename($keyed[0]).'], '
+                "Roma property \"{$printableName}\" has both #[".class_basename($destination).'] and #['.class_basename($keyed[0]).'], '
                 .'but #['.class_basename($destination).'] is not written under a key. Remove #['.class_basename($keyed[0]).'].'
             );
         }
 
         if (self::first($attributes, Optional::class) !== null && self::first($attributes, Present::class) !== null) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has both #[Optional] and #[Present]. #[Present] requires the key and "
+                "Roma property \"{$printableName}\" has both #[Optional] and #[Present]. #[Present] requires the key and "
                 .'#[Optional] allows it to be absent, so remove one of them.'
             );
         }
@@ -79,12 +79,12 @@ final class PropertyAttributes
      *
      * @param  array<int, ReflectionAttribute<object>>  $attributes
      */
-    public static function assertNotClassOnly(array $attributes, string $subject): void
+    public static function assertNotClassOnly(array $attributes, string $printableName): void
     {
         foreach ($attributes as $attribute) {
             if ($attribute->getName() === AutoDiscriminated::class) {
                 throw new RuntimeException(
-                    "Roma property \"{$subject}\" has #[AutoDiscriminated], which applies only to an interface or abstract "
+                    "Roma property \"{$printableName}\" has #[AutoDiscriminated], which applies only to an interface or abstract "
                     .'class, since its members are found and cached per contract. Put it on the interface or abstract class, '
                     .'or list the classes on the property with #[Discriminated([...])].'
                 );
@@ -95,7 +95,7 @@ final class PropertyAttributes
     /**
      * @param  list<object>  $attributes
      */
-    private static function assertNoEmptyKey(array $attributes, string $subject): void
+    private static function assertNoEmptyKey(array $attributes, string $printableName): void
     {
         foreach ($attributes as $attribute) {
             if (self::declaredKey($attribute) !== '') {
@@ -105,7 +105,7 @@ final class PropertyAttributes
             $name = class_basename($attribute);
 
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has #[{$name}('')], an empty key. ".match (true) {
+                "Roma property \"{$printableName}\" has #[{$name}('')], an empty key. ".match (true) {
                     $attribute instanceof Key => 'Give a key, or remove #[Key] to use the property name.',
                     $attribute instanceof ExplicitKeyAttribute => "Give a key, or use #[{$name}] without one to use the property name.",
                     default => 'Give a key.',
@@ -119,11 +119,11 @@ final class PropertyAttributes
      *
      * @param  list<object>  $attributes
      */
-    public static function assertPresentWithoutDefault(array $attributes, bool $hasDefault, string $subject): void
+    public static function assertPresentWithoutDefault(array $attributes, bool $hasDefault, string $printableName): void
     {
         if ($hasDefault && self::first($attributes, Present::class) !== null) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has #[Present] and a default value, which is never used since #[Present] "
+                "Roma property \"{$printableName}\" has #[Present] and a default value, which is never used since #[Present] "
                 .'requires the key. Remove the default or #[Present].'
             );
         }
@@ -135,7 +135,7 @@ final class PropertyAttributes
      *
      * @param  list<object>  $attributes
      */
-    public static function assertStatusType(array $attributes, ?ReflectionType $type, string $subject): void
+    public static function assertStatusType(array $attributes, ?ReflectionType $type, string $printableName): void
     {
         $destination = self::first($attributes, DestinationAttribute::class);
 
@@ -145,7 +145,7 @@ final class PropertyAttributes
 
         if (! $type instanceof ReflectionNamedType || $type->getName() !== 'int' || $type->allowsNull()) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has #[".class_basename($destination).'], so its type must be int'
+                "Roma property \"{$printableName}\" has #[".class_basename($destination).'], so its type must be int'
                 .($type !== null ? ", not {$type}" : '').'. For a status that is usually the same, give the property a default such as 200.'
             );
         }
@@ -157,13 +157,13 @@ final class PropertyAttributes
      *
      * @param  list<object>  $attributes
      */
-    public static function assertAllowedOnVirtual(array $attributes, string $subject): void
+    public static function assertAllowedOnVirtual(array $attributes, string $printableName): void
     {
         foreach ($attributes as $attribute) {
             if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute)
                 && ! $attribute instanceof DestinationAttribute) {
                 throw new RuntimeException(
-                    "Roma property \"{$subject}\" is virtual (a hooked property with no backing value), so it is never "
+                    "Roma property \"{$printableName}\" is virtual (a hooked property with no backing value), so it is never "
                     .'mapped and #['.class_basename($attribute).'] has no effect. Remove it.'
                 );
             }
@@ -175,27 +175,27 @@ final class PropertyAttributes
      *
      * @param  list<object>  $attributes
      */
-    public static function assertAllowedInNestedObject(array $attributes, string $subject): void
+    public static function assertAllowedInNestedObject(array $attributes, string $printableName): void
     {
         foreach ($attributes as $attribute) {
             if ($attribute instanceof DestinationAttribute) {
-                throw self::topLevelOnly($attribute::class, $subject);
+                throw self::topLevelOnly($attribute::class, $printableName);
             }
         }
     }
 
-    public static function topLevelOnly(string $attribute, string $subject): RuntimeException
+    public static function topLevelOnly(string $attribute, string $printableName): RuntimeException
     {
         return new RuntimeException(
-            "Roma property \"{$subject}\" has #[".class_basename($attribute).'] but is inside a nested object. '
+            "Roma property \"{$printableName}\" has #[".class_basename($attribute).'] but is inside a nested object. '
             .'Headers and #[Status] can only be declared on the top-level class.'
         );
     }
 
-    public static function dateFormatWithoutDate(string $subject): RuntimeException
+    public static function dateFormatWithoutDate(string $printableName): RuntimeException
     {
         return new RuntimeException(
-            "Roma property \"{$subject}\" has #[DateFormat], but its type is not a date or an array, map or shape "
+            "Roma property \"{$printableName}\" has #[DateFormat], but its type is not a date or an array, map or shape "
             .'of dates. A nested object sets the formats of its own dates.'
         );
     }
@@ -253,13 +253,13 @@ final class PropertyAttributes
      * @param  list<object>  $attributes
      * @param  class-string  $class
      */
-    private static function assertAtMostOne(array $attributes, string $class, string $kind, string $subject): void
+    private static function assertAtMostOne(array $attributes, string $class, string $kind, string $printableName): void
     {
         $matching = array_values(array_filter($attributes, fn (object $attribute) => $attribute instanceof $class));
 
         if (count($matching) > 1) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has more than one {$kind}: #[".class_basename($matching[0]).'] and #['
+                "Roma property \"{$printableName}\" has more than one {$kind}: #[".class_basename($matching[0]).'] and #['
                 .class_basename($matching[1]).']. Remove one of them.'
             );
         }

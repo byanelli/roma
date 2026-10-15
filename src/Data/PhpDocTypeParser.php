@@ -281,10 +281,10 @@ class PhpDocTypeParser
 
     private function unresolvable(string $problem, ReflectionParameter|ReflectionProperty $obj): UnresolvableClassName
     {
-        $subject = ($obj->getDeclaringClass()?->getName() ?? '').'::$'.$obj->getName();
+        $printableName = ($obj->getDeclaringClass()?->getName() ?? '').'::$'.$obj->getName();
 
         return new UnresolvableClassName(
-            "Roma cannot read the PHPDoc type {$this->getArrayTypePhpDocNode($obj)} of {$subject}: it contains {$problem}."
+            "Roma cannot read the PHPDoc type {$this->getArrayTypePhpDocNode($obj)} of {$printableName}: it contains {$problem}."
         );
     }
 }

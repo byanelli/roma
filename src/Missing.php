@@ -48,7 +48,7 @@ final class Missing
      *
      * @internal
      */
-    public static function assertNotAlone(?ReflectionType $type, string $subject): void
+    public static function assertNotAlone(?ReflectionType $type, string $printableName): void
     {
         $names = match (true) {
             $type instanceof ReflectionNamedType => [$type->getName()],
@@ -58,7 +58,7 @@ final class Missing
 
         if (in_array(self::class, $names, true) && array_diff($names, [self::class, 'null']) === []) {
             throw new RuntimeException(
-                "Roma property \"{$subject}\" has no type besides Missing. Add the type of its value, e.g. string|Missing."
+                "Roma property \"{$printableName}\" has no type besides Missing. Add the type of its value, e.g. string|Missing."
             );
         }
     }

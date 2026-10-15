@@ -97,19 +97,19 @@ final readonly class Discriminator
     }
 
     /**
-     * `$subject` describes where the attribute applies, for error messages.
+     * `$printableName` is the property or contract the attribute is on, for error messages.
      *
      * @param  ?class-string  $contract  the interface or abstract class the members must extend
      * @param  ?list<class-string>  $union  the members of a native union type, which the list must equal
      */
     public static function fromAttribute(
         Discriminated $attribute,
-        string $subject,
+        string $printableName,
         ?string $contract = null,
         ?array $union = null,
         string $attributeName = 'Discriminated',
     ): self {
-        $prefix = "Roma #[{$attributeName}] on {$subject}";
+        $prefix = "Roma #[{$attributeName}] on {$printableName}";
 
         if ($attribute->key === '') {
             throw new RuntimeException("{$prefix} has an empty key.");
