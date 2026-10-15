@@ -38,7 +38,7 @@ final class ValidationErrors
     }
 
     /**
-     * Two keys with the same name, such as a header's in two cases, merge their messages.
+     * Two keys with the same name merge their messages.
      *
      * @return array<string, list<string>>
      */

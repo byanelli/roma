@@ -38,11 +38,14 @@ All notable changes to `roma` will be documented in this file.
   `ObjectMapper::makeValidator()` takes. `ObjectMapper::validate()` and
   `ValidationRules::VALIDATION_ONLY_KEY` are removed. A class-level constraint such as
   `#[ContentType('application/json')]` is a rule on its source's validator.
-- Two properties that map from the same key of one source, such as one header, both apply
-  their rules; the later one's rules used to replace the earlier one's, and its name was used
-  in messages. The earlier one's name is used now. A class-level constraint on a header that
-  a property also maps reports its errors in that property's place, and a message both
-  report appears once.
+- Breaking: two properties that map from the same key of one source throw when the
+  definition is built, after the key is normalized: `#[Header('X-Flag')]` beside
+  `#[Header('x-flag')]`, `#[Query('page')]` on two properties, or `#[Input('a')]` beside a
+  property named `a`. Two properties of one nested class on one key throw too. The later
+  one's rules used to replace the earlier one's. Several properties may still read one
+  accessor, such as `#[Ajax]`. A class-level constraint such as `#[ContentType(...)]` on a
+  header that a property also maps adds its rules to that key and reports its errors in that
+  property's place, and a message both report appears once.
 - JSON Schema: an `array<string, T>` map, which has no value schema, gives its value type in
   its description, after any `#[Description]` text: "Values: Address", "Values: integer",
   "Values: array of string". The error for a file upload says that tool input is JSON, which

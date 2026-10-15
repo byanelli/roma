@@ -380,6 +380,40 @@ class ClassDefinitionBuilder
     }
 
     /**
+     * Properties of one accessor, and class-level constraints, which only add rules, may share
+     * a key.
+     *
+     * @param  ReflectionClass<object>  $class
+     * @param  list<Property>  $properties
+     */
+    private function assertDistinctKeys(ReflectionClass $class, array $properties): void
+    {
+        $seen = [];
+
+        foreach ($properties as $property) {
+            if ($property->isVirtual || $property->role === Role::ValidationOnly || $property->source?->isSingleValue()) {
+                continue;
+            }
+
+            $key = $property->fullKey();
+            $first = $seen[serialize($key->segments)] ??= $property;
+
+            if ($first === $property) {
+                continue;
+            }
+
+            $same = $first->errorKey === $property->errorKey
+                ? "the same key \"{$first->errorKey}\""
+                : "the same key: \"{$first->errorKey}\" and \"{$property->errorKey}\" are both read as \"{$key->toKey()}\"";
+
+            throw new RuntimeException(
+                "Roma class {$class->getShortName()} maps \${$first->name} and \${$property->name} from {$same}. "
+                .'Give one of them another key.'
+            );
+        }
+    }
+
+    /**
      * @param  list<object>  $attributes
      */
     private function assertDestinationAllowed(array $attributes, string $subject): void
@@ -703,6 +737,8 @@ class ClassDefinitionBuilder
         if (! $this->nested) {
             $this->assertDistinctSourceKeys($class, $properties);
         }
+
+        $this->assertDistinctKeys($class, $properties);
 
         return new Class_(class: $class->getName(), properties: $properties);
     }

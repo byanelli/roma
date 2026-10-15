@@ -130,7 +130,7 @@ declaring one on a nested property throws. Use `#[Key]` to override a nested key
 containing a literal dot; on a top-level property it sets the key within the source
 (`#[Key('page_num')]` reads `input.page_num`). A property may get its key from only one
 attribute, so `#[Query('a')]` with `#[Key('b')]` throws, as does an empty key
-(`#[Key('')]`). The serializer writes the property under the same key, from `#[Key]` or a
+(`#[Key('')]`) or two properties on the same key of one source or nested class. The serializer writes the property under the same key, from `#[Key]` or a
 source attribute. A nested class may contain itself (`list<Comment>` in `Comment`,
 `?Node $parent`); its rules are built from the data, and errors keep full keys such as
 `input.replies.0.replies.1.body`.

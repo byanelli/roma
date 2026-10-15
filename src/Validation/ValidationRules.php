@@ -103,7 +103,7 @@ readonly class ValidationRules
                 $key = $entry['path']->toRuleKey();
                 $plainKey = $entry['path']->toKey();
 
-                // Two properties, or a property and a class attribute, may validate the same key.
+                // Properties of one accessor, or a property and a class-level constraint, may validate the same key.
                 $rules[$key] = [...($rules[$key] ?? []), ...$entry['rules']];
 
                 // The attribute-name key is the unescaped join, matching what

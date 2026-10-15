@@ -58,6 +58,11 @@ only one attribute: `#[Query('page_num')]` together with `#[Key('page')]`, or
 `#[Body]`, and a source attribute on an `UploadedFile` property, which always maps from the
 uploaded files.
 
+Two properties on the same key of one source throw too, such as `#[Query('page')]` on two
+properties, `#[Input('a')]` beside a property named `a`, or `#[Header('X-Flag')]` beside
+`#[Header('x-flag')]`, since header names ignore case. Several properties may read one
+accessor such as `#[Ajax]`.
+
 ### The QUERY method
 
 `QUERY` ([RFC 10008](https://www.rfc-editor.org/info/rfc10008/)) is a safe, idempotent
