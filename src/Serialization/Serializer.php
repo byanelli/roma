@@ -344,6 +344,11 @@ class Serializer
             $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
             $attributes = $this->checkedAttributes($property);
             PropertyAttributes::assertCombinable($attributes, $subject);
+
+            if ($property->isVirtual()) {
+                PropertyAttributes::assertAllowedOnVirtual($attributes, $subject);
+            }
+
             Missing::assertNotAlone($property->getType(), $subject);
 
             $destination = $this->attribute($property, DestinationAttribute::class);

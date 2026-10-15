@@ -144,6 +144,12 @@ class ClassDefinitionBuilder
         $typeAttributes = $typeName !== null ? $this->policy->attributesForType($typeName) : [];
         $typeSource = $typeName !== null ? $this->policy->sourceForType($typeName) : null;
 
+        $isVirtual = $obj instanceof ReflectionProperty && $obj->isVirtual();
+
+        if ($isVirtual) {
+            PropertyAttributes::assertAllowedOnVirtual($attributes, $this->subject($obj));
+        }
+
         if ($this->nested) {
             PropertyAttributes::assertAllowedInNestedObject($attributes, $this->subject($obj));
         }
@@ -229,9 +235,8 @@ class ClassDefinitionBuilder
             nullable: $nullable,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
             rawAttributes: $attributes,
-            // A virtual (hooked, backing-less) property is a computed value with
-            // no backing store. The mapper, validator and request TypeScript skip it.
-            isVirtual: $obj instanceof ReflectionProperty && $obj->isVirtual(),
+            // The mapper, validator and request TypeScript skip a virtual property.
+            isVirtual: $isVirtual,
             optional: $optional,
         );
     }

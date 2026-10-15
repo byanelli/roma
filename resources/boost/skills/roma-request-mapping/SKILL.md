@@ -170,7 +170,8 @@ top-level class only (in a nested object they throw). Use
 objects don't need the traits. For runtime values, override the public
 `responseStatus(Serialized $serialized)` / `responseHeaders(Serialized $serialized)`, or
 implement `CustomizesSerialization` for date formats. Prefer get-only hooked properties for
-computed values (they reach TypeScript); an overridden `toArray(?Profile $profile = null)` is
+computed values (they reach TypeScript, and `#[Rule]`, `#[Present]` or a source attribute on
+one throws); an overridden `toArray(?Profile $profile = null)` is
 the escape hatch and should pass `$profile` to `Serializer::toArray($this, $profile)`; a
 `Response`'s HTTP body uses the override. `Serializer::toArray($obj, $profile)` /
 `Serializer::serialize()` (facade `BYanelli\Roma\Facades\Serializer`) serialize any object

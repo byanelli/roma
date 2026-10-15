@@ -6,6 +6,7 @@ use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
+use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Serialization\DestinationAttribute;
 use RuntimeException;
@@ -27,7 +28,7 @@ final class PropertyAttributes
         ExplicitKeyAttribute::class,
         KeyAttribute::class,
         Optional::class,
-        Present::class,
+        RulesAttribute::class,
     ];
 
     /**
@@ -62,6 +63,25 @@ final class PropertyAttributes
                 "Roma property \"{$subject}\" has both #[Optional] and #[Present]. #[Present] requires the key and "
                 .'#[Optional] allows it to be absent, so remove one of them.'
             );
+        }
+    }
+
+    /**
+     * A virtual (hooked, backing-less) property is never mapped. Attributes that only affect
+     * serialization or TypeScript, such as #[Key] and #[Header], still apply.
+     *
+     * @param  list<object>  $attributes
+     */
+    public static function assertAllowedOnVirtual(array $attributes, string $subject): void
+    {
+        foreach ($attributes as $attribute) {
+            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute)
+                && ! $attribute instanceof DestinationAttribute) {
+                throw new RuntimeException(
+                    "Roma property \"{$subject}\" is virtual (a hooked property with no backing value), so it is never "
+                    .'mapped and #['.class_basename($attribute).'] has no effect. Remove it.'
+                );
+            }
         }
     }
 

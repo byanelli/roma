@@ -156,6 +156,10 @@ class UserResponse extends Response {
 }
 ```
 
+A hooked property with no backing value is never mapped, so `#[Rule]`, `#[Present]` or a
+source attribute such as `#[Query]` on one throws. `#[Key]`, `#[Header]`, `#[DateFormat]` and
+`#[Description]` apply to it as usual.
+
 Overriding `toArray()` is the escape hatch for output the properties can't describe. Keys it
 adds are not in the generated TypeScript. When the object is nested in another, the
 serializer calls the override with its profile and normalizes the result with that profile,

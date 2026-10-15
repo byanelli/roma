@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Rule]`, `#[Present]` or a source attribute such as `#[Query]` or an accessor on a virtual
+  (hooked, backing-less) property throws when the definition is built and when serializing,
+  since the property is never mapped. `#[Key]`, `#[Header]`, `#[DateFormat]` and
+  `#[Description]` are still allowed.
 - Breaking: the key given to a source attribute, as in `#[Query('page_num')]`,
   `#[Body('display.name')]` or `#[Input('sort_by')]`, is also the key the serializer writes,
   so a request class serializes back to its own keys. It used to write the property name.
