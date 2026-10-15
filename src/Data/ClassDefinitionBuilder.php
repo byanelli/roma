@@ -642,6 +642,8 @@ class ClassDefinitionBuilder
      */
     private function define(ReflectionClass $class): Class_
     {
+        Discriminator::assertNotOnConcreteClass($class);
+
         return new Class_(
             class: $class->getName(),
             properties: [

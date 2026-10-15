@@ -335,8 +335,10 @@ class Serializer
     private function buildPlan(string $class): array
     {
         $plan = [];
+        $reflection = new ReflectionClass($class);
+        Discriminator::assertNotOnConcreteClass($reflection);
 
-        foreach (new ReflectionClass($class)->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
+        foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
             if ($property->isStatic()) {
                 continue;
             }

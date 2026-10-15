@@ -48,6 +48,30 @@ final readonly class Discriminator
     }
 
     /**
+     * @param  ReflectionClass<object>  $class
+     */
+    public static function assertNotOnConcreteClass(ReflectionClass $class): void
+    {
+        if ($class->isInterface() || $class->isAbstract()) {
+            return;
+        }
+
+        if ($class->getAttributes(Discriminated::class) !== []) {
+            throw new RuntimeException(
+                "Roma #[Discriminated] on {$class->getName()} applies only to an interface or abstract class, or to a "
+                .'property. Move it to the interface or abstract class its members share, or to the property.'
+            );
+        }
+
+        if ($class->getAttributes(AutoDiscriminated::class) !== []) {
+            throw new RuntimeException(
+                "Roma #[AutoDiscriminated] on {$class->getName()} applies only to an interface or abstract class. "
+                .'Move it to the interface or abstract class its members share.'
+            );
+        }
+    }
+
+    /**
      * @param  class-string  $contract
      */
     private static function discovered(AutoDiscriminated $attribute, string $contract): self

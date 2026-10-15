@@ -2,6 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\DiscriminatorValue;
 use BYanelli\Roma\Attributes\Key;
@@ -9,6 +10,8 @@ use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Serializer;
+use BYanelli\Roma\JsonSchema\ClassSchema;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;
 use BYanelli\Roma\Tests\Support\Discriminated\Checkout;
@@ -20,6 +23,7 @@ use BYanelli\Roma\Tests\Support\Discriminated\Standard;
 use BYanelli\Roma\Tests\Support\Discriminated\Voucher;
 use BYanelli\Roma\Tests\Support\Discriminated\Wallet;
 use BYanelli\Roma\Tests\TestCase;
+use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
@@ -348,3 +352,25 @@ it('reports per-element errors under bare keys in a precognitive response', func
             'errors' => ['fallbacks.1.iban' => ['The fallbacks.1.iban field is required.']],
         ]);
 });
+
+#[Discriminated([DuConcreteTagged::class])]
+final class DuConcreteTagged
+{
+    public string $name = 'x';
+}
+
+#[AutoDiscriminated]
+final class DuConcreteAuto
+{
+    public string $name = 'x';
+}
+
+it('rejects a class-level discriminator attribute on a concrete class', function (string $class, string $message) {
+    expect(fn () => mapDiscriminated($class, ['name' => 'x']))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => Serializer::toArray(new $class))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => ClassSchema::object($class))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => new TypeScriptGenerator(responses: [$class])->generate())->toThrow(RuntimeException::class, $message);
+})->with([
+    [DuConcreteTagged::class, 'Roma #[Discriminated] on DuConcreteTagged applies only to an interface or abstract class, or to a property'],
+    [DuConcreteAuto::class, 'Roma #[AutoDiscriminated] on DuConcreteAuto applies only to an interface or abstract class'],
+]);

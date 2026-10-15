@@ -130,7 +130,7 @@ errors keep full keys such as `input.replies.0.replies.1.body`.
 A property that can be one of several classes is a discriminated union: type it as an
 interface, an abstract class or a native union, and list the classes with
 `#[Discriminated([Card::class, BankAccount::class])]` on the interface/abstract class or on
-the property (required for `Card|Voucher`). The wire value under `type` (or `key:`) is the
+the property (required for `Card|Voucher`; on a concrete class it throws). The wire value under `type` (or `key:`) is the
 short class name or `#[DiscriminatorValue('bank')]`; member classes must not declare a
 property under the key. Unknown values fail validation at `input.payment.type`. The
 serializer writes the key only through a discriminated property, and TypeScript emits

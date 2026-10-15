@@ -133,7 +133,8 @@ readonly class CheckoutRequest {
 }
 ```
 
-- The attribute goes on the interface or abstract class, or on the property. It is required
+- The attribute goes on the interface or abstract class, or on the property; on a concrete
+  class it throws when the definition is built and when serializing. It is required
   on a native union of classes, and on a property typed as an interface or abstract class it
   replaces the class-level attribute. On an array property it applies to the elements, so
   `list<Card|Voucher>` works with a property-level attribute. Change the key with

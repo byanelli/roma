@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Discriminated]` or `#[AutoDiscriminated]` on a concrete class throws when the definition
+  is built, in mapping, TypeScript and JSON Schema, and when serializing. It used to be
+  ignored.
 - Breaking: `#[Status]` on a property not typed `int`, including `?int`, `int|Missing` and an
   untyped property, throws when the definition is built and when serializing. The serializer
   used to cast the value with `(int)`. A status that is usually the same takes a default.
