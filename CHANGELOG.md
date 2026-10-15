@@ -4,6 +4,8 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: an empty key, as in `#[Key('')]`, `#[Query('')]` or `#[Header('')]`, throws when
+  the definition is built and when serializing. It used to fall back to the property name.
 - `#[Present]` on a property or parameter with a default value throws when the definition is
   built and when serializing, since the default is never used.
 - `#[Discriminated]` or `#[AutoDiscriminated]` on a concrete class throws when the definition

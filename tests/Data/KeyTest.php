@@ -158,3 +158,41 @@ it('reads #[Header] from a request and writes it to a header', function () {
     expect($serialized->headers)->toBe(['X-Request-Id' => 'abc'])
         ->and($serialized->body)->toBe(['name' => 'Bill']);
 });
+
+class TestEmptyKey
+{
+    #[Key('')]
+    public string $name = 'x';
+}
+
+class TestEmptyQueryKey
+{
+    #[Query('')]
+    public string $name = 'x';
+}
+
+class TestEmptyBodyKey
+{
+    #[Body('')]
+    public string $name = 'x';
+}
+
+class TestEmptyHeaderName
+{
+    #[Header('')]
+    public string $name = 'x';
+}
+
+it('rejects an empty key', function (string $class, string $message) {
+    /** @var TestCase $this */
+    $this->setRequest();
+    $message = "Roma property \"{$class}::\$name\" has {$message}";
+
+    expect(fn () => $this->mapRequest($class))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => Serializer::toArray(new $class))->toThrow(RuntimeException::class, $message);
+})->with([
+    [TestEmptyKey::class, "#[Key('')], an empty key. Give a key, or remove #[Key] to use the property name."],
+    [TestEmptyQueryKey::class, "#[Query('')], an empty key. Give a key, or use #[Query] without one to use the property name."],
+    [TestEmptyBodyKey::class, "#[Body('')], an empty key."],
+    [TestEmptyHeaderName::class, "#[Header('')], an empty key. Give a key."],
+]);

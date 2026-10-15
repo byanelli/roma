@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
@@ -40,6 +41,7 @@ final class PropertyAttributes
      */
     public static function assertCombinable(array $attributes, string $subject): void
     {
+        self::assertNoEmptyKey($attributes, $subject);
         self::assertAtMostOne($attributes, SourceAttribute::class, 'source', $subject);
         self::assertAtMostOne($attributes, DestinationAttribute::class, 'destination', $subject);
 
@@ -65,6 +67,28 @@ final class PropertyAttributes
             throw new RuntimeException(
                 "Roma property \"{$subject}\" has both #[Optional] and #[Present]. #[Present] requires the key and "
                 .'#[Optional] allows it to be absent, so remove one of them.'
+            );
+        }
+    }
+
+    /**
+     * @param  list<object>  $attributes
+     */
+    private static function assertNoEmptyKey(array $attributes, string $subject): void
+    {
+        foreach ($attributes as $attribute) {
+            if (self::declaredKey($attribute) !== '') {
+                continue;
+            }
+
+            $name = class_basename($attribute);
+
+            throw new RuntimeException(
+                "Roma property \"{$subject}\" has #[{$name}('')], an empty key. ".match (true) {
+                    $attribute instanceof Key => 'Give a key, or remove #[Key] to use the property name.',
+                    $attribute instanceof ExplicitKeyAttribute => "Give a key, or use #[{$name}] without one to use the property name.",
+                    default => 'Give a key.',
+                }
             );
         }
     }
@@ -162,13 +186,11 @@ final class PropertyAttributes
      */
     public static function declaredKey(object $attribute): ?string
     {
-        $key = match (true) {
+        return match (true) {
             $attribute instanceof KeyAttribute => $attribute->getKey(),
             $attribute instanceof ExplicitKeyAttribute => $attribute->getKey(),
             default => null,
         };
-
-        return $key === '' ? null : $key;
     }
 
     /**
