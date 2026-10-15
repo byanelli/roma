@@ -22,10 +22,13 @@ class ClassMapping
      */
     private array $data;
 
-    private ?ValidationRules $validationRules = null;
+    /**
+     * @var ?list<ValidationRules>
+     */
+    private ?array $validationRules = null;
 
     /**
-     * At the top level `$data` is keyed by root source; a nested object's data is its own slice.
+     * At the top level `$data` is keyed by root source key; a nested object's data is its own slice.
      *
      * @param  array<string, mixed>  $data
      */
@@ -37,16 +40,33 @@ class ClassMapping
     ) {
         $this->data = $data;
 
-        if (! $nested) {
-            $this->addValidationOnlyValuesToData();
-        }
-
         $this->castData();
     }
 
+    /**
+     * Reads only the root sources the class's properties map from.
+     */
     public static function fromPayload(Class_ $class, Payload $payload, DateFactory $dateFactory = new DateFactory): self
     {
-        return new self($class, $payload->data($class), false, $dateFactory);
+        $data = [];
+
+        foreach ($class->rootSources() as $key => $source) {
+            $data[$key] = $source->readFrom($payload);
+        }
+
+        return new self($class, $data, false, $dateFactory);
+    }
+
+    /**
+     * Where the property's value is in `$data`.
+     *
+     * @return list<string>
+     */
+    private function dataPath(Property $property): array
+    {
+        return $this->nested
+            ? $property->getKeySegments()
+            : [$property->getRootSource()->getKey(), ...$property->getKeySegments()];
     }
 
     /**
@@ -75,18 +95,6 @@ class ClassMapping
     }
 
     /**
-     * @return list<Property>
-     */
-    private function getValidationOnlyProperties(): array
-    {
-        return array_values(
-            collect($this->class->properties)
-                ->filter(fn (Property $p) => $p->role == Role::ValidationOnly)
-                ->all()
-        );
-    }
-
-    /**
      * Get an argument list for the constructor of values and/or nested class mappings.
      *
      * @return list<mixed>
@@ -107,7 +115,7 @@ class ClassMapping
     {
         $present = array_filter(
             $this->getClassProperties(),
-            fn (Property $p) => ! $p->optional || $p->default instanceof Missing || $this->dataHas($this->data, $p->getKeySegments()),
+            fn (Property $p) => ! $p->optional || $p->default instanceof Missing || $this->dataHas($this->data, $this->dataPath($p)),
         );
 
         return Arr::mapWithKeys($present, fn (Property $p) => [$p->name => $this->getMappedValue($p)]);
@@ -371,7 +379,7 @@ class ClassMapping
     private function castData(): void
     {
         foreach ($this->class->properties as $property) {
-            [$role, $type, $keySegments] = [$property->role, $property->type, $property->getKeySegments()];
+            [$role, $type, $keySegments] = [$property->role, $property->type, $this->dataPath($property)];
 
             if ($property->isVirtual || $role == Role::ValidationOnly) {
                 continue;
@@ -423,19 +431,6 @@ class ClassMapping
             $type instanceof Types\Mixed_ => $rawValue,
             default => throw new RuntimeException('Unsupported type: '.$type::class),
         };
-    }
-
-    private function addValidationOnlyValuesToData(): void
-    {
-        foreach ($this->getValidationOnlyProperties() as $property) {
-            $keySegments = $property->getKeySegments();
-
-            $this->dataSet(
-                $this->data,
-                [ValidationRules::VALIDATION_ONLY_KEY, ...$keySegments],
-                $this->dataGet($this->data, $keySegments),
-            );
-        }
     }
 
     /**
@@ -512,7 +507,7 @@ class ClassMapping
 
     public function getMappedValue(Property $property): mixed
     {
-        $value = $this->dataGet($this->data, $property->getKeySegments(), $property->default);
+        $value = $this->dataGet($this->data, $this->dataPath($property), $property->default);
 
         // A deferred string value (see castObjectValue) is parsed here, at
         // construction time, now that validation has accepted the raw string.
@@ -622,33 +617,15 @@ class ClassMapping
     }
 
     /**
-     * @return array<string, mixed>
-     */
-    public function rules(): array
-    {
-        return $this->validationRules()->toArray();
-    }
-
-    /**
-     * Client-facing :attribute names, keyed by internal rule key.
+     * The rules for each root source the class maps from, in the order the sources are first used.
      *
-     * @return array<string, string>
+     * @return list<ValidationRules>
      */
-    public function attributeNames(): array
+    public function validationRules(): array
     {
-        return $this->validationRules()->attributeNames();
-    }
-
-    private function validationRules(): ValidationRules
-    {
-        return $this->validationRules ??= new ValidationRules($this->class, $this->toArray());
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function data(): array
-    {
-        return $this->toArray();
+        return $this->validationRules ??= array_values(array_map(
+            fn (RootSource $source) => new ValidationRules($this->class, $source, $this->normalizeValue($this->data[$source->getKey()] ?? null)),
+            $this->class->rootSources(),
+        ));
     }
 }

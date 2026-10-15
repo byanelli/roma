@@ -126,21 +126,21 @@ it('checks the discriminator key against a member that contains its own union', 
 it('builds rules for a class that contains itself only as deep as the data', function () {
     $mapping = app(ObjectMapper::class)->mapping(Thread::class, new ArrayPayload(['title' => 't', 'replies' => [['body' => 'a', 'replies' => [['body' => 'b']]]]]), new ArrayPolicy);
 
-    expect(array_keys($mapping->rules()))->toBe([
-        'data.title',
-        'data.replies',
-        'data.replies.0',
-        'data.replies.0.body',
-        'data.replies.0.likes',
-        'data.replies.0.replies',
-        'data.replies.0.replies.0',
-        'data.replies.0.replies.0.body',
-        'data.replies.0.replies.0.likes',
-        'data.replies.0.replies.0.replies',
-        'data.node',
-        'data.root',
-        'data.root.type',
-        'data.person',
+    expect(array_keys($mapping->validationRules()[0]->toArray()))->toBe([
+        'title',
+        'replies',
+        'replies.0',
+        'replies.0.body',
+        'replies.0.likes',
+        'replies.0.replies',
+        'replies.0.replies.0',
+        'replies.0.replies.0.body',
+        'replies.0.replies.0.likes',
+        'replies.0.replies.0.replies',
+        'node',
+        'root',
+        'root.type',
+        'person',
     ]);
 });
 

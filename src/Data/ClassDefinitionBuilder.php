@@ -6,7 +6,6 @@ use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
-use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
@@ -18,7 +17,6 @@ use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
 use BYanelli\Roma\Serialization\DestinationAttribute;
-use Closure;
 use Illuminate\Http\UploadedFile;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -50,7 +48,7 @@ class ClassDefinitionBuilder
     /**
      * @param  array<int, object>  $attributes
      */
-    private function getSourceFromAttributes(array $attributes): Source
+    private function getSourceFromAttributes(array $attributes): RootSource
     {
         return collect($attributes)
             ->whereInstanceOf(SourceAttribute::class)
@@ -78,17 +76,6 @@ class ClassDefinitionBuilder
         }
 
         return null;
-    }
-
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function getAccessorFromAttributes(array $attributes): ?Closure
-    {
-        return collect($attributes)
-            ->whereInstanceOf(AccessorAttribute::class)
-            ->map(fn (AccessorAttribute $attr) => $attr->getAccessor())
-            ->first();
     }
 
     /**
@@ -236,7 +223,6 @@ class ClassDefinitionBuilder
             role: $this->getRole($obj),
             default: $optional ? $this->getOptionalDefault($obj, $nullable) : $this->getDefault($obj),
             parent: $parent,
-            accessor: $this->getAccessorFromAttributes($attributes) ?: fn () => null,
             rules: $this->getRulesForParameterOrProperty($attributes),
             nullable: $nullable,
             errorKey: $this->getErrorKeyFromAttributes($attributes),
@@ -335,13 +321,45 @@ class ClassDefinitionBuilder
         return null;
     }
 
-    private function assertSourceAllowed(Source $source, string $subject): void
+    private function assertSourceAllowed(RootSource $source, string $subject): void
     {
-        if (! $this->policy->allowsSource($source)) {
+        if (! is_a($this->policy->payloadType(), $source->payloadType(), true)) {
+            $policy = class_basename($this->policy);
+
             throw new RuntimeException(
-                "Roma {$subject} maps from the \"{$source->getKey()}\" source, which "
-                .class_basename($this->policy).' does not allow.'
+                "Roma {$subject} maps from the \"{$source->getKey()}\" source, which {$policy} does not allow: "
+                .'the source reads from '.class_basename($source->payloadType()).", and {$policy} maps from "
+                .class_basename($this->policy->payloadType()).'.'
             );
+        }
+    }
+
+    /**
+     * Two sources under one key would give their properties the same error keys.
+     *
+     * @param  ReflectionClass<object>  $class
+     * @param  list<Property>  $properties
+     */
+    private function assertDistinctSourceKeys(ReflectionClass $class, array $properties): void
+    {
+        $sources = [];
+
+        foreach ($properties as $property) {
+            $source = $property->getRootSource();
+
+            if ($property->isVirtual || ! $source instanceof RootSource) {
+                continue;
+            }
+
+            [$first, $firstProperty] = $sources[$source->getKey()] ??= [$source, $property];
+
+            if (! $first->isSameAs($source)) {
+                throw new RuntimeException(
+                    "Roma class {$class->getShortName()} maps \${$firstProperty->name} and \${$property->name} from two "
+                    ."different sources with the key \"{$source->getKey()}\" (".class_basename($first).' and '
+                    .class_basename($source).'), so their error keys would collide. Give one of the sources another key.'
+                );
+            }
         }
     }
 
@@ -661,13 +679,16 @@ class ClassDefinitionBuilder
     {
         Discriminator::assertNotOnConcreteClass($class);
 
-        return new Class_(
-            class: $class->getName(),
-            properties: [
-                ...$this->getConstructorParameterAndClassProperties($class),
-                ...$this->getValidationOnlyProperties($class),
-            ],
-        );
+        $properties = [
+            ...$this->getConstructorParameterAndClassProperties($class),
+            ...$this->getValidationOnlyProperties($class),
+        ];
+
+        if (! $this->nested) {
+            $this->assertDistinctSourceKeys($class, $properties);
+        }
+
+        return new Class_(class: $class->getName(), properties: $properties);
     }
 
     /**
@@ -697,9 +718,6 @@ class ClassDefinitionBuilder
                 role: Role::ValidationOnly,
                 default: new NoDefault,
                 parent: $attr->getSource(),
-                accessor: ($attr instanceof AccessorAttribute)
-                    ? $attr->getAccessor()
-                    : fn () => null,
                 rules: $attr->getRules(AttributeTarget::Class_),
                 errorKey: ($attr instanceof ErrorKeyAttribute) ? $attr->getErrorKey() : null,
                 rawAttributes: $attributes,

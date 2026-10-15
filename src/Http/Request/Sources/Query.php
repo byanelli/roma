@@ -2,17 +2,20 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
-use BYanelli\Roma\Data\Source;
+use Illuminate\Http\Request;
 
-final readonly class Query extends Source
+final readonly class Query extends RequestSource
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     public function getOwnKey(): string
     {
         return 'query';
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    protected function readRequest(Request $request): array
+    {
+        return $request->query->all();
     }
 }

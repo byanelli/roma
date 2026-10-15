@@ -5,59 +5,38 @@ namespace BYanelli\Roma\Http\Request\Precognition;
 use Illuminate\Http\Request;
 
 /**
- * Narrows a rule set to what a precognitive request should validate.
- * Precognition is a front-end form concern, so only rules for the data a
- * client posts — the input, query, body, and file sources — take part;
- * header, cookie, route-parameter, and request-metadata rules are dropped.
- * When the request names specific fields via Precognition-Validate-Only, the
- * rules are narrowed further to the fields matching those patterns, using the
- * same pattern semantics as Laravel's own filtering
- * (Illuminate\Http\Concerns\CanBePrecognitive).
+ * Narrows the rules of one form-data source to the fields a precognitive request names in
+ * Precognition-Validate-Only, using the same pattern semantics as Laravel's own filtering
+ * (Illuminate\Http\Concerns\CanBePrecognitive). Without the header every rule is kept.
  */
 readonly class PrecognitiveRuleFilter
 {
-    public function __construct(private ClientDataKeys $clientDataKeys = new ClientDataKeys) {}
-
     /**
-     * @param  array<string, mixed>  $rules  keyed as the validator reports
-     *                                       them: wildcards expanded against
-     *                                       the data, literal dots escaped as "\."
+     * @param  string  $prefix  the source's error prefix, e.g. "input"
+     * @param  array<string, mixed>  $rules  keyed relative to the source as the validator
+     *                                       reports them: wildcards expanded against the
+     *                                       data, literal dots escaped as "\."
      * @return array<string, mixed>
      */
-    public function filter(Request $request, array $rules): array
+    public function filter(Request $request, string $prefix, array $rules): array
     {
-        $patterns = $request->headers->has('Precognition-Validate-Only')
-            ? explode(',', (string) $request->header('Precognition-Validate-Only'))
-            : null;
+        if (! $request->headers->has('Precognition-Validate-Only')) {
+            return $rules;
+        }
+
+        $patterns = explode(',', (string) $request->header('Precognition-Validate-Only'));
 
         return array_filter(
             $rules,
-            fn (string|int $key) => $this->included((string) $key, $patterns),
+            function (string|int $key) use ($prefix, $patterns) {
+                $plain = str_replace('\\.', '.', (string) $key);
+
+                // A field matches by either name the client might use: the bare
+                // posted name ("email"), which the official Precognition front-end
+                // helpers send, or Roma's source-prefixed key ("input.email").
+                return $this->matchesAnyPattern([$plain, "{$prefix}.{$plain}"], $patterns);
+            },
             ARRAY_FILTER_USE_KEY,
-        );
-    }
-
-    /**
-     * @param  list<string>|null  $patterns
-     */
-    private function included(string $key, ?array $patterns): bool
-    {
-        $plain = str_replace('\\.', '.', $key);
-
-        if (! $this->clientDataKeys->isClientDataKey($plain)) {
-            return false;
-        }
-
-        if ($patterns === null) {
-            return true;
-        }
-
-        // A field matches by either name the client might use: the bare
-        // posted name ("email"), which the official Precognition front-end
-        // helpers send, or Roma's source-prefixed key ("input.email").
-        return $this->matchesAnyPattern(
-            [$plain, $this->clientDataKeys->stripSourcePrefix($plain)],
-            $patterns,
         );
     }
 

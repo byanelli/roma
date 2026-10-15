@@ -3,7 +3,6 @@
 namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Data\Sources\Property as PropertySource;
-use Closure;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -29,7 +28,6 @@ readonly class Property
         public Role $role,
         mixed $default,
         Source $parent,
-        public Closure $accessor,
         public array $rules,
         public bool $nullable = false,
         ?string $errorKey = null,
@@ -51,7 +49,9 @@ readonly class Property
         // its key is absent, which in turn makes it optional (not required).
         $this->default = ($nullable && $default instanceof NoDefault) ? null : $default;
         $this->isRequired = ! $optional && $this->default instanceof NoDefault;
-        $this->source = new PropertySource($parent, $parent->normalizeKey($key));
+        $this->source = $parent instanceof RootSource && $parent->isSingleValue()
+            ? $parent
+            : new PropertySource($parent, $parent->normalizeKey($key));
 
         // The client-facing name shown in validation errors. Plain fields reuse
         // their source-prefixed path; attributes (headers, accessors) can supply
@@ -65,16 +65,21 @@ readonly class Property
     }
 
     /**
-     * The ordered key segments for this property (source-prefix key segments
-     * plus this property's own key). Each key segment is opaque and may contain a
-     * literal dot; callers doing data access or building rule keys must treat
-     * them one key segment at a time.
+     * The ordered key segments of this property within its root source's data: empty for a
+     * single-value source, else the property's key. Each segment is opaque and may contain a
+     * literal dot, so data access and rule keys must treat them one segment at a time.
      *
      * @return list<string>
      */
     public function getKeySegments(): array
     {
-        return $this->source->getKeySegments();
+        $keySegments = [];
+
+        for ($source = $this->source; $source->parent !== null; $source = $source->parent) {
+            array_unshift($keySegments, $source->getOwnKey());
+        }
+
+        return $keySegments;
     }
 
     /**
@@ -103,9 +108,8 @@ readonly class Property
     }
 
     /**
-     * The root source of this property. Every property's source is a chain of
-     * Sources\Property wrappers (one per nested key segment); the location it
-     * actually reads from is the source at the root of that chain.
+     * The source at the root of this property's source chain: a RootSource for a property of
+     * a top-level class, and Sources\Nested for one of a nested object.
      */
     public function getRootSource(): Source
     {

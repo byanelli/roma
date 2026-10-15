@@ -21,7 +21,7 @@ readonly class Content extends Accessor
         return new String_;
     }
 
-    protected function getFromRequest(Request $request): string
+    public function read(Request $request): string
     {
         return $request->getContent();
     }

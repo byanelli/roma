@@ -3,6 +3,8 @@
 namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Data\Attributes\GuardAttribute;
+use BYanelli\Roma\Validation\ValidationErrors;
+use BYanelli\Roma\Validation\ValidationRules;
 use Closure;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Validation\Factory as ValidatorFactory;
@@ -79,13 +81,22 @@ readonly class ObjectMapper
     }
 
     /**
+     * Validates each root source's data with its own validator and throws the errors of all of them.
+     *
      * @throws MappingValidationException
      */
     public function validateMapping(ClassMapping $mapping): void
     {
-        $attributeNames = $mapping->attributeNames();
+        $errors = new ValidationErrors;
 
-        $this->validate($this->makeValidator($mapping, $attributeNames), $attributeNames, $mapping->getClassName());
+        foreach ($mapping->validationRules() as $rules) {
+            $attributeNames = $rules->attributeNames();
+            $unnamedKey = $rules->prefixedKey(...);
+
+            $errors->add($rules, $this->makeValidator($rules, $attributeNames, $unnamedKey), $attributeNames, $unnamedKey);
+        }
+
+        $errors->throwIfAny($mapping->getClassName());
     }
 
     /**
@@ -103,39 +114,23 @@ readonly class ObjectMapper
     }
 
     /**
-     * @param  array<string, string>  $attributeNames
-     * @param  ?Closure(string): string  $unnamedKey  renames a key with no attribute name, such as an array element's
+     * @param  array<string, string>  $attributeNames  keyed by rule key
+     * @param  Closure(string): string  $unnamedKey  the name of a key with no attribute name, such as an array element's
      */
-    public function makeValidator(ClassMapping $mapping, array $attributeNames, ?Closure $unnamedKey = null): ValidatorContract
+    public function makeValidator(ValidationRules $rules, array $attributeNames, Closure $unnamedKey): ValidatorContract
     {
         $validator = $this->validatorFactory->make(
-            $mapping->data(),
-            $this->resolveRuleClosures($mapping->rules()),
+            $rules->data(),
+            $this->resolveRuleClosures($rules->toArray()),
             [],
             $attributeNames,
         );
 
-        if ($unnamedKey !== null && $validator instanceof Validator) {
+        if ($validator instanceof Validator) {
             $validator->setImplicitAttributesFormatter($unnamedKey);
         }
 
         return $validator;
-    }
-
-    /**
-     * Validate, re-keying any errors from internal source-prefixed keys to client-facing names.
-     *
-     * @param  array<string, string>  $attributeNames
-     * @param  class-string  $className
-     * @param  ?Closure(string): string  $unnamedKey  renames an error key with no attribute name
-     *
-     * @throws MappingValidationException
-     */
-    public function validate(ValidatorContract $validator, array $attributeNames, string $className, ?Closure $unnamedKey = null): void
-    {
-        if ($validator->fails()) {
-            throw new MappingValidationException($className, $this->rekeyErrors($validator->errors()->messages(), $attributeNames, $unnamedKey));
-        }
     }
 
     /**
@@ -220,30 +215,5 @@ readonly class ObjectMapper
                 $this->container->call($method->getClosure($instance));
             }
         }
-    }
-
-    /**
-     * Re-key the error bag from internal source-prefixed keys to the
-     * client-facing names (e.g. "header.x_flag" => "header.X-Flag"). An
-     * array-indexed path expanded by the validator ("input.items.1.code") has
-     * no attribute-name entry, so it goes through `$unnamedKey` instead. Two
-     * fields that share a client-facing name merge their messages.
-     *
-     * @param  array<string, array<int, string>>  $messages
-     * @param  array<string, string>  $attributeNames
-     * @param  ?Closure(string): string  $unnamedKey
-     * @return array<string, list<string>>
-     */
-    private function rekeyErrors(array $messages, array $attributeNames, ?Closure $unnamedKey): array
-    {
-        $errors = [];
-
-        foreach ($messages as $key => $keyMessages) {
-            $name = $attributeNames[$key] ?? ($unnamedKey !== null ? $unnamedKey($key) : $key);
-
-            $errors[$name] = array_merge($errors[$name] ?? [], $keyMessages);
-        }
-
-        return $errors;
     }
 }

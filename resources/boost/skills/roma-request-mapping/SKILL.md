@@ -151,6 +151,9 @@ an explicit list unless the member list changes often.
 
 - **Dynamic rules:** pass a first-class-callable to `#[Rule]`; Roma resolves it through the
   container at validation time (`#[Rule('string', self::maxLength(...))]`).
+- **Cross-field rules** (`required_if:type,card`, `same:password`) use keys relative to the
+  property's source, without the prefix, and see only that source's data. Compare values
+  from different sources in a `#[Guard]`.
 - **Guards:** a `#[Guard]` method runs after validation, resolved through the container
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
 - **Class-level constraints:** apply `#[Ajax]`, `#[ContentType(...)]`, etc. at the class

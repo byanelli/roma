@@ -17,7 +17,12 @@ readonly class ArrayPolicy implements SourcePolicy
         return self::class;
     }
 
-    public function defaultSource(): Source
+    public function payloadType(): string
+    {
+        return ArrayPayload::class;
+    }
+
+    public function defaultSource(): RootSource
     {
         return new Data;
     }
@@ -27,14 +32,9 @@ readonly class ArrayPolicy implements SourcePolicy
         return [];
     }
 
-    public function sourceForType(string $typeName): ?Source
+    public function sourceForType(string $typeName): ?RootSource
     {
         return null;
-    }
-
-    public function allowsSource(Source $source): bool
-    {
-        return $source instanceof Data;
     }
 
     /**

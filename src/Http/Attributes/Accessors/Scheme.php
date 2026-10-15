@@ -19,7 +19,7 @@ readonly class Scheme extends Accessor
         return new String_;
     }
 
-    protected function getFromRequest(Request $request): mixed
+    public function read(Request $request): mixed
     {
         // Symfony exposes the scheme as getScheme(), not scheme().
         return $request->getScheme();

@@ -2,18 +2,8 @@
 
 namespace BYanelli\Roma\Data;
 
-use BYanelli\Roma\Data\Types\Class_;
-
 /**
- * The raw data a class is mapped from.
+ * The raw input a class is mapped from, such as a request. Each root source reads its own
+ * data from it.
  */
-interface Payload
-{
-    /**
-     * The raw values keyed by root source key, e.g. ['input' => [...], 'header' => [...]].
-     * `$class` is the class being mapped, for values that depend on its properties.
-     *
-     * @return array<string, mixed>
-     */
-    public function data(Class_ $class): array;
-}
+interface Payload {}

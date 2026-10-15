@@ -2,19 +2,17 @@
 
 namespace BYanelli\Roma\Http\Attributes;
 
-use BYanelli\Roma\Data\Attributes\AccessorAttribute;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
-use BYanelli\Roma\Data\Source;
-use BYanelli\Roma\Http\Request\Sources\RequestObject_;
-use Closure;
+use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Http\Request\Sources;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
-abstract readonly class Accessor implements AccessorAttribute, ErrorKeyAttribute, KeyAttribute, RulesAttribute, SourceAttribute
+abstract readonly class Accessor implements ErrorKeyAttribute, KeyAttribute, RulesAttribute, SourceAttribute
 {
     public function getKey(): string
     {
@@ -28,19 +26,12 @@ abstract readonly class Accessor implements AccessorAttribute, ErrorKeyAttribute
 
     public function getErrorKey(): string
     {
-        // Request-metadata accessors report under the "request." namespace,
-        // e.g. "request.ajax". Override for a more specific origin.
-        return "{$this->getSource()->getKey()}.{$this->getKey()}";
+        return $this->getSource()->getKey();
     }
 
-    public function getSource(): Source
+    public function getSource(): RootSource
     {
-        return new RequestObject_;
-    }
-
-    public function getAccessor(): Closure
-    {
-        return fn (Request $request) => $this->getFromRequest($request);
+        return new Sources\Accessor($this);
     }
 
     /**
@@ -51,7 +42,7 @@ abstract readonly class Accessor implements AccessorAttribute, ErrorKeyAttribute
         return [];
     }
 
-    protected function getFromRequest(Request $request): mixed
+    public function read(Request $request): mixed
     {
         return $request->{$this->getKey()}();
     }

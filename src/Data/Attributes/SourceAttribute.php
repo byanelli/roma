@@ -2,9 +2,9 @@
 
 namespace BYanelli\Roma\Data\Attributes;
 
-use BYanelli\Roma\Data\Source;
+use BYanelli\Roma\Data\RootSource;
 
 interface SourceAttribute
 {
-    public function getSource(): Source;
+    public function getSource(): RootSource;
 }

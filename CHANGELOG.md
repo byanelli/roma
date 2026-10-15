@@ -4,6 +4,38 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: each source a class maps from reads its own data and is validated by its own
+  Laravel validator. Validation rule keys are relative to the source, so a rule that refers
+  to another field gives its key without the prefix: `#[Rule('required_if:type,card')]`, not
+  `required_if:input.type,card`. Such a rule can't refer to a field of another source; use
+  `#[Guard]` to compare values across sources. Error keys, messages and their order are
+  unchanged (`input.email`, `header.X-Flag`, `request.ip`, "The input.email field is
+  required."), and so are precognitive responses.
+- Breaking: a root source extends `BYanelli\Roma\Data\RootSource`. Its key is the prefix
+  of its error keys, `payloadType()` returns the payload class it reads from, and `read()`
+  returns its data. `Payload` has no `data()` method: `RequestPayload::$request` contains the
+  request and `ArrayPayload::$data` the array. The HTTP sources extend
+  `Http\Request\Sources\RequestSource`, and each accessor, such as `#[Ip]`, is its own
+  `Sources\Accessor` source under `request.ip`, replacing `Sources\RequestObject_`. Only the
+  sources a class uses are read, so a class with only `#[Query]` properties doesn't decode
+  the JSON body. `SourceAttribute::getSource()`, `SourcePolicy::defaultSource()` and
+  `sourceForType()` return a `RootSource`.
+- Breaking: `SourcePolicy::allowsSource()` is replaced by `payloadType()`. A policy allows a
+  source when its payload type is the source's payload type or a subtype of it, and the
+  message for a source it doesn't allow names both payload types.
+- Two different sources with the same key in one class, such as a custom source keyed
+  `query` beside `#[Query]`, throw when the definition is built.
+- Breaking: `AccessorAttribute` and `Property::$accessor` are removed; an accessor attribute's
+  `getFromRequest()` is the public `read()`. `ClassMapping::rules()`, `attributeNames()` and
+  `data()` are replaced by `validationRules()`, a `ValidationRules` per source, which
+  `ObjectMapper::makeValidator()` takes. `ObjectMapper::validate()` and
+  `ValidationRules::VALIDATION_ONLY_KEY` are removed. A class-level constraint such as
+  `#[ContentType('application/json')]` is a rule on its source's validator.
+- Two properties that map from the same key of one source, such as one header, both apply
+  their rules; the later one's rules used to replace the earlier one's, and its name was used
+  in messages. The earlier one's name is used now. A class-level constraint on a header that
+  a property also maps reports its errors in that property's place, and a message both
+  report appears once.
 - JSON Schema: an `array<string, T>` map, which has no value schema, gives its value type in
   its description, after any `#[Description]` text: "Values: Address", "Values: integer",
   "Values: array of string". The error for a file upload says that tool input is JSON, which

@@ -2,17 +2,34 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
-use BYanelli\Roma\Data\Source;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Route;
 
-final readonly class Path extends Source
+final readonly class Path extends RequestSource
 {
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
     public function getOwnKey(): string
     {
         return 'path';
+    }
+
+    /**
+     * The bound route's parameters. A request with no route, or with a route that isn't bound
+     * yet, has none, so a missing parameter is a "required" error.
+     *
+     * @return array<string, mixed>
+     */
+    protected function readRequest(Request $request): array
+    {
+        $route = $request->route();
+
+        if (! $route instanceof Route) {
+            return [];
+        }
+
+        try {
+            return $route->parameters();
+        } catch (\LogicException) {
+            return [];
+        }
     }
 }

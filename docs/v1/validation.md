@@ -49,6 +49,27 @@ readonly class UpdateBioRequest {
 }
 ```
 
+## Rules that refer to other fields
+
+Each source is validated on its own, with keys relative to the source. A rule that refers to
+another field, such as `required_if`, `same` or `gt`, gives that field's key as the client
+sends it, without the source prefix:
+
+```php
+use BYanelli\Roma\Attributes\Rule;
+
+readonly class PaymentRequest {
+    public string $type;
+
+    #[Rule('required_if:type,card')]
+    public ?string $cardNumber = null;
+}
+```
+
+The error key still has the prefix: `input.cardNumber`. A rule only sees the data of its own
+source, so a `#[Query]` property's rule can't refer to an input field or a header. To check
+values from different sources against each other, use a [guard](#guards).
+
 ## Guards
 
 Mark a method `#[Guard]` to run it after validation passes. Guards are called through the

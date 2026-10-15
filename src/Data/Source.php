@@ -18,18 +18,13 @@ abstract readonly class Source
 
     public function getKey(): string
     {
-        $parentKey = $this->parent?->getKey() ?? '';
-
-        return empty($parentKey)
-            ? $this->getOwnKey()
-            : "$parentKey.{$this->getOwnKey()}";
+        return implode('.', $this->getKeySegments());
     }
 
     /**
-     * The ordered key keySegments from the root source down to this one. Each
-     * key segment is an opaque array key and may itself contain a literal dot;
-     * data access must walk these keySegments rather than splitting getKey() on
-     * '.', which would misread a literal dot as structural nesting.
+     * The ordered key segments from the root source down to this one. Each
+     * segment is an opaque array key and may itself contain a literal dot, so
+     * data access must walk the segments rather than split getKey() on '.'.
      *
      * @return list<string>
      */

@@ -2,56 +2,32 @@
 
 namespace BYanelli\Roma\Http\Request\Precognition;
 
-use BYanelli\Roma\Data\Source;
+use BYanelli\Roma\Data\RootSource;
 use BYanelli\Roma\Http\Request\Sources;
 
 /**
- * The keys a client addresses as form data. Input, query, body, and file
- * values are the data a client actually posts, so the client knows them by
- * their bare, source-relative names ("email", not "input.email"). Headers,
- * cookies, route parameters, and request metadata are not form fields; the
- * client only ever sees those under their source-prefixed names.
+ * The sources a client posts as form data. Input, query, body, and file values
+ * are what a client actually posts, so the client knows them by their bare,
+ * source-relative names ("email", not "input.email"). Headers, cookies, route
+ * parameters, and request metadata are not form fields; the client only ever
+ * sees those under their source-prefixed names.
  */
 readonly class ClientDataKeys
 {
-    /**
-     * @var list<string>
-     */
-    private array $roots;
+    private const array SOURCES = [Sources\Input::class, Sources\Query::class, Sources\Body::class, Sources\File::class];
 
-    public function __construct()
+    public function isClientData(RootSource $source): bool
     {
-        $this->roots = array_map(
-            fn (Source $source) => $source->getKey(),
-            [new Sources\Input, new Sources\Query, new Sources\Body, new Sources\File],
-        );
+        return in_array($source::class, self::SOURCES, true);
     }
 
     /**
-     * Whether $plainKey addresses a value the client posts as form data.
+     * The name as the client knows it: "email" for "input.email".
      */
-    public function isClientDataKey(string $plainKey): bool
+    public function stripSourcePrefix(RootSource $source, string $name): string
     {
-        return $this->splitSourcePrefix($plainKey) !== null;
-    }
+        $prefix = $source->getKey().'.';
 
-    /**
-     * The key as the client knows it: the source prefix stripped from a
-     * form-data key; any other key unchanged.
-     */
-    public function stripSourcePrefix(string $plainKey): string
-    {
-        return $this->splitSourcePrefix($plainKey) ?? $plainKey;
-    }
-
-    /**
-     * The source-relative remainder of a form-data key, or null when the key
-     * does not belong to a form-data source.
-     */
-    private function splitSourcePrefix(string $plainKey): ?string
-    {
-        [$root, $rest] = explode('.', $plainKey, 2) + [1 => null];
-
-        return ($rest !== null && in_array($root, $this->roots, true)) ? $rest : null;
+        return str_starts_with($name, $prefix) ? substr($name, strlen($prefix)) : $name;
     }
 }
