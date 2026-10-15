@@ -125,6 +125,7 @@ value belongs:
 * `path.id` — a `#[Path]` property
 * `cookie.session` — a `#[Cookie]` property
 * `request.ajax` — request metadata from an accessor
+* `tenant.plan` — a [custom source](/docs/roma/v1/sources#custom-sources), under its key
 
 Nested fields keep their full path and array elements are indexed (`input.address.city`,
 `input.items.1.code`). The one exception is a [precognitive request](/docs/roma/v1/precognition),

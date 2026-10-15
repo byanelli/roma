@@ -141,6 +141,73 @@ class FileRequest {
 File uploads must be declared on the top-level request class — a `UploadedFile` inside a
 nested object is not supported and throws.
 
+## Custom sources
+
+A source is a class that extends `BYanelli\Roma\Data\RootSource`, used through an attribute
+that implements `SourceAttribute`. This one reads the request attributes, which middleware
+often sets:
+
+```php
+use Attribute;
+use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
+use BYanelli\Roma\Data\Attributes\SourceAttribute;
+use BYanelli\Roma\Data\Payload;
+use BYanelli\Roma\Data\RootSource;
+use BYanelli\Roma\Http\Request\RequestPayload;
+
+final readonly class Tenant extends RootSource
+{
+    public function getOwnKey(): string
+    {
+        return 'tenant';                  // the prefix of its error keys
+    }
+
+    public function payloadType(): string
+    {
+        return RequestPayload::class;
+    }
+
+    /** @param  RequestPayload  $payload */
+    protected function read(Payload $payload): array
+    {
+        return $payload->request->attributes->all();
+    }
+}
+
+#[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
+readonly class FromTenant implements ExplicitKeyAttribute, SourceAttribute
+{
+    public function __construct(public ?string $key = null) {}
+
+    public function getSource(): RootSource
+    {
+        return new Tenant;
+    }
+
+    public function getKey(): ?string
+    {
+        return $this->key;
+    }
+}
+
+readonly class InvoiceRequest {
+    #[FromTenant('tenant_id')]
+    public int $tenantId;                 // from $request->attributes->get('tenant_id')
+
+    #[FromTenant]
+    public string $plan;
+}
+```
+
+`read()` returns the source's values keyed by property key. Roma calls it only for a class
+with a property from the source, and only with an instance of `payloadType()`. A source is
+allowed wherever the payload is of that type, so `Tenant` works in a request, and a class
+that uses it throws under `Mapper::fromArray()`.
+
+The source's data is validated on its own, and its errors are keyed under its key, such as
+`tenant.tenant_id`. Two different sources with the same key in one class throw when the
+class definition is built.
+
 ## Type coercion and enums
 
 Roma coerces string input to the property's declared type, and maps values onto
