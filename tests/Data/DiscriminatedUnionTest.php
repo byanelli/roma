@@ -6,10 +6,8 @@ use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\DiscriminatorValue;
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\JsonSchema\ClassSchema;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
@@ -30,7 +28,7 @@ use Illuminate\Validation\ValidationException;
 
 function mapDiscriminated(string $class, array $data): mixed
 {
-    return app(ObjectMapper::class)->map($class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray($class, $data);
 }
 
 function checkoutData(array $overrides = []): array

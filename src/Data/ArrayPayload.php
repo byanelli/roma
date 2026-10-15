@@ -6,7 +6,9 @@ use BYanelli\Roma\Data\Sources\Data;
 use BYanelli\Roma\Data\Types\Class_;
 
 /**
- * A plain array, mapped with ArrayPolicy.
+ * A plain array, mapped with ArrayPolicy. Use Facades\Mapper::fromArray().
+ *
+ * @internal
  */
 readonly class ArrayPayload implements Payload
 {

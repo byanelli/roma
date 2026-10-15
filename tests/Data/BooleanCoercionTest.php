@@ -2,10 +2,8 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
@@ -23,7 +21,7 @@ readonly class BoolFlag
 
 function mapBool(array $data): BoolFlag
 {
-    return app(ObjectMapper::class)->map(BoolFlag::class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray(BoolFlag::class, $data);
 }
 
 /**

@@ -2,16 +2,14 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 
 function mapKeyed(string $class, array $data): mixed
 {
-    return app(ObjectMapper::class)->map($class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray($class, $data);
 }
 
 /**

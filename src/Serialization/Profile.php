@@ -42,7 +42,7 @@ final readonly class Profile
     }
 
     /**
-     * Output that maps back to an equal object through ObjectMapper, for casts and caches.
+     * Output that maps back to an equal object through Mapper::fromArray(), for casts and caches.
      */
     public static function storage(): self
     {

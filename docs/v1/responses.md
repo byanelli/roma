@@ -231,7 +231,7 @@ use BYanelli\Roma\Serialization\Profile;
 
 Serializer::toArray($object);                      // the body, as a response would send it
 Serializer::serialize($object);                    // body, headers, status, query and path
-Serializer::toArray($object, Profile::storage());  // output ObjectMapper can map back
+Serializer::toArray($object, Profile::storage());  // output Mapper::fromArray() can map back
 ```
 
 A `Profile` sets the enum style, the default date format and which destinations are allowed:

@@ -3,10 +3,8 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\DateFormat;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\IsArrayable;
 use BYanelli\Roma\Serialization\Profile;
@@ -31,7 +29,7 @@ class TestDateFormatted
 
 function mapDateFormatted(array $data): TestDateFormatted
 {
-    return app(ObjectMapper::class)->map(TestDateFormatted::class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray(TestDateFormatted::class, $data);
 }
 
 /**
@@ -165,7 +163,7 @@ it('applies #[DateFormat] to array elements and map values in both directions', 
         'slot' => ['day' => '2024-05-01', 'event' => ['name' => 'Launch', 'at' => '2024-05-01T09:00:00+00:00', 'ends' => '17:00']],
     ];
 
-    $mapped = app(ObjectMapper::class)->map(TestDateCollections::class, new ArrayPayload($data), new ArrayPolicy);
+    $mapped = Mapper::fromArray(TestDateCollections::class, $data);
 
     expect($mapped->days[1]->toDateTimeString())->toBe('2024-03-06 00:00:00')
         ->and($mapped->deadlines['draft']->toDateTimeString())->toBe('2024-04-01 00:00:00')
@@ -174,11 +172,11 @@ it('applies #[DateFormat] to array elements and map values in both directions', 
 });
 
 it('validates a nested object\'s dates with its own formats', function () {
-    $map = fn () => app(ObjectMapper::class)->map(TestDateCollections::class, new ArrayPayload([
+    $map = fn () => Mapper::fromArray(TestDateCollections::class, [
         'days' => ['2024-03-05'],
         'deadlines' => ['draft' => '2024-04-01'],
         'slot' => ['day' => '2024-05-01', 'event' => ['name' => 'Launch', 'at' => '2024-05-01T09:00:00+00:00', 'ends' => '2024-05-01']],
-    ]), new ArrayPolicy);
+    ]);
 
     expect($map)->toThrow(fn (MappingValidationException $e) => expect($e->errors())->toBe([
         'data.slot.event.ends' => ['The data.slot.event.ends field must match the format H:i.'],
@@ -266,7 +264,7 @@ class TestDateFormatOnMixedMap
 it('rejects #[DateFormat] on a type with no date of its own', function (string $class) {
     $message = "Roma property \"{$class}::\$";
 
-    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload([]), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray($class, []))
         ->toThrow(RuntimeException::class, 'has #[DateFormat], but its type is not a date or an array, map or shape of dates')
         ->and(fn () => Serializer::toArray(new $class))
         ->toThrow(RuntimeException::class, $message);
@@ -290,7 +288,7 @@ class TestDateFormatOnDateUnion
 }
 
 it('applies #[DateFormat] to a union with a date', function () {
-    $mapped = app(ObjectMapper::class)->map(TestDateFormatOnDateUnion::class, new ArrayPayload(['at' => 'soon']), new ArrayPolicy);
+    $mapped = Mapper::fromArray(TestDateFormatOnDateUnion::class, ['at' => 'soon']);
 
     expect($mapped->at)->toBe('soon')
         ->and(Serializer::toArray(new TestDateFormatOnDateUnion(new DateTimeImmutable('2024-05-01 09:00:00'))))->toBe(['at' => '2024-05-01']);

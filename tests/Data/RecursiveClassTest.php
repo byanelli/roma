@@ -6,6 +6,7 @@ use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Tests\Support\Recursive\BadEntry;
@@ -23,7 +24,7 @@ use Illuminate\Validation\ValidationException;
 
 function mapRecursive(array $data): Thread
 {
-    return app(ObjectMapper::class)->map(Thread::class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray(Thread::class, $data);
 }
 
 /**
@@ -106,7 +107,7 @@ it('reports errors at depth under concrete, source-prefixed keys', function () {
 });
 
 it('maps a top-level class that contains itself', function () {
-    $map = fn (array $data) => app(ObjectMapper::class)->map(Node::class, new ArrayPayload($data), new ArrayPolicy);
+    $map = fn (array $data) => Mapper::fromArray(Node::class, $data);
 
     expect($map(['name' => 'a', 'parent' => ['name' => 'b', 'parent' => ['name' => 'c']]]))->toEqual(new Node('a', new Node('b', new Node('c'))))
         ->and(recursiveErrors(fn () => $map(['name' => 'a', 'parent' => ['name' => 'b', 'parent' => []]])))
@@ -119,7 +120,7 @@ it('checks the discriminator key against a member that contains its own union', 
         public BadEntry $entry;
     };
 
-    app(ObjectMapper::class)->map($holder::class, new ArrayPayload([]), new ArrayPolicy);
+    Mapper::fromArray($holder::class, []);
 })->throws(RuntimeException::class, 'Roma property "BadFolder::$name" uses the key "name"');
 
 it('builds rules for a class that contains itself only as deep as the data', function () {

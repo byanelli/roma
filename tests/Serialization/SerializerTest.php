@@ -3,9 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\DateFormat;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Attributes\Status;
@@ -277,7 +275,7 @@ it('produces storage output that maps back to an equal object', function () {
 
     $stored = Serializer::toArray($order, Profile::storage());
 
-    expect(app(ObjectMapper::class)->map(StoredOrder::class, new ArrayPayload($stored), new ArrayPolicy))
+    expect(Mapper::fromArray(StoredOrder::class, $stored))
         ->toEqual($order);
 });
 

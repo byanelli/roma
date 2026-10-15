@@ -2,9 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Serialization\Profile;
@@ -68,7 +66,7 @@ it('maps the storage output back to an equal object', function () {
 
     $stored = json_decode(json_encode(Serializer::toArray($checkout, Profile::storage())), true);
 
-    $mapped = app(ObjectMapper::class)->map(Checkout::class, new ArrayPayload($stored), new ArrayPolicy);
+    $mapped = Mapper::fromArray(Checkout::class, $stored);
 
     expect($mapped)->toEqual($checkout);
 });
@@ -76,7 +74,7 @@ it('maps the storage output back to an equal object', function () {
 it('maps the storage output of a minimal object back to an equal object', function () {
     $checkout = new Checkout(new Card('4242'), new Standard(3), new Card('1111'));
 
-    $mapped = app(ObjectMapper::class)->map(Checkout::class, new ArrayPayload(Serializer::toArray($checkout, Profile::storage())), new ArrayPolicy);
+    $mapped = Mapper::fromArray(Checkout::class, Serializer::toArray($checkout, Profile::storage()));
 
     expect($mapped)->toEqual($checkout);
 });

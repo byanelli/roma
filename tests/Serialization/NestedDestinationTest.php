@@ -2,9 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Attributes\Status;
@@ -82,7 +80,7 @@ it('writes the header of the same class at the top level', function () {
 });
 
 it('throws when the definition of a nested object with a header or status is built', function (string $class, string $message) {
-    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload([]), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray($class, []))
         ->toThrow(RuntimeException::class, $message);
 })->with([
     'header' => [TestNestedHeaderTypedResponse::class, 'TestNestedWithHeader::$etag" has #[Header] but is inside a nested object'],

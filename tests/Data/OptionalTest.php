@@ -5,10 +5,8 @@
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Missing;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;
@@ -42,7 +40,7 @@ class TestOptionalProfile
 
 function mapOptional(array $data): TestOptionalProfile
 {
-    return app(ObjectMapper::class)->map(TestOptionalProfile::class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray(TestOptionalProfile::class, $data);
 }
 
 /**
@@ -115,7 +113,7 @@ class TestOptionalWithoutAbsentValue
 }
 
 it('rejects an #[Optional] parameter with no value for when it is absent', function () {
-    expect(fn () => app(ObjectMapper::class)->map(TestOptionalWithoutAbsentValue::class, new ArrayPayload([]), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray(TestOptionalWithoutAbsentValue::class, []))
         ->toThrow(RuntimeException::class, 'Roma parameter "TestOptionalWithoutAbsentValue::$bio" is #[Optional] but has no value for when it is absent. Make it nullable (?string), add Missing to its type (string|Missing), or give it a default.');
 });
 
@@ -186,7 +184,7 @@ class TestMissingTypedWithPresent
 }
 
 it('treats a type with Missing as optional without #[Optional]', function () {
-    $mapped = app(ObjectMapper::class)->map(TestMissingTyped::class, new ArrayPayload(['name' => 'Bill']), new ArrayPolicy);
+    $mapped = Mapper::fromArray(TestMissingTyped::class, ['name' => 'Bill']);
 
     expect($mapped->bio)->toBe(Missing::instance())
         ->and($mapped->card)->toBe(Missing::instance())
@@ -196,7 +194,7 @@ it('treats a type with Missing as optional without #[Optional]', function () {
 });
 
 it('validates a present value of a type with Missing', function () {
-    $map = fn () => app(ObjectMapper::class)->map(TestMissingTyped::class, new ArrayPayload(['name' => 'Bill', 'bio' => 5, 'age' => 'old']), new ArrayPolicy);
+    $map = fn () => Mapper::fromArray(TestMissingTyped::class, ['name' => 'Bill', 'bio' => 5, 'age' => 'old']);
 
     expect($map)->toThrow(fn (MappingValidationException $e) => expect($e->errors())->toEqual([
         'data.bio' => ['The data.bio field must be a string.'],
@@ -205,7 +203,7 @@ it('validates a present value of a type with Missing', function () {
 });
 
 it('rejects #[Present] on a type with Missing', function () {
-    expect(fn () => app(ObjectMapper::class)->map(TestMissingTypedWithPresent::class, new ArrayPayload([]), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray(TestMissingTypedWithPresent::class, []))
         ->toThrow(RuntimeException::class, 'is typed with Missing, which allows the key to be absent, and has #[Present]');
 });
 
@@ -247,7 +245,7 @@ class TestMissingOrNull
 it('rejects a type with nothing but Missing', function (string $class) {
     $message = "Roma property \"{$class}::\$bio\" has no type besides Missing. Add the type of its value, e.g. string|Missing.";
 
-    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload([]), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray($class, []))
         ->toThrow(RuntimeException::class, $message)
         ->and(fn () => Serializer::toArray(new $class(Missing::instance())))
         ->toThrow(RuntimeException::class, $message);

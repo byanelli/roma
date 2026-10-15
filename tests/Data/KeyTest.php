@@ -3,9 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Key;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Body;
 use BYanelli\Roma\Http\Attributes\Header;
@@ -134,7 +132,7 @@ class TestKeyRoundTrip
 it('maps and serializes a renamed property under the same key', function () {
     $data = ['user_id' => 42, 'home.address' => ['street_name' => 'Main St']];
 
-    $mapped = app(ObjectMapper::class)->map(TestKeyRoundTrip::class, new ArrayPayload($data), new ArrayPolicy);
+    $mapped = Mapper::fromArray(TestKeyRoundTrip::class, $data);
 
     expect($mapped->id)->toBe(42)
         ->and($mapped->address->street)->toBe('Main St')

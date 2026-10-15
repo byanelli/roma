@@ -3,10 +3,8 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Rule;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Request\Injection\Request as RomaRequest;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Support\Facades\Route;
@@ -28,7 +26,7 @@ readonly class MappingErrorSignup
 
 function mapSignupArray(array $data): MappingErrorSignup
 {
-    return app(ObjectMapper::class)->map(MappingErrorSignup::class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray(MappingErrorSignup::class, $data);
 }
 
 it('throws MappingValidationException with the errors and class when an array fails validation', function () {

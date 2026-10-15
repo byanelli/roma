@@ -4,12 +4,10 @@
 
 use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Discriminated;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Discovery\DiscriminatedMembers;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\JsonSchema\ClassSchema;
 use BYanelli\Roma\Serialization\Profile;
@@ -60,7 +58,7 @@ function writeAutoCache(array $members): void
  */
 function mapAuto(string $class, array $data): mixed
 {
-    return app(ObjectMapper::class)->map($class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray($class, $data);
 }
 
 beforeEach(function () {

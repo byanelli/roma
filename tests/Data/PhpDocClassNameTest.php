@@ -1,9 +1,7 @@
 <?php
 
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
-use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Data\UnresolvableClassName;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Tests\Support\Discriminated\BankAccount;
 use BYanelli\Roma\Tests\Support\Discriminated\Card;
@@ -26,7 +24,7 @@ use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 
 function mapPhpDocNames(string $class, array $data): mixed
 {
-    return app(ObjectMapper::class)->map($class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray($class, $data);
 }
 
 it('resolves an imported class name', function () {

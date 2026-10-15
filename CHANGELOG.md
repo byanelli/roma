@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `BYanelli\Roma\Facades\Mapper::fromArray($class, $array)` maps a plain array onto a class
+  and throws `MappingValidationException` on invalid data. Its return type is the class, for
+  PHPStan. Its root is `ObjectMapper`, which gains `fromArray()`. `ArrayPayload` and
+  `ArrayPolicy` are `@internal`.
 - `#[AutoDiscriminated]` on a property or parameter throws a message that says it applies
   only to an interface or abstract class and suggests `#[Discriminated([...])]`, in mapping,
   serialization, TypeScript and JSON Schema. PHP used to throw a generic `Error` when the

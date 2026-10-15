@@ -37,7 +37,9 @@ class SearchTool extends Tool
 ```
 
 The schema describes the class as it is mapped from a plain array, so a property with an
-HTTP source attribute such as `#[Query]` throws.
+HTTP source attribute such as `#[Query]` throws. Map the tool's arguments onto the same class
+with `Mapper::fromArray(SearchInput::class, $arguments)` (see
+[Mapping outside a request](/docs/roma/v1/validation#mapping-outside-a-request)).
 
 ## Types
 

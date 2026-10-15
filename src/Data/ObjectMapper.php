@@ -39,6 +39,22 @@ readonly class ObjectMapper
     }
 
     /**
+     * Maps a plain array, such as a tool's arguments or a stored value.
+     *
+     * @template T of object
+     *
+     * @param  class-string<T>  $className
+     * @param  array<array-key, mixed>  $data
+     * @return T
+     *
+     * @throws \ReflectionException|MappingValidationException
+     */
+    public function fromArray(string $className, array $data): object
+    {
+        return $this->map($className, new ArrayPayload($data), new ArrayPolicy);
+    }
+
+    /**
      * The coerced, unvalidated data for `$className`.
      *
      * @param  class-string  $className

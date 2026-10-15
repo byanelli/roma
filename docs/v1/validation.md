@@ -111,25 +111,28 @@ whose errors are keyed by the bare posted field name for front-end form tooling.
 
 ## Mapping outside a request
 
-`ObjectMapper` maps a plain array onto the same classes. A failure there throws
+`Mapper::fromArray()` maps a plain array, such as a tool's arguments, a config array or a
+stored value, onto the same classes. A failure there throws
 `BYanelli\Roma\Data\MappingValidationException`, which Laravel renders as a 500 if nothing
 catches it, so data your code maps during a request, such as a config array, never answers
 the caller with a 422. Its `errors()` are keyed under `data.` and `className()` returns the
 class being mapped:
 
 ```php
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 
 try {
-    $settings = app(ObjectMapper::class)->map(Settings::class, new ArrayPayload($array), new ArrayPolicy);
+    $settings = Mapper::fromArray(Settings::class, $array); // a Settings instance
 } catch (MappingValidationException $e) {
     $e->errors();    // ['data.timeout' => ['The data.timeout field must be an integer.']]
     $e->className(); // Settings::class
 }
 ```
+
+A property with an HTTP source attribute such as `#[Query]`, `#[Header]` or `#[Status]`
+throws, since a plain array has none of them. PHPStan infers the return type from the class
+name.
 
 Request mapping converts it to Laravel's `ValidationException`, so a request still gets a 422.
 

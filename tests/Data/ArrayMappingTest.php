@@ -4,17 +4,15 @@
 
 use BYanelli\Roma\Attributes\Guard;
 use BYanelli\Roma\Attributes\Rule;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Tests\TestCase;
 use Carbon\CarbonImmutable;
 
 /*
-| These tests map plain arrays through the core with ArrayPayload and
-| ArrayPolicy, without an HTTP request.
+| These tests map plain arrays through Mapper::fromArray(), without an
+| HTTP request.
 */
 
 enum ArrayMappedStatus: string
@@ -62,7 +60,7 @@ readonly class ArrayMappedPost
 
 function mapArray(string $class, array $data): mixed
 {
-    return app(ObjectMapper::class)->map($class, new ArrayPayload($data), new ArrayPolicy);
+    return Mapper::fromArray($class, $data);
 }
 
 function validPostData(array $overrides = []): array

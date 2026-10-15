@@ -5,9 +5,7 @@
 use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\ArrayPolicy;
-use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Body;
 use BYanelli\Roma\Http\Attributes\Header;
@@ -36,7 +34,7 @@ class TestOptionalAndPresent
 }
 
 it('rejects attribute combinations with no meaning when the definition is built', function (string $class, string $message) {
-    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload([]), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray($class, []))
         ->toThrow(RuntimeException::class, $message);
 })->with([
     'Status and Key' => [TestStatusWithKey::class, 'has both #[Status] and #[Key], but #[Status] is not written under a key'],
@@ -120,7 +118,7 @@ it('rejects #[Status] on a class mapped from a request or an array', function ()
         ->toThrow(RuntimeException::class, 'TestStatusRequest::$status" has #[Status], which RequestSourcePolicy does not allow: the data it maps from has no status')
         ->and(fn () => new TypeScriptGenerator([TestStatusRequest::class])->generate())
         ->toThrow(RuntimeException::class, 'which RequestSourcePolicy does not allow')
-        ->and(fn () => app(ObjectMapper::class)->map(TestStatusRequest::class, new ArrayPayload(['name' => 'Bill']), new ArrayPolicy))
+        ->and(fn () => Mapper::fromArray(TestStatusRequest::class, ['name' => 'Bill']))
         ->toThrow(RuntimeException::class, 'which ArrayPolicy does not allow');
 });
 
@@ -186,13 +184,13 @@ class TestPresentWithoutDefault
 it('rejects #[Present] on a property with a default value', function (string $class) {
     $message = "Roma property \"{$class}::\$bio\" has #[Present] and a default value, which is never used";
 
-    expect(fn () => app(ObjectMapper::class)->map($class, new ArrayPayload(['bio' => 'x']), new ArrayPolicy))
+    expect(fn () => Mapper::fromArray($class, ['bio' => 'x']))
         ->toThrow(RuntimeException::class, $message)
         ->and(fn () => Serializer::toArray(new $class))->toThrow(RuntimeException::class, $message);
 })->with([TestPresentWithDefaultParameter::class, TestPresentWithDefaultProperty::class]);
 
 it('allows #[Present] on a property without a default', function () {
-    $mapped = app(ObjectMapper::class)->map(TestPresentWithoutDefault::class, new ArrayPayload(['bio' => null]), new ArrayPolicy);
+    $mapped = Mapper::fromArray(TestPresentWithoutDefault::class, ['bio' => null]);
 
     expect($mapped->bio)->toBeNull()
         ->and(Serializer::toArray($mapped))->toBe(['bio' => null]);
