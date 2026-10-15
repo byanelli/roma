@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Data\Sources\Data;
+use BYanelli\Roma\Serialization\Destination;
 
 /**
  * Maps every property from the plain array of an ArrayPayload.
@@ -32,5 +33,13 @@ readonly class ArrayPolicy implements SourcePolicy
     public function allowsSource(Source $source): bool
     {
         return $source instanceof Data;
+    }
+
+    /**
+     * A plain array has no headers or status.
+     */
+    public function allowsDestination(Destination $destination): bool
+    {
+        return false;
     }
 }

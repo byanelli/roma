@@ -2,6 +2,8 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Serialization\Destination;
+
 /**
  * The sources available in one mapping context, such as an HTTP request, and
  * the rules for placing a property in one of them.
@@ -31,4 +33,10 @@ interface SourcePolicy
     public function sourceForType(string $typeName): ?Source;
 
     public function allowsSource(Source $source): bool;
+
+    /**
+     * Whether a top-level property may have a destination attribute, such as #[Status], for
+     * this destination.
+     */
+    public function allowsDestination(Destination $destination): bool;
 }

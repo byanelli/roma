@@ -65,7 +65,7 @@ class Serializer
             match ($property->destination) {
                 Destination::Body => $body[$key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated),
                 Destination::Header => $headers[$key] = $this->headerValue($value, $dateFormat),
-                Destination::Status => $status = (int) $value,
+                Destination::Status => $status = $value,
                 Destination::Query => $query[$key] = $this->queryValue($this->normalizeValue($value, $profile, $dateFormat, $property->discriminated), $profile),
                 Destination::Path => $path[$key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated),
             };
@@ -344,6 +344,7 @@ class Serializer
             $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
             $attributes = $this->checkedAttributes($property);
             PropertyAttributes::assertCombinable($attributes, $subject);
+            PropertyAttributes::assertStatusType($attributes, $property->getType(), $subject);
 
             if ($property->isVirtual()) {
                 PropertyAttributes::assertAllowedOnVirtual($attributes, $subject);

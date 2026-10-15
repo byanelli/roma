@@ -4,6 +4,13 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `#[Status]` on a property not typed `int`, including `?int`, `int|Missing` and an
+  untyped property, throws when the definition is built and when serializing. The serializer
+  used to cast the value with `(int)`. A status that is usually the same takes a default.
+- Breaking: `#[Status]` on a class mapped from a request or a plain array throws when the
+  definition is built. `SourcePolicy::allowsDestination()` decides which destination
+  attributes a mapped class may have; `RequestSourcePolicy` allows `#[Header]` only.
+  TypeScript generation builds response classes with its own policy, which allows both.
 - `#[Rule]`, `#[Present]` or a source attribute such as `#[Query]` or an accessor on a virtual
   (hooked, backing-less) property throws when the definition is built and when serializing,
   since the property is never mapped. `#[Key]`, `#[Header]`, `#[DateFormat]` and

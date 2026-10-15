@@ -143,16 +143,14 @@ readonly class TypeScriptGenerator
      */
     private function collectInterfaces(): array
     {
-        // Response classes use the request policy as well; response
-        // interfaces don't depend on sources.
-        $policy = new RequestSourcePolicy;
-        $phpClassDefinitionBuilder = new PhpClassDefinitionBuilder($policy);
+        $requestDefinitions = new PhpClassDefinitionBuilder(new RequestSourcePolicy);
+        $responseDefinitions = new PhpClassDefinitionBuilder(new ResponseDefinitionPolicy);
         $tsInterfaceBuilder = new InterfaceBuilder;
 
         $interfaces = [];
 
         foreach ($this->requests as $request) {
-            $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($request);
+            $phpClass = $requestDefinitions->buildClassDefinition($request);
 
             foreach ($phpClass->properties as $property) {
                 $tsInterfaceBuilder->assertBucketAttribute($request, $property, $property->getRootSource() instanceof Sources\Input);
@@ -170,7 +168,7 @@ readonly class TypeScriptGenerator
         }
 
         foreach ($this->responses as $response) {
-            $phpClass = $phpClassDefinitionBuilder->buildClassDefinition($response);
+            $phpClass = $responseDefinitions->buildClassDefinition($response);
 
             foreach ($phpClass->properties as $property) {
                 $tsInterfaceBuilder->assertBucketAttribute($response, $property, false);

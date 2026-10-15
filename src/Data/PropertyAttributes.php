@@ -8,7 +8,10 @@ use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
+use BYanelli\Roma\Serialization\Destination;
 use BYanelli\Roma\Serialization\DestinationAttribute;
+use ReflectionNamedType;
+use ReflectionType;
 use RuntimeException;
 
 /**
@@ -62,6 +65,28 @@ final class PropertyAttributes
             throw new RuntimeException(
                 "Roma property \"{$subject}\" has both #[Optional] and #[Present]. #[Present] requires the key and "
                 .'#[Optional] allows it to be absent, so remove one of them.'
+            );
+        }
+    }
+
+    /**
+     * A status is always written, so its property is a plain int. A status that varies takes a
+     * default, such as 200, instead of null or Missing.
+     *
+     * @param  list<object>  $attributes
+     */
+    public static function assertStatusType(array $attributes, ?ReflectionType $type, string $subject): void
+    {
+        $destination = self::first($attributes, DestinationAttribute::class);
+
+        if ($destination?->destination() !== Destination::Status) {
+            return;
+        }
+
+        if (! $type instanceof ReflectionNamedType || $type->getName() !== 'int' || $type->allowsNull()) {
+            throw new RuntimeException(
+                "Roma property \"{$subject}\" has #[".class_basename($destination).'], so its type must be int'
+                .($type !== null ? ", not {$type}" : '').'. For a status that is usually the same, give the property a default such as 200.'
             );
         }
     }

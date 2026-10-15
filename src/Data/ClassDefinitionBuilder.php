@@ -17,6 +17,7 @@ use BYanelli\Roma\Data\Sources\Nested;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
+use BYanelli\Roma\Serialization\DestinationAttribute;
 use Closure;
 use Illuminate\Http\UploadedFile;
 use ReflectionAttribute;
@@ -192,12 +193,14 @@ class ClassDefinitionBuilder
         }
 
         PropertyAttributes::assertCombinable($attributes, $this->subject($obj));
+        PropertyAttributes::assertStatusType($attributes, $obj->getType(), $this->subject($obj));
 
         if ($this->nested) {
             $parent = new Nested;
         } else {
             $parent = $typeSource ?? $this->getSourceFromAttributes($attributes);
             $this->assertSourceAllowed($parent, "property \"{$declaringClass}::\${$obj->getName()}\"");
+            $this->assertDestinationAllowed($attributes, $this->subject($obj));
         }
 
         $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
@@ -322,6 +325,21 @@ class ClassDefinitionBuilder
                 "Roma {$subject} maps from the \"{$source->getKey()}\" source, which "
                 .class_basename($this->policy).' does not allow.'
             );
+        }
+    }
+
+    /**
+     * @param  list<object>  $attributes
+     */
+    private function assertDestinationAllowed(array $attributes, string $subject): void
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof DestinationAttribute && ! $this->policy->allowsDestination($destination = $attribute->destination())) {
+                throw new RuntimeException(
+                    "Roma property \"{$subject}\" has #[".class_basename($attribute).'], which '.class_basename($this->policy)
+                    .' does not allow: the data it maps from has no '.strtolower($destination->name).'. Remove the attribute.'
+                );
+            }
         }
     }
 

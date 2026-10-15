@@ -7,9 +7,9 @@ use BYanelli\Roma\Serialization\Destination;
 use BYanelli\Roma\Serialization\DestinationAttribute;
 
 /**
- * Marks the property whose value is the HTTP status code of the JSON response.
+ * Marks the int property whose value is the HTTP status code of the JSON response.
  * That property is lifted out of the serialized body. Without it, the response
- * defaults to 200.
+ * defaults to 200. A request has no status, so a class mapped from one can't use it.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class Status implements DestinationAttribute

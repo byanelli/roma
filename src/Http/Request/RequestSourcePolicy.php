@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Http\Request;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Http\Enums\HasRequestSource;
+use BYanelli\Roma\Serialization\Destination;
 use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 
@@ -50,5 +51,13 @@ readonly class RequestSourcePolicy implements SourcePolicy
             Sources\Path::class,
             Sources\RequestObject_::class,
         ], true);
+    }
+
+    /**
+     * A #[Header] property maps from a request header. A request has no status.
+     */
+    public function allowsDestination(Destination $destination): bool
+    {
+        return $destination === Destination::Header;
     }
 }
