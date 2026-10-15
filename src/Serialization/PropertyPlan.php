@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Serialization;
 
+use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\Type;
 use ReflectionProperty;
 
@@ -19,6 +20,7 @@ final readonly class PropertyPlan
      */
     public function __construct(
         public ReflectionProperty $reflection,
+        public AttributesCollection $attributes,
         public string $key,
         public Destination $destination,
         public ?string $dateFormat,

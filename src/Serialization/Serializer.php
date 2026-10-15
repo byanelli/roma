@@ -6,9 +6,10 @@ use BackedEnum;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\PhpDocTypeParser;
-use BYanelli\Roma\Data\PropertyAttributes;
+use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Type;
 use BYanelli\Roma\Data\Types;
 use BYanelli\Roma\Data\UnresolvableClassName;
@@ -17,11 +18,9 @@ use DateTimeInterface;
 use Generator;
 use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
-use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
 use ReflectionNamedType;
-use ReflectionParameter;
 use ReflectionProperty;
 use ReflectionUnionType;
 use RuntimeException;
@@ -35,6 +34,11 @@ use UnitEnum;
  */
 class Serializer
 {
+    /**
+     * Other attributes are left uninstantiated, since their classes may not be loadable.
+     */
+    private const array ATTRIBUTES = [...AttributesCollection::CHECKED, DateFormat::class, Discriminated::class];
+
     public function __construct(private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser) {}
 
     /**
@@ -120,12 +124,7 @@ class Serializer
     {
         foreach ($this->plan($object::class) as $property) {
             if ($property->destination !== Destination::Body) {
-                $reflection = $property->reflection;
-
-                throw PropertyAttributes::topLevelOnly(
-                    $reflection->getAttributes(DestinationAttribute::class, ReflectionAttribute::IS_INSTANCEOF)[0]->getName(),
-                    $reflection->getDeclaringClass()->getShortName().'::$'.$reflection->getName(),
-                );
+                $property->attributes->assertAllowedInNestedObject();
             }
         }
     }
@@ -343,34 +342,33 @@ class Serializer
                 continue;
             }
 
-            $printableName = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
-            PropertyAttributes::assertNotClassOnly($property->getAttributes(), $printableName);
-            $attributes = $this->checkedAttributes($property);
-            PropertyAttributes::assertCombinable($attributes, $printableName);
-            PropertyAttributes::assertStatusType($attributes, $property->getType(), $printableName);
-            PropertyAttributes::assertPresentWithoutDefault($attributes, $this->hasDefault($property), $printableName);
+            $prop = new ReflectionParamOrProperty($property, instantiate: self::ATTRIBUTES);
+            $attributes = $prop->attributes;
+            $attributes->assertCombinable();
+            $attributes->assertStatusType();
+            $attributes->assertPresentWithoutDefault();
 
-            if ($property->isVirtual()) {
-                PropertyAttributes::assertAllowedOnVirtual($attributes, $printableName);
+            if ($prop->isVirtual) {
+                $attributes->assertAllowedOnVirtual();
             }
 
-            Missing::assertNotAlone($property->getType(), $printableName);
+            Missing::assertNotAlone($prop->type, $prop->printableName);
 
-            $destination = $this->attribute($property, DestinationAttribute::class);
-            $key = PropertyAttributes::explicitKey($attributes);
-            $dateFormat = $this->attribute($property, DateFormat::class)?->format;
+            $destination = $attributes->destinationAttribute();
+            $dateFormat = $attributes->dateFormat();
 
-            if ($dateFormat !== null && ! $this->hasDate($property)) {
-                throw PropertyAttributes::dateFormatWithoutDate($printableName);
+            if ($dateFormat !== null && ! $this->hasDate($prop)) {
+                throw $attributes->dateFormatWithoutDate();
             }
 
             $plan[] = new PropertyPlan(
                 reflection: $property,
-                key: $destination?->destinationKey() ?? $key ?? $property->getName(),
+                attributes: $attributes,
+                key: $destination?->destinationKey() ?? $attributes->explicitKey() ?? $prop->name,
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $dateFormat,
-                optional: $this->attribute($property, Optional::class) !== null || Missing::isInType($property->getType()),
-                discriminated: $this->discriminatedType($property),
+                optional: $attributes->hasInstanceOf(Optional::class) || $prop->acceptsMissing,
+                discriminated: $this->discriminatedType($prop),
             );
         }
 
@@ -380,9 +378,9 @@ class Serializer
     /**
      * Whether the declared type allows a date, or an array whose PHPDoc type contains one.
      */
-    private function hasDate(ReflectionProperty $property): bool
+    private function hasDate(ReflectionParamOrProperty $prop): bool
     {
-        $type = $property->getType();
+        $type = $prop->type;
 
         $names = match (true) {
             $type instanceof ReflectionNamedType => [$type->getName()],
@@ -395,7 +393,7 @@ class Serializer
                 return true;
             }
 
-            if ($name === 'array' && $this->arrayHasDate($property)) {
+            if ($name === 'array' && $this->arrayHasDate($prop)) {
                 return true;
             }
         }
@@ -403,11 +401,11 @@ class Serializer
         return false;
     }
 
-    private function arrayHasDate(ReflectionProperty $property): bool
+    private function arrayHasDate(ReflectionParamOrProperty $prop): bool
     {
         try {
             $type = $this->phpDocTypeParser->getArrayType(
-                $this->documentedProperty($property),
+                $prop->documented,
                 fn (array $names): Type => array_any($names, fn (string $name) => is_a($name, DateTimeInterface::class, true))
                     ? new Types\Date
                     : new Types\String_,
@@ -426,11 +424,12 @@ class Serializer
      * interface without #[Discriminated] or an undocumented array is serialized without
      * a discriminator rather than rejected.
      */
-    private function discriminatedType(ReflectionProperty $property): ?Type
+    private function discriminatedType(ReflectionParamOrProperty $prop): ?Type
     {
-        $attribute = $this->attribute($property, Discriminated::class);
-        $declared = $property->getType();
-        $printableName = class_basename($property->getDeclaringClass()->getName()).'::$'.$property->getName();
+        $attribute = $prop->attributes->discriminated();
+        $declared = $prop->type;
+        // For an anonymous class, class_basename() gives the file and line, unlike $prop->printableName.
+        $printableName = class_basename($prop->declaringClass?->getName() ?? '').'::$'.$prop->name;
 
         if ($declared instanceof ReflectionUnionType) {
             $names = array_values(array_filter(
@@ -454,7 +453,7 @@ class Serializer
 
         try {
             $type = $this->phpDocTypeParser->getArrayType(
-                $this->documentedProperty($property),
+                $prop->documented,
                 function (array $names) use ($attribute, $printableName, &$error, &$found): Type {
                     try {
                         $value = $this->discriminatedValue($names, $attribute, $printableName);
@@ -522,67 +521,5 @@ class Serializer
 
         /** @var list<class-string> $names */
         return $names;
-    }
-
-    /**
-     * A promoted property's default is the constructor parameter's.
-     */
-    private function hasDefault(ReflectionProperty $property): bool
-    {
-        $documented = $this->documentedProperty($property);
-
-        return $documented instanceof ReflectionParameter ? $documented->isDefaultValueAvailable() : $documented->hasDefaultValue();
-    }
-
-    /**
-     * A promoted property's PHPDoc is the constructor's @param tag.
-     */
-    private function documentedProperty(ReflectionProperty $property): ReflectionProperty|ReflectionParameter
-    {
-        if (! $property->isPromoted()) {
-            return $property;
-        }
-
-        foreach ($property->getDeclaringClass()->getConstructor()?->getParameters() ?? [] as $parameter) {
-            if ($parameter->getName() === $property->getName()) {
-                return $parameter;
-            }
-        }
-
-        return $property;
-    }
-
-    /**
-     * Instances of the attributes PropertyAttributes checks. Other attributes are left
-     * uninstantiated, since their classes may not be loadable.
-     *
-     * @return list<object>
-     */
-    private function checkedAttributes(ReflectionProperty $property): array
-    {
-        $attributes = [];
-
-        foreach ($property->getAttributes() as $attribute) {
-            foreach (PropertyAttributes::CHECKED as $class) {
-                if (is_a($attribute->getName(), $class, true)) {
-                    $attributes[] = $attribute->newInstance();
-
-                    break;
-                }
-            }
-        }
-
-        return $attributes;
-    }
-
-    /**
-     * @template T of object
-     *
-     * @param  class-string<T>  $class
-     * @return ?T
-     */
-    private function attribute(ReflectionProperty $property, string $class): ?object
-    {
-        return ($property->getAttributes($class, ReflectionAttribute::IS_INSTANCEOF)[0] ?? null)?->newInstance();
     }
 }
