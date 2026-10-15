@@ -53,7 +53,7 @@ with `Mapper::fromArray(SearchInput::class, $arguments)` (see
 | a unit enum                            | `enum` of its case names                             |
 | a class                                | `object`                                             |
 | `list<T>`, `array<T>`, `array<int, T>` | `array` with `items`                                 |
-| `array<string, T>`                     | `object` with no `properties`                        |
+| `array<string, T>`                     | `object`, with the value type in the description     |
 | `array{a: int, b?: string}`            | `object` with `properties`                           |
 | a discriminated union                  | `anyOf`, one `object` per member                     |
 | `mixed` or no type                     | every JSON type                                      |
@@ -122,9 +122,12 @@ schema. The mapper still enforces them when it validates the input.
 These follow from what Laravel's `JsonSchema` types support:
 
 - A map such as `array<string, int>` is an `object` with no schema for its values, since
-  `ObjectType` can only set `additionalProperties` to `false`.
+  `ObjectType` can only set `additionalProperties` to `false`. Its description gives the value
+  type instead, after any `#[Description]` text: "Values: integer", "Values: Address" or
+  "Values: array of string". Scalars use JSON type names and classes their short names.
 - A class that contains itself, such as `list<Comment>` in `Comment`, throws, since there is
   no `$ref` to refer back to it.
-- A file upload throws, since JSON can't carry one.
+- A file upload throws, since MCP and AI tool arguments are JSON, which can't carry an
+  uploaded file.
 - A `regex` is passed through as written after the delimiters are removed, so PHP-only syntax
   such as `\A` or possessive quantifiers isn't converted.

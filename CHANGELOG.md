@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- JSON Schema: an `array<string, T>` map, which has no value schema, gives its value type in
+  its description, after any `#[Description]` text: "Values: Address", "Values: integer",
+  "Values: array of string". The error for a file upload says that tool input is JSON, which
+  can't carry an uploaded file, and a map of file uploads throws too.
 - `BYanelli\Roma\Facades\Mapper::fromArray($class, $array)` maps a plain array onto a class
   and throws `MappingValidationException` on invalid data. Its return type is the class, for
   PHPStan. Its root is `ObjectMapper`, which gains `fromArray()`. `ArrayPayload` and

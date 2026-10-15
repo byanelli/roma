@@ -130,6 +130,10 @@ final readonly class ClassSchema
             return $this->rules->dateFormat($description !== null ? $schema->description($description) : $schema, $type->format);
         }
 
+        if ($type instanceof Types\Array_ && $type->keyType instanceof Types\String_ && ($values = $this->typeName($type->memberType)) !== null) {
+            $description = ($description !== null ? rtrim($description, '. ').'. ' : '')."Values: {$values}";
+        }
+
         $schema = match (true) {
             $type instanceof Types\String_ => new Schema\StringType,
             $type instanceof Types\Integer => new Schema\IntegerType,
@@ -141,13 +145,44 @@ final readonly class ClassSchema
             $type instanceof Types\Array_ => $this->arrayOf($type, $ancestors),
             $type instanceof Types\Shape => $this->shapeOf($type, $ancestors),
             $type instanceof Types\Union => $this->unionOf($type, $ancestors),
-            $type instanceof Types\File => throw new RuntimeException(
-                "Roma can't build a JSON Schema for {$this->root}: it contains a file upload, which JSON can't carry."
-            ),
+            $type instanceof Types\File => throw $this->fileUpload(),
             default => new Schema\UnionType(Schema\UnionType::SUPPORTED),
         };
 
         return $description !== null ? $schema->description($description) : $schema;
+    }
+
+    private function fileUpload(): RuntimeException
+    {
+        return new RuntimeException(
+            "Roma can't build a JSON Schema for {$this->root}: it contains a file upload. A schema describes MCP or AI "
+            .'tool input, whose arguments are JSON, and JSON can\'t carry an uploaded file.'
+        );
+    }
+
+    /**
+     * A readable name for the values of a map, which have no schema: a class's short name or a
+     * JSON type. Null for mixed.
+     */
+    private function typeName(Type $type): ?string
+    {
+        return match (true) {
+            $type instanceof Types\String_, $type instanceof Class_ && $type->parsesStringValue() => 'string',
+            $type instanceof Types\Integer => 'integer',
+            $type instanceof Types\Float_ => 'number',
+            $type instanceof Types\Boolean => 'boolean',
+            $type instanceof Types\Date => 'date',
+            $type instanceof Types\Enum => class_basename($type->class),
+            $type instanceof Class_ => class_basename($type->class),
+            $type instanceof Types\Shape => 'object',
+            $type instanceof Types\Array_ => ($type->keyType instanceof Types\String_ ? 'map' : 'array')
+                .(($values = $this->typeName($type->memberType)) !== null ? " of {$values}" : ''),
+            $type instanceof Types\Union => $type->contract !== null
+                ? class_basename($type->contract)
+                : implode(' | ', array_map(fn (Class_ $member) => class_basename($member->class), $type->members)),
+            $type instanceof Types\File => throw $this->fileUpload(),
+            default => null,
+        };
     }
 
     /**
@@ -171,7 +206,7 @@ final readonly class ClassSchema
 
     /**
      * A map with string keys is an object whose values have no schema, since Laravel's
-     * ObjectType only supports `additionalProperties: false`.
+     * ObjectType only supports `additionalProperties: false`. Its description gives the value type.
      *
      * @param  array<class-string, true>  $ancestors
      */

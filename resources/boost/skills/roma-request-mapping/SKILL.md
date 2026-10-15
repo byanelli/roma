@@ -197,7 +197,8 @@ returns one `ObjectType`. Required/nullable/defaults follow mapping, `#[Descript
 `description`, discriminated unions become `anyOf`, and `#[Rule]`s such as `max`, `in`,
 `email` and `regex` add keywords; other rules are still enforced when mapping. A class that
 contains itself, a file upload or an HTTP source attribute throws. `array<string, T>` maps
-are an `object` without a value schema. Map the tool's arguments with
+are an `object` without a value schema; the description gives the value type
+("Values: Address"). Map the tool's arguments with
 `Mapper::fromArray(SearchInput::class, $arguments)`, which throws
 `MappingValidationException` on invalid input.
 

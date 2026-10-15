@@ -214,7 +214,7 @@ it('maps arrays, maps, shapes and nested objects', function () {
     expect(schemaProperties(SchemaCollections::class))->toBe([
         'tags' => ['items' => ['type' => 'string'], 'type' => 'array'],
         'scores' => ['items' => ['type' => 'integer'], 'type' => 'array'],
-        'counts' => ['type' => 'object'],
+        'counts' => ['description' => 'Values: integer', 'type' => 'object'],
         'names' => ['items' => ['type' => 'string'], 'type' => 'array'],
         'price' => [
             'properties' => [
@@ -246,7 +246,7 @@ it('marks required, nullable and default values', function () {
             'tint' => ['default' => 'green', 'enum' => ['red', 'green'], 'type' => 'string'],
             'size' => ['default' => 'Large', 'enum' => ['Small', 'Large'], 'type' => 'string'],
             'ids' => ['default' => [1, 2], 'items' => ['type' => 'integer'], 'type' => 'array'],
-            'counts' => ['type' => 'object'],
+            'counts' => ['description' => 'Values: integer', 'type' => 'object'],
             'ratio' => ['default' => 0.5, 'type' => 'number'],
         ]);
 });
@@ -315,9 +315,65 @@ it('throws for a class that contains itself', function (string $class) {
         ->toThrow(RuntimeException::class, 'contains itself');
 })->with([Comment::class, Thread::class]);
 
-it('throws for a file upload', function () {
-    expect(fn () => ClassSchema::object(SchemaFile::class))
-        ->toThrow(RuntimeException::class, 'file upload');
+readonly class SchemaFileMap
+{
+    /**
+     * @param  array<string, UploadedFile>  $uploads
+     */
+    public function __construct(public array $uploads) {}
+}
+
+it('throws for a file upload', function (string $class) {
+    expect(fn () => ClassSchema::object($class))->toThrow(
+        RuntimeException::class,
+        "Roma can't build a JSON Schema for {$class}: it contains a file upload. A schema describes MCP or AI tool input, "
+        ."whose arguments are JSON, and JSON can't carry an uploaded file.",
+    );
+})->with([SchemaFile::class, SchemaFileMap::class]);
+
+readonly class SchemaMaps
+{
+    /**
+     * @param  array<string, SchemaAddress>  $addresses
+     * @param  array<string, float>  $prices
+     * @param  array<string, list<int>>  $series
+     * @param  array<string, array<string, bool>>  $flags
+     * @param  array<string, SchemaColor>  $colors
+     * @param  array<string, DateTimeImmutable>  $dates
+     * @param  array<string, array{a: int}>  $shapes
+     * @param  array<string, PaymentMethod>  $methods
+     * @param  array<string, Card|Voucher>  $refunds
+     * @param  array<string, mixed>  $extra
+     */
+    public function __construct(
+        public array $addresses,
+        #[Description('Prices by date.')] public array $prices,
+        public array $series,
+        public array $flags,
+        public array $colors,
+        public array $dates,
+        public array $shapes,
+        public array $methods,
+        #[Discriminated([Card::class, Voucher::class])] public array $refunds,
+        public array $extra,
+    ) {}
+}
+
+it('describes the value type of a map', function () {
+    $descriptions = array_map(fn (array $schema) => $schema['description'] ?? null, schemaProperties(SchemaMaps::class));
+
+    expect($descriptions)->toBe([
+        'addresses' => 'Values: SchemaAddress',
+        'prices' => 'Prices by date. Values: number',
+        'series' => 'Values: array of integer',
+        'flags' => 'Values: map of boolean',
+        'colors' => 'Values: SchemaColor',
+        'dates' => 'Values: date',
+        'shapes' => 'Values: object',
+        'methods' => 'Values: PaymentMethod',
+        'refunds' => 'Values: Card | Voucher',
+        'extra' => null,
+    ]);
 });
 
 it('rejects an HTTP source', function () {
