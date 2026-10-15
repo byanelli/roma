@@ -35,8 +35,9 @@ readonly class SearchRequest {
 ### Renaming a key
 
 A source attribute takes the key as its argument, and `#[Key]` sets it within whichever
-source the property reads from. The serializer writes a property under its `#[Key]` too, so
-an object mapped from input serializes back to the same keys:
+source the property reads from. The serializer writes a property under the same key, whether
+it comes from `#[Key]` or from a source attribute such as `#[Query('page_num')]`, so an object
+mapped from input serializes back to the same keys:
 
 ```php
 use BYanelli\Roma\Attributes\Key;

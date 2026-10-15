@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: the key given to a source attribute, as in `#[Query('page_num')]`,
+  `#[Body('display.name')]` or `#[Input('sort_by')]`, is also the key the serializer writes,
+  so a request class serializes back to its own keys. It used to write the property name.
 - Breaking: `#[DateFormat]` applies only to the property's own value: a date, or the dates in
   an array, map or shape. When serializing, a nested object's dates use its own formats,
   including a nested object with its own `toArray()`, an `Arrayable` or a `stdClass`, which

@@ -66,7 +66,8 @@ key. The value must be one of the union's classes.
 ## Rename a key with `#[Key]`
 
 A property serializes under its PHP name unless it has `#[Key]`. It is the same attribute
-that sets a key when mapping input, so a class used both ways reads and writes the same key:
+that sets a key when mapping input, so a class used both ways reads and writes the same key.
+A key given to a source attribute, such as `#[Query('page_num')]`, is also written:
 
 ```php
 use BYanelli\Roma\Attributes\Key;

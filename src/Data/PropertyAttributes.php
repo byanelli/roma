@@ -112,6 +112,23 @@ final class PropertyAttributes
     }
 
     /**
+     * The key from #[Key] or a source attribute such as #[Query('x')], which applies when
+     * mapping and when serializing.
+     *
+     * @param  list<object>  $attributes
+     */
+    public static function explicitKey(array $attributes): ?string
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute instanceof ExplicitKeyAttribute && ($key = self::declaredKey($attribute)) !== null) {
+                return $key;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @template T of object
      *
      * @param  list<object>  $attributes

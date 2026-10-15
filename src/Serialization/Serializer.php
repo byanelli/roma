@@ -5,7 +5,6 @@ namespace BYanelli\Roma\Serialization;
 use BackedEnum;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
-use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\PhpDocTypeParser;
@@ -343,11 +342,12 @@ class Serializer
             }
 
             $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
-            PropertyAttributes::assertCombinable($this->checkedAttributes($property), $subject);
+            $attributes = $this->checkedAttributes($property);
+            PropertyAttributes::assertCombinable($attributes, $subject);
             Missing::assertNotAlone($property->getType(), $subject);
 
             $destination = $this->attribute($property, DestinationAttribute::class);
-            $key = $this->attribute($property, Key::class)?->key;
+            $key = PropertyAttributes::explicitKey($attributes);
             $dateFormat = $this->attribute($property, DateFormat::class)?->format;
 
             if ($dateFormat !== null && ! $this->mayHoldDate($property)) {

@@ -7,6 +7,7 @@ use BYanelli\Roma\Data\ArrayPayload;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Serializer;
+use BYanelli\Roma\Http\Attributes\Body;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Attributes\Input;
 use BYanelli\Roma\Http\Attributes\Query;
@@ -80,6 +81,36 @@ class TestResponseHeaderAndKey
     #[Header('X-Foo'), Key('foo')]
     public string $foo = 'bar';
 }
+
+class TestBodyAndKey
+{
+    #[Body('a'), Key('b')]
+    public string $value = 'v';
+}
+
+it('rejects a source key with #[Key] when serializing', function () {
+    expect(fn () => Serializer::toArray(new TestBodyAndKey))
+        ->toThrow(RuntimeException::class, 'gets a key from both #[Body] and #[Key]');
+});
+
+readonly class TestSourceKeyRoundTrip
+{
+    public function __construct(
+        #[Query('page_num')] public int $page,
+        #[Body('display.name')] public string $name,
+        #[Input('sort_by')] public string $sort,
+        #[Query] public bool $draft,
+    ) {}
+}
+
+it('serializes a property under the key from its source attribute', function () {
+    /** @var TestCase $this */
+    $this->setRequest(query: ['page_num' => '2', 'sort_by' => 'date', 'draft' => '1'], headers: ['Content-Type' => 'application/json'], json: ['display.name' => 'Bill']);
+
+    $request = $this->mapRequest(TestSourceKeyRoundTrip::class);
+
+    expect(Serializer::toArray($request))->toBe(['page_num' => 2, 'display.name' => 'Bill', 'sort_by' => 'date', 'draft' => true]);
+});
 
 it('rejects #[Key] on a response header', function () {
     expect(fn () => Serializer::toArray(new TestResponseHeaderAndKey))

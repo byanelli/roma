@@ -122,9 +122,10 @@ its location from the parent — **source attributes and metadata enums are top-
 declaring one on a nested property throws. Use `#[Key]` to override a nested key, e.g. one
 containing a literal dot; on a top-level property it sets the key within the source
 (`#[Key('page_num')]` reads `input.page_num`). A property may get its key from only one
-attribute, so `#[Query('a')]` with `#[Key('b')]` throws. A nested class may contain itself (`list<Comment>`
-in `Comment`, `?Node $parent`); its rules are built from the data, and errors keep full
-keys such as `input.replies.0.replies.1.body`.
+attribute, so `#[Query('a')]` with `#[Key('b')]` throws. The serializer writes the property
+under the same key, from `#[Key]` or a source attribute. A nested class may contain itself
+(`list<Comment>` in `Comment`, `?Node $parent`); its rules are built from the data, and
+errors keep full keys such as `input.replies.0.replies.1.body`.
 
 A property that can be one of several classes is a discriminated union: type it as an
 interface, an abstract class or a native union, and list the classes with
