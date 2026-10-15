@@ -346,7 +346,7 @@ class Serializer
             $attributes = $prop->attributes;
             $attributes->assertCombinable();
             $attributes->assertStatusType();
-            $attributes->assertPresentWithoutDefault();
+            $attributes->assertNoPresentWithDefault();
 
             if ($prop->isVirtual) {
                 $attributes->assertAllowedOnVirtual();

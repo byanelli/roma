@@ -228,7 +228,7 @@ final class AttributesCollection extends Collection
     /**
      * #[Present] requires the key, so a default would never be used.
      */
-    public function assertPresentWithoutDefault(): void
+    public function assertNoPresentWithDefault(): void
     {
         if ($this->property->hasDefault && $this->hasInstanceOf(Present::class)) {
             throw new RuntimeException(
@@ -238,7 +238,7 @@ final class AttributesCollection extends Collection
         }
     }
 
-    public function assertPresentWithoutMissing(): void
+    public function assertNoPresentWithMissing(): void
     {
         if ($this->property->acceptsMissing && $this->hasInstanceOf(Present::class)) {
             throw new RuntimeException(

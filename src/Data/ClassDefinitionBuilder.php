@@ -51,8 +51,8 @@ class ClassDefinitionBuilder
         $source = $this->nested ? null : $this->topLevelSource($prop, $attributes);
 
         Missing::assertNotAlone($prop->type, $prop->printableName);
-        $attributes->assertPresentWithoutMissing();
-        $attributes->assertPresentWithoutDefault();
+        $attributes->assertNoPresentWithMissing();
+        $attributes->assertNoPresentWithDefault();
 
         $type = $this->propertyType($prop, $attributes);
         $key = $attributes->declaredKey() ?: $prop->name;
