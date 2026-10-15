@@ -10,6 +10,11 @@ namespace BYanelli\Roma\Data;
  */
 final readonly class KeyPath
 {
+    public static function empty(): self
+    {
+        return new self([]);
+    }
+
     /**
      * @param  list<string>  $segments
      */

@@ -4,7 +4,6 @@ namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
-use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
@@ -47,14 +46,15 @@ class ClassDefinitionBuilder
     {
         $prop = new ReflectionParamOrProperty($obj, $this->policy);
 
-        $attributes = $this->checkedAttributes($prop);
-        $source = $this->nested ? null : $this->topLevelSource($prop, $attributes);
+        $this->checkAttributes($prop);
+
+        $attributes = $prop->attributes;
 
         Missing::assertNotAlone($prop->type, $prop->printableName);
-        $attributes->assertNoPresentWithMissing();
-        $attributes->assertNoPresentWithDefault();
 
-        $type = $this->propertyType($prop, $attributes);
+        $source = $this->nested ? null : $this->topLevelSource($prop);
+
+        $type = $this->propertyType($prop);
         $key = $attributes->declaredKey() ?: $prop->name;
         $optional = $prop->acceptsMissing || $attributes->hasInstanceOf(Optional::class);
 
@@ -79,7 +79,7 @@ class ClassDefinitionBuilder
     /**
      * Checks where the attributes may appear and how they combine.
      */
-    private function checkedAttributes(ReflectionParamOrProperty $prop): AttributesCollection
+    private function checkAttributes(ReflectionParamOrProperty $prop): void
     {
         $attributes = $prop->attributes;
         $typeSource = $prop->typeSource;
@@ -103,9 +103,11 @@ class ClassDefinitionBuilder
         }
 
         $attributes->assertCombinable();
+
         $attributes->assertStatusType();
 
-        return $attributes;
+        $attributes->assertNoPresentWithMissing();
+        $attributes->assertNoPresentWithDefault();
     }
 
     /**
@@ -139,18 +141,19 @@ class ClassDefinitionBuilder
     /**
      * Also checks the destination attribute against the policy.
      */
-    private function topLevelSource(ReflectionParamOrProperty $prop, AttributesCollection $attributes): Source
+    private function topLevelSource(ReflectionParamOrProperty $prop): Source
     {
-        $source = $prop->typeSource ?? $attributes->source() ?? $this->policy->defaultSource();
+        $source = $prop->typeSource ?? $prop->attributes->source() ?? $this->policy->defaultSource();
 
         $this->assertSourceAllowed($source, "property \"{$prop->printableName}\"");
-        $this->assertDestinationAllowed($prop, $attributes);
+        $this->assertDestinationAllowed($prop);
 
         return $source;
     }
 
-    private function propertyType(ReflectionParamOrProperty $prop, AttributesCollection $attributes): Type
+    private function propertyType(ReflectionParamOrProperty $prop): Type
     {
+        $attributes = $prop->attributes;
         $type = $this->buildType($prop, $attributes->discriminated());
         $dateFormat = $attributes->dateFormat();
 
@@ -161,9 +164,6 @@ class ClassDefinitionBuilder
         return $this->withDateFormat($type, $dateFormat);
     }
 
-    /**
-     * A single-value source's property is the whole value, so its key path is empty.
-     */
     private function keyPath(?Source $source, string $key, string $name): KeyPath
     {
         // '*' is Laravel's array wildcard and can't be escaped in a rule key.
@@ -173,7 +173,8 @@ class ClassDefinitionBuilder
 
         return match (true) {
             $source === null => new KeyPath([$key]),
-            $source->isSingleValue() => new KeyPath,
+            // A single-value source's property is the whole value, so its key path is empty.
+            $source->isSingleValue() => KeyPath::empty(),
             default => new KeyPath([$source->normalizeKey($key)]),
         };
     }
@@ -272,9 +273,9 @@ class ClassDefinitionBuilder
         }
     }
 
-    private function assertDestinationAllowed(ReflectionParamOrProperty $prop, AttributesCollection $attributes): void
+    private function assertDestinationAllowed(ReflectionParamOrProperty $prop): void
     {
-        $attribute = $attributes->destinationAttribute();
+        $attribute = $prop->attributes->destinationAttribute();
 
         if ($attribute !== null && ! $this->policy->allowsDestination($destination = $attribute->destination())) {
             throw new RuntimeException(
