@@ -15,7 +15,7 @@ readonly class Property
      * object, so the object's definition is the same wherever it appears.
      *
      * @param  array<int, mixed>  $rules
-     * @param  list<object>  $rawAttributes
+     * @param  array<int, object>  $rawAttributes
      */
     public function __construct(
         public string $name,

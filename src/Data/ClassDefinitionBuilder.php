@@ -2,20 +2,19 @@
 
 namespace BYanelli\Roma\Data;
 
-use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
-use BYanelli\Roma\Attributes\Present;
+use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
+use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
-use BYanelli\Roma\Serialization\DestinationAttribute;
 use Illuminate\Http\UploadedFile;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -44,112 +43,82 @@ class ClassDefinitionBuilder
         private readonly bool $nested = false,
     ) {}
 
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function getSourceFromAttributes(array $attributes): Source
-    {
-        return collect($attributes)
-            ->whereInstanceOf(SourceAttribute::class)
-            ->map(fn (SourceAttribute $attr) => $attr->getSource())
-            ->first() ?: $this->policy->defaultSource();
-    }
-
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function hasSourceAttribute(array $attributes): bool
-    {
-        return collect($attributes)->whereInstanceOf(SourceAttribute::class)->isNotEmpty();
-    }
-
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function getKeyFromAttributes(array $attributes): ?string
-    {
-        foreach ($attributes as $attribute) {
-            if (($key = PropertyAttributes::declaredKey($attribute)) !== null) {
-                return $key;
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function getErrorKeyFromAttributes(array $attributes): ?string
-    {
-        return collect($attributes)
-            ->whereInstanceOf(ErrorKeyAttribute::class)
-            ->map(fn (ErrorKeyAttribute $attr) => $attr->getErrorKey())
-            ->first();
-    }
-
-    private function getDefault(ReflectionParameter|ReflectionProperty $obj): mixed
-    {
-        return $obj instanceof ReflectionParameter
-            ? ($obj->isOptional() ? $obj->getDefaultValue() : new NoDefault)
-            : ($obj->hasDefaultValue() ? $obj->getDefaultValue() : new NoDefault);
-    }
-
-    /**
-     * @param  array<int, object>  $attributes
-     * @return array<int, mixed>
-     */
-    private function getRulesForParameterOrProperty(array $attributes): array
-    {
-        return collect($attributes)
-            ->whereInstanceOf(RulesAttribute::class)
-            ->flatMap(function (RulesAttribute $attr) {
-                return $attr->getRules(AttributeTarget::Property);
-            })
-            ->all();
-    }
-
-    /**
-     * @param  array<int, ReflectionAttribute<object>>  $attributes
-     * @return list<object>
-     */
-    private function getAttributeInstances(array $attributes): array
-    {
-        return array_values(array_map(
-            fn (ReflectionAttribute $attr) => $attr->newInstance(),
-            $attributes,
-        ));
-    }
-
     private function getFromReflectionParameterOrProperty(ReflectionParameter|ReflectionProperty $obj): Property
     {
-        PropertyAttributes::assertNotClassOnly($obj->getAttributes(), $this->printableName($obj));
-        $attributes = $this->getAttributeInstances($obj->getAttributes());
+        $prop = new ReflectionParamOrProperty($obj, $this->policy);
 
-        $typeName = $this->declaredTypeName($obj);
-        $declaringClass = $obj->getDeclaringClass()?->getShortName() ?? '';
+        $attributes = $this->checkedAttributes($prop);
+        $source = $this->nested ? null : $this->topLevelSource($prop, $attributes);
 
-        $typeAttributes = $typeName !== null ? $this->policy->attributesForType($typeName) : [];
-        $typeSource = $typeName !== null ? $this->policy->sourceForType($typeName) : null;
+        Missing::assertNotAlone($prop->type, $prop->printableName);
+        $attributes->assertPresentWithoutMissing();
+        $attributes->assertPresentWithoutDefault();
 
-        $isVirtual = $obj instanceof ReflectionProperty && $obj->isVirtual();
+        $type = $this->propertyType($prop, $attributes);
+        $key = $attributes->declaredKey() ?: $prop->name;
+        $optional = $prop->acceptsMissing || $attributes->hasInstanceOf(Optional::class);
 
-        if ($isVirtual) {
-            PropertyAttributes::assertAllowedOnVirtual($attributes, $this->printableName($obj));
+        return new Property(
+            name: $prop->name,
+            keyPath: $this->keyPath($source, $key, $prop->name),
+            wireKey: $attributes->wireKey() ?: $key,
+            type: $type,
+            role: $prop->role,
+            default: $optional ? $prop->optionalDefault() : $prop->default,
+            source: $source,
+            rules: $attributes->rules(),
+            nullable: $prop->nullable,
+            errorKey: $attributes->errorKey(),
+            rawAttributes: $attributes->all(),
+            // The mapper, validator and request TypeScript skip a virtual property.
+            isVirtual: $prop->isVirtual,
+            optional: $optional,
+        );
+    }
+
+    /**
+     * Checks where the attributes may appear and how they combine.
+     */
+    private function checkedAttributes(ReflectionParamOrProperty $prop): AttributesCollection
+    {
+        $attributes = $prop->attributes;
+        $typeSource = $prop->typeSource;
+
+        if ($prop->isVirtual) {
+            $attributes->assertAllowedOnVirtual();
         }
 
         if ($this->nested) {
-            PropertyAttributes::assertAllowedInNestedObject($attributes, $this->printableName($obj));
+            $attributes->assertAllowedInNestedObject();
+            $this->assertNoSourceInNestedObject($prop);
         }
 
-        // A nested object always inherits its location from the parent, so a
-        // property inside one cannot declare its own source: it would silently
-        // relocate the property and fail validation as "required". To override
-        // a nested property's key (e.g. a literal dotted key) use #[Key] instead.
-        if ($this->nested
-            && ($this->hasSourceAttribute($attributes) || $this->hasSourceAttribute($typeAttributes))) {
+        $sourceAttribute = $attributes->sourceAttribute();
+
+        if ($typeSource !== null && $sourceAttribute !== null) {
             throw new RuntimeException(
-                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested object and "
+                "Roma property \"{$prop->printableName}\" is typed as {$prop->typeName}, which always maps from the "
+                ."\"{$typeSource->getKey()}\" source, so #[".class_basename($sourceAttribute).'] has no effect. Remove it.'
+            );
+        }
+
+        $attributes->assertCombinable();
+        $attributes->assertStatusType();
+
+        return $attributes;
+    }
+
+    /**
+     * A nested object always inherits its location from the parent, so a property inside one
+     * can't declare its own source, which would relocate it and fail validation as "required".
+     */
+    private function assertNoSourceInNestedObject(ReflectionParamOrProperty $prop): void
+    {
+        $typeSource = $prop->typeSource;
+
+        if ($prop->attributes->sourceAttribute() !== null) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" is inside a nested object and "
                 .'cannot declare its own source; source attributes and types that imply a source are only '
                 .'available on top-level classes. To override a nested property\'s key (e.g. a key containing '
                 .'a literal dot) use #[Key] instead.'
@@ -158,78 +127,38 @@ class ClassDefinitionBuilder
 
         // A type-implied source would replace the parent's key path, so the
         // property would receive the whole slice of its parent's data.
-        if ($this->nested && $typeSource !== null) {
+        if ($typeSource !== null) {
             throw new RuntimeException(
-                "Roma property \"{$declaringClass}::\${$obj->getName()}\" is inside a nested object, but its "
-                ."type {$typeName} always maps from the \"{$typeSource->getKey()}\" source, which is not supported "
+                "Roma property \"{$prop->printableName}\" is inside a nested object, but its "
+                ."type {$prop->typeName} always maps from the \"{$typeSource->getKey()}\" source, which is not supported "
                 .'there; declare the property on the top-level class.'
             );
         }
+    }
 
-        $sourceAttribute = collect($attributes)->whereInstanceOf(SourceAttribute::class)->first();
+    /**
+     * Also checks the destination attribute against the policy.
+     */
+    private function topLevelSource(ReflectionParamOrProperty $prop, AttributesCollection $attributes): Source
+    {
+        $source = $prop->typeSource ?? $attributes->source() ?? $this->policy->defaultSource();
 
-        if ($typeSource !== null && $sourceAttribute !== null) {
-            throw new RuntimeException(
-                "Roma property \"{$this->printableName($obj)}\" is typed as {$typeName}, which always maps from the "
-                ."\"{$typeSource->getKey()}\" source, so #[".class_basename($sourceAttribute).'] has no effect. Remove it.'
-            );
+        $this->assertSourceAllowed($source, "property \"{$prop->printableName}\"");
+        $this->assertDestinationAllowed($prop, $attributes);
+
+        return $source;
+    }
+
+    private function propertyType(ReflectionParamOrProperty $prop, AttributesCollection $attributes): Type
+    {
+        $type = $this->buildType($prop, $attributes->discriminated());
+        $dateFormat = $attributes->dateFormat();
+
+        if ($dateFormat !== null && ! Types\Date::isIn($type) && ! $prop->isUnionWithDate) {
+            throw $attributes->dateFormatWithoutDate();
         }
 
-        if (! $this->hasSourceAttribute($attributes)) {
-            $attributes = [...$attributes, ...$typeAttributes];
-        }
-
-        PropertyAttributes::assertCombinable($attributes, $this->printableName($obj));
-        PropertyAttributes::assertStatusType($attributes, $obj->getType(), $this->printableName($obj));
-
-        if ($this->nested) {
-            $source = null;
-        } else {
-            $source = $typeSource ?? $this->getSourceFromAttributes($attributes);
-            $this->assertSourceAllowed($source, "property \"{$declaringClass}::\${$obj->getName()}\"");
-            $this->assertDestinationAllowed($attributes, $this->printableName($obj));
-        }
-
-        $key = $this->getKeyFromAttributes($attributes) ?: $obj->getName();
-
-        Missing::assertNotAlone($obj->getType(), $this->printableName($obj));
-        $acceptsMissing = Missing::isInType($obj->getType());
-        $optional = $acceptsMissing || collect($attributes)->contains(fn (object $attr) => $attr instanceof Optional);
-
-        if ($acceptsMissing && collect($attributes)->contains(fn (object $attr) => $attr instanceof Present)) {
-            throw new RuntimeException(
-                "Roma property \"{$this->printableName($obj)}\" is typed with Missing, which allows the key to be absent, "
-                .'and has #[Present], which requires it. Remove one of them.'
-            );
-        }
-
-        PropertyAttributes::assertPresentWithoutDefault($attributes, ! $this->getDefault($obj) instanceof NoDefault, $this->printableName($obj));
-
-        $nullable = $obj->getType()?->allowsNull() ?? true;
-
-        $type = $this->getTypeFromReflectionObject($obj, $this->getDiscriminated($attributes));
-        $dateFormat = collect($attributes)->whereInstanceOf(DateFormat::class)->first()?->format;
-
-        if ($dateFormat !== null && ! Types\Date::isIn($type) && ! $this->isUnionWithDate($obj)) {
-            throw PropertyAttributes::dateFormatWithoutDate($this->printableName($obj));
-        }
-
-        return new Property(
-            name: $obj->getName(),
-            keyPath: $this->keyPath($source, $key, $obj->getName()),
-            wireKey: $this->getWireKey($attributes) ?: $key,
-            type: $this->withDateFormat($type, $dateFormat),
-            role: $this->getRole($obj),
-            default: $optional ? $this->getOptionalDefault($obj, $nullable) : $this->getDefault($obj),
-            source: $source,
-            rules: $this->getRulesForParameterOrProperty($attributes),
-            nullable: $nullable,
-            errorKey: $this->getErrorKeyFromAttributes($attributes),
-            rawAttributes: $attributes,
-            // The mapper, validator and request TypeScript skip a virtual property.
-            isVirtual: $isVirtual,
-            optional: $optional,
-        );
+        return $this->withDateFormat($type, $dateFormat);
     }
 
     /**
@@ -250,62 +179,6 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * An absent optional property takes its default, else Missing when its type allows it. A
-     * parameter then takes null; a property is left unset, so it needs none.
-     */
-    private function getOptionalDefault(ReflectionParameter|ReflectionProperty $obj, bool $nullable): mixed
-    {
-        $default = $this->getDefault($obj);
-
-        if (! $default instanceof NoDefault) {
-            return $default;
-        }
-
-        if (Missing::isInType($obj->getType())) {
-            return Missing::instance();
-        }
-
-        if (! $obj instanceof ReflectionParameter || $nullable) {
-            return $default;
-        }
-
-        throw new RuntimeException(
-            "Roma parameter \"{$this->printableName($obj)}\" is #[Optional] but has no value for when it is absent. "
-            .'Make it nullable (?string), add Missing to its type (string|Missing), or give it a default.'
-        );
-    }
-
-    /**
-     * The declared type's name, ignoring null and Missing, or null when there isn't exactly one.
-     */
-    private function declaredTypeName(ReflectionParameter|ReflectionProperty $obj): ?string
-    {
-        $type = $obj->getType();
-
-        if ($type instanceof ReflectionNamedType) {
-            return $type->getName();
-        }
-
-        $names = $type instanceof ReflectionUnionType ? $this->unionMemberNames($type) : [];
-
-        return count($names) === 1 ? $names[0] : null;
-    }
-
-    /**
-     * Whether the declared type is a union with a date member, such as `DateTimeImmutable|string`,
-     * which is mapped as mixed and serialized with the format.
-     */
-    private function isUnionWithDate(ReflectionParameter|ReflectionProperty $obj): bool
-    {
-        $type = $obj->getType();
-
-        return $type instanceof ReflectionUnionType && array_any(
-            $type->getTypes(),
-            fn ($member) => $member instanceof ReflectionNamedType && is_a($member->getName(), \DateTimeInterface::class, true),
-        );
-    }
-
-    /**
      * Applies #[DateFormat] to a date, or to the dates in an array or shape. A nested object's
      * dates keep their own formats.
      */
@@ -321,20 +194,6 @@ class ClassDefinitionBuilder
             ),
             default => $type,
         };
-    }
-
-    /**
-     * @param  list<object>  $attributes
-     */
-    private function getWireKey(array $attributes): ?string
-    {
-        foreach ($attributes as $attribute) {
-            if ($attribute instanceof WireKeyAttribute) {
-                return $attribute->getWireKey();
-            }
-        }
-
-        return null;
     }
 
     private function assertSourceAllowed(Source $source, string $description): void
@@ -413,18 +272,15 @@ class ClassDefinitionBuilder
         }
     }
 
-    /**
-     * @param  list<object>  $attributes
-     */
-    private function assertDestinationAllowed(array $attributes, string $printableName): void
+    private function assertDestinationAllowed(ReflectionParamOrProperty $prop, AttributesCollection $attributes): void
     {
-        foreach ($attributes as $attribute) {
-            if ($attribute instanceof DestinationAttribute && ! $this->policy->allowsDestination($destination = $attribute->destination())) {
-                throw new RuntimeException(
-                    "Roma property \"{$printableName}\" has #[".class_basename($attribute).'], which '.class_basename($this->policy)
-                    .' does not allow: the data it maps from has no '.strtolower($destination->name).'. Remove the attribute.'
-                );
-            }
+        $attribute = $attributes->destinationAttribute();
+
+        if ($attribute !== null && ! $this->policy->allowsDestination($destination = $attribute->destination())) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[".class_basename($attribute).'], which '.class_basename($this->policy)
+                .' does not allow: the data it maps from has no '.strtolower($destination->name).'. Remove the attribute.'
+            );
         }
     }
 
@@ -468,13 +324,6 @@ class ClassDefinitionBuilder
         return $result;
     }
 
-    private function getRole(ReflectionParameter|ReflectionProperty $obj): Role
-    {
-        return ($obj instanceof ReflectionParameter)
-            ? Role::Constructor
-            : Role::Property;
-    }
-
     /**
      * @param  ReflectionClass<object>  $class
      * @return list<Property>
@@ -487,29 +336,21 @@ class ClassDefinitionBuilder
         ];
     }
 
-    /**
-     * @param  array<int, object>  $attributes
-     */
-    private function getDiscriminated(array $attributes): ?Discriminated
-    {
-        return collect($attributes)->whereInstanceOf(Discriminated::class)->first();
-    }
-
     private function getArrayType(
-        ReflectionParameter|ReflectionProperty $obj,
+        ReflectionParamOrProperty $prop,
         ?Discriminated $discriminated,
     ): Types\Array_|Types\Shape {
         return $this->phpDocTypeParser->getArrayType(
-            $obj,
+            $prop->documented,
             fn (array $names) => count($names) === 1
-                ? $this->getTypeByName($obj, $names[0], $discriminated)
-                : $this->getUnionType($obj, $names, $discriminated)
+                ? $this->getTypeByName($prop, $names[0], $discriminated)
+                : $this->getUnionType($prop, $names, $discriminated)
                     ?? throw new RuntimeException('Unsupported array element type: '.implode('|', $names)),
         );
     }
 
     private function getTypeByName(
-        ReflectionParameter|ReflectionProperty $obj,
+        ReflectionParamOrProperty $prop,
         string $name,
         ?Discriminated $discriminated = null,
     ): Type {
@@ -519,14 +360,14 @@ class ClassDefinitionBuilder
             'bool' => new Types\Boolean,
             'float' => new Types\Float_,
             'mixed' => new Mixed_,
-            'array' => $this->getArrayType($obj, $discriminated),
+            'array' => $this->getArrayType($prop, $discriminated),
             UploadedFile::class, SymfonyUploadedFile::class => new Types\File,
             default => match (true) {
                 // Any DateTimeInterface implementor is a date. The bare interface
                 // has no concrete target class; a concrete class carries its own.
                 is_a($name, \DateTimeInterface::class, true) => new Types\Date(interface_exists($name) ? null : $name),
                 enum_exists($name) => new Types\Enum($name),
-                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => $this->getContractType($obj, $name, $discriminated),
+                interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => $this->getContractType($prop, $name, $discriminated),
                 class_exists($name) => $this->nestedBuilder()->buildClassDefinition($name),
                 default => throw new RuntimeException("Unsupported type $name"),
             },
@@ -542,18 +383,18 @@ class ClassDefinitionBuilder
      * @param  class-string  $contract
      */
     private function getContractType(
-        ReflectionParameter|ReflectionProperty $obj,
+        ReflectionParamOrProperty $prop,
         string $contract,
         ?Discriminated $discriminated,
     ): Types\Union {
         if ($discriminated !== null) {
-            $discriminator = Discriminator::fromAttribute($discriminated, $this->printableName($obj), $contract);
+            $discriminator = Discriminator::fromAttribute($discriminated, $prop->printableName, $contract);
 
             return $this->buildUnion($discriminator, null);
         }
 
         $classLevel = Discriminator::ofContract($contract) ?? throw new RuntimeException(
-            "Roma property \"{$this->printableName($obj)}\" is typed as {$contract}, an interface or abstract class. "
+            "Roma property \"{$prop->printableName}\" is typed as {$contract}, an interface or abstract class. "
             ."Add #[Discriminated] or #[AutoDiscriminated] to {$contract}, add #[Discriminated] to the property, "
             .'or type the property with a concrete class.'
         );
@@ -568,7 +409,7 @@ class ClassDefinitionBuilder
      * @param  list<string>  $names
      */
     private function getUnionType(
-        ReflectionParameter|ReflectionProperty $obj,
+        ReflectionParamOrProperty $prop,
         array $names,
         ?Discriminated $discriminated,
     ): ?Types\Union {
@@ -583,11 +424,11 @@ class ClassDefinitionBuilder
         }
 
         $discriminated ??= throw new RuntimeException(
-            "Roma property \"{$this->printableName($obj)}\" is typed as the union ".implode('|', $names).'. '
+            "Roma property \"{$prop->printableName}\" is typed as the union ".implode('|', $names).'. '
             .'Add #[Discriminated(['.implode(', ', array_map(fn (string $c) => class_basename($c).'::class', $names)).'])] to the property.'
         );
 
-        return $this->buildUnion(Discriminator::fromAttribute($discriminated, $this->printableName($obj), union: $classes), null);
+        return $this->buildUnion(Discriminator::fromAttribute($discriminated, $prop->printableName, union: $classes), null);
     }
 
     /**
@@ -628,26 +469,19 @@ class ClassDefinitionBuilder
         return new Types\Union($discriminator->key, $members, $contract);
     }
 
-    private function printableName(ReflectionParameter|ReflectionProperty $obj): string
+    private function buildType(ReflectionParamOrProperty $prop, ?Discriminated $discriminated): Type
     {
-        return ($obj->getDeclaringClass()?->getShortName() ?? '').'::$'.$obj->getName();
-    }
-
-    public function getTypeFromReflectionObject(
-        ReflectionParameter|ReflectionProperty $obj,
-        ?Discriminated $discriminated = null,
-    ): Type {
-        $declared = $obj->getType();
+        $declared = $prop->type;
 
         $type = match (true) {
-            $declared instanceof ReflectionNamedType => $this->getTypeByName($obj, $declared->getName(), $discriminated),
-            $declared instanceof ReflectionUnionType => $this->getUnionMembersType($obj, $this->unionMemberNames($declared), $discriminated),
+            $declared instanceof ReflectionNamedType => $this->getTypeByName($prop, $declared->getName(), $discriminated),
+            $declared instanceof ReflectionUnionType => $this->getUnionMembersType($prop, $prop->unionMemberNames, $discriminated),
             default => new Mixed_,
         };
 
         if ($discriminated !== null && ! $this->appliesDiscriminator($type)) {
             throw new RuntimeException(
-                "Roma #[Discriminated] on \"{$this->printableName($obj)}\" applies only to a property typed as an interface, "
+                "Roma #[Discriminated] on \"{$prop->printableName}\" applies only to a property typed as an interface, "
                 .'an abstract class or a union of classes, or an array of one.'
             );
         }
@@ -660,36 +494,13 @@ class ClassDefinitionBuilder
      *
      * @param  list<string>  $names
      */
-    private function getUnionMembersType(ReflectionParameter|ReflectionProperty $obj, array $names, ?Discriminated $discriminated): Type
+    private function getUnionMembersType(ReflectionParamOrProperty $prop, array $names, ?Discriminated $discriminated): Type
     {
         return match (count($names)) {
             0 => new Mixed_,
-            1 => $this->getTypeByName($obj, $names[0], $discriminated),
-            default => $this->getUnionType($obj, $names, $discriminated) ?? new Mixed_,
+            1 => $this->getTypeByName($prop, $names[0], $discriminated),
+            default => $this->getUnionType($prop, $names, $discriminated) ?? new Mixed_,
         };
-    }
-
-    /**
-     * The names of a union type's members other than null and Missing, or an empty list when
-     * a member is an intersection type.
-     *
-     * @return list<string>
-     */
-    private function unionMemberNames(ReflectionUnionType $type): array
-    {
-        $names = [];
-
-        foreach ($type->getTypes() as $member) {
-            if (! $member instanceof ReflectionNamedType) {
-                return [];
-            }
-
-            if (! in_array($member->getName(), ['null', Missing::class], true)) {
-                $names[] = $member->getName();
-            }
-        }
-
-        return $names;
     }
 
     private function appliesDiscriminator(Type $type): bool
@@ -749,7 +560,8 @@ class ClassDefinitionBuilder
      */
     private function getValidationOnlyProperties(ReflectionClass $class): array
     {
-        $attributes = $this->getAttributeInstances($class->getAttributes());
+        $attributes = array_map(fn (ReflectionAttribute $attribute) => $attribute->newInstance(), $class->getAttributes());
+        $wireKey = collect($attributes)->whereInstanceOf(WireKeyAttribute::class)->first()?->getWireKey();
 
         $result = [];
 
@@ -765,7 +577,7 @@ class ClassDefinitionBuilder
             $result[] = new Property(
                 name: $attr->getKey(),
                 keyPath: $this->keyPath($attr->getSource(), $attr->getKey(), $attr->getKey()),
-                wireKey: $this->getWireKey($attributes) ?: $attr->getKey(),
+                wireKey: $wireKey ?: $attr->getKey(),
                 type: $attr->getType(),
                 role: Role::ValidationOnly,
                 default: new NoDefault,

@@ -11,6 +11,7 @@ use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Accessors\Ip;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Http\Enums\Method;
 use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Tests\TestCase;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;
@@ -153,4 +154,21 @@ it('allows attributes that affect only serialization and TypeScript on a virtual
         ->and(new TypeScriptGenerator(responses: [VirtualWithOutputAttributes::class])->generate())
         ->toContain('display_name: string;')
         ->toContain('The name to show.');
+});
+
+class VirtualMethodResponse extends Response
+{
+    public function __construct(public string $path) {}
+
+    public Method $method {
+        get => Method::Get;
+    }
+}
+
+// The type implies a source attribute, which the virtual check doesn't count.
+it('accepts a computed property whose type implies a source', function () {
+    $typescript = new TypeScriptGenerator(responses: [VirtualMethodResponse::class])->generate();
+
+    expect($typescript)->toContain('export interface VirtualMethodResponseBody {')
+        ->and(Serializer::toArray(new VirtualMethodResponse('/a')))->toBe(['path' => '/a', 'method' => ['name' => 'Get', 'value' => 'GET']]);
 });

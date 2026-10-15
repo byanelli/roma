@@ -6,6 +6,7 @@ use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Http\Attributes\Body;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Attributes\Input;
+use BYanelli\Roma\Http\Values\Authorization;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Validation\ValidationException;
 
@@ -214,6 +215,25 @@ it('rejects a source attribute on a nested property', function () {
 
     expect(fn () => $this->mapRequest(TestNestedInputSourceRequest::class))
         ->toThrow(RuntimeException::class, 'cannot declare its own source');
+});
+
+readonly class TestNestedAuthorizationChild
+{
+    public Authorization $auth;
+}
+
+readonly class TestNestedAuthorizationRequest
+{
+    public TestNestedAuthorizationChild $nested;
+}
+
+// Authorization implies #[Authorization], which is both a source and a header.
+it('rejects a nested property whose type implies a header as a source', function () {
+    /** @var TestCase $this */
+    $this->setRequest();
+
+    expect(fn () => $this->mapRequest(TestNestedAuthorizationRequest::class))
+        ->toThrow(RuntimeException::class, 'TestNestedAuthorizationChild::$auth" is inside a nested object and cannot declare its own source');
 });
 
 readonly class TestTopLevelKeyRequest
