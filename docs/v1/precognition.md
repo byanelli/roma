@@ -48,4 +48,4 @@ When the client narrows validation with a `Precognition-Validate-Only` header â€
 official helpers do on every keystroke â€” Roma validates only the matching fields. A pattern
 matches a field by either name the client might know it by: the bare posted name (`email`,
 `items.0.code`) or Roma's source-prefixed key (`input.email`). Fields outside the filter
-may be missing or invalid; the request still succeeds if the named fields pass.
+may be missing or invalid; the request still succeeds if the listed fields pass.

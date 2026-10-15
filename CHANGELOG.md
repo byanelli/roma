@@ -22,7 +22,7 @@ All notable changes to `roma` will be documented in this file.
   `sourceForType()` return a `RootSource`.
 - Breaking: `SourcePolicy::allowsSource()` is replaced by `payloadType()`. A policy allows a
   source when its payload type is the source's payload type or a subtype of it, and the
-  message for a source it doesn't allow names both payload types.
+  message for a source it doesn't allow states both payload types.
 - Two different sources with the same key in one class, such as a custom source keyed
   `query` beside `#[Query]`, throw when the definition is built.
 - Breaking: `AccessorAttribute` and `Property::$accessor` are removed; an accessor attribute's
@@ -100,7 +100,7 @@ All notable changes to `roma` will be documented in this file.
   `#[InputMapsToTypeScriptQuery]` throw in TypeScript generation unless they are alone on an
   `#[Input]` property of a top-level request class.
 - `#[AutoDiscriminated(key: 'type')]` on an interface or abstract class makes a
-  discriminated union of every concrete class that extends or implements it in the
+  discriminated union of all concrete classes that extend or implement it in the
   `roma.discover` directories, sorted by class name. Values, `#[DiscriminatorValue]`,
   duplicate checks, mapping, validation, serialization, TypeScript and JSON Schema are the
   same as for `#[Discriminated]`. It is class-level only. `php artisan roma:cache` writes the
@@ -193,7 +193,7 @@ All notable changes to `roma` will be documented in this file.
   result, and `CustomizesSerialization::dateFormat()` replaces the protected
   `IsArrayable::dateFormat()` override.
 - Booleans accept `true`, `1`, `"true"`, `"1"`, `"yes"`, `"on"` and `false`, `0`, `"false"`,
-  `"0"`, `"no"`, `"off"`, ignoring case, in every source. Any other value, including an empty
+  `"0"`, `"no"`, `"off"`, ignoring case, in all sources. Any other value, including an empty
   string, fails validation with Laravel's boolean message.
 - Breaking: a property typed as an interface or an abstract class without `#[Discriminated]`
   throws when its class definition is built, in mapping and in TypeScript generation. The TypeScript union of
@@ -220,7 +220,7 @@ All notable changes to `roma` will be documented in this file.
   TypeScript support it: rules for such a structure are built from the data, errors keep
   full keys such as `input.replies.0.replies.1.body`, and TypeScript refers to the interface
   by name (`replies?: Comment[]`). A nested definition's property sources are now relative
-  to the object, so one definition per class serves every place the class appears.
+  to the object, so one definition per class is used wherever the class appears.
 - A class name in a PHPDoc type resolves as PHP resolves it, through the `use` imports
   (aliases, group imports and partially qualified names such as `Billing\Card`) and namespace
   of the file that declares the property, which for a property from a trait or parent class is

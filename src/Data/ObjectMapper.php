@@ -201,7 +201,7 @@ readonly class ObjectMapper
     }
 
     /**
-     * Run every guard method on the mapped object, in declaration order,
+     * Run the guard methods on the mapped object, in declaration order,
      * through the container so guards can inject dependencies. Guards run only
      * after validation has passed; a guard rejects by throwing.
      */

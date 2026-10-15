@@ -32,7 +32,7 @@ final readonly class ClassSchema
     }
 
     /**
-     * The schema of each property, keyed by input key: what a tool's `schema()` method returns.
+     * The property schemas, keyed by input key: what a tool's `schema()` method returns.
      *
      * @param  class-string  $class
      * @return array<string, Schema\Type>

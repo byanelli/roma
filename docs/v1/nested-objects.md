@@ -154,8 +154,8 @@ readonly class CheckoutRequest {
 
 ### Discovered members
 
-`#[AutoDiscriminated]` on an interface or abstract class makes every concrete class that
-extends or implements it a member, without a list. Roma finds the members by scanning the
+`#[AutoDiscriminated]` on an interface or abstract class makes all concrete classes that
+extend or implement it members, without a list. Roma finds the members by scanning the
 directories in `roma.discover` (default `app/`). Values, `#[DiscriminatorValue]`, the key
 (`key: 'kind'`), validation, serialization, TypeScript and JSON Schema work as for
 `#[Discriminated]`.

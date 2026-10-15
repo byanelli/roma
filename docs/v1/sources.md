@@ -10,7 +10,7 @@ group: Requests
 
 # Sources
 
-Every property is populated from a **source** — a part of the request. By default a
+A property is populated from a **source** — a part of the request. By default a
 property reads from the merged input bag (query string + body). Attributes bind it to a
 specific source instead.
 

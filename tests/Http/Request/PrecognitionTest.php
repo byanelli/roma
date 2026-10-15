@@ -118,7 +118,7 @@ it('returns validation errors for a failing precognitive request', function () {
     $this->assertArrayHasKey('email', $errors);
 });
 
-it('validates only the fields named by Precognition-Validate-Only', function () {
+it('validates only the fields listed in Precognition-Validate-Only', function () {
     /** @var TestCase $this */
     signupRoute();
 
@@ -220,7 +220,7 @@ it('does not validate headers during a precognitive request', function () {
     $this->assertArrayHasKey('header.X-Api-Key', $response->json('errors'));
 });
 
-it('drops every rule when no Validate-Only pattern matches', function () {
+it('drops all rules when no Validate-Only pattern matches', function () {
     /** @var TestCase $this */
     signupRoute();
 

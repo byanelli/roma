@@ -7,7 +7,7 @@ use Attribute;
 /**
  * Declares the classes a value can be and the key whose value says which one it is.
  *
- * On an interface or abstract class it applies to every property typed as it. On a
+ * On an interface or abstract class it applies to properties typed as it. On a
  * property it is required for a native union type such as `Card|Voucher`, and on a
  * property typed as an interface or abstract class it replaces the class-level attribute.
  * On an array property it applies to the array's elements.

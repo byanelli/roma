@@ -25,8 +25,8 @@ readonly class Interface_ extends Type
     }
 
     /**
-     * Collect this interface and every nested Interface_ referenced by a
-     * property type into a flat, de-duplicated list keyed by interface name.
+     * Collect this interface and the nested Interface_ objects referenced by
+     * property types into a flat, de-duplicated list keyed by interface name.
      *
      * @param  array<string, true>  $seen
      * @return list<Interface_>

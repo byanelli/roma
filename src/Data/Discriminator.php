@@ -99,7 +99,7 @@ final readonly class Discriminator
     /**
      * `$subject` describes where the attribute applies, for error messages.
      *
-     * @param  ?class-string  $contract  the interface or abstract class every member must extend
+     * @param  ?class-string  $contract  the interface or abstract class the members must extend
      * @param  ?list<class-string>  $union  the members of a native union type, which the list must equal
      */
     public static function fromAttribute(

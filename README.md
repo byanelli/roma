@@ -66,8 +66,8 @@ class CreateContactController {
   object, with profiles for responses, outgoing requests and storage.
 - **Plain arrays too.** `Mapper::fromArray(Settings::class, $array)` maps and validates an
   array, such as tool input or a stored value, onto the same classes.
-- **TypeScript generation.** `php artisan roma:typescript` emits an interface for every
-  request and response — one source of truth for your frontend (great with Inertia).
+- **TypeScript generation.** `php artisan roma:typescript` emits interfaces for your
+  requests and responses — one source of truth for your frontend (great with Inertia).
 - **JSON Schema.** `ClassSchema::properties(SearchInput::class)` builds Laravel `JsonSchema`
   types from a class at runtime, for the `schema()` method of an MCP or AI SDK tool.
 - **Laravel Precognition.** Works out of the box.

@@ -6,7 +6,7 @@ use BYanelli\Roma\Data\Enums\NormalizesRawValue;
 use Illuminate\Support\Str;
 
 /**
- * The authentication scheme named by the Authorization header's first token.
+ * The authentication scheme identified by the Authorization header's first token.
  *
  * Schemes are case-insensitive on the wire (RFC 7235), so the raw token is
  * normalized to canonical casing before it is matched to a case.

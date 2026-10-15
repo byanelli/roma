@@ -18,7 +18,7 @@ php artisan roma:typescript
 ```
 
 It writes a `.d.ts` file (default `resources/js/roma.d.ts`, overridable with `--output` or
-config) containing an interface for every request and response.
+config) containing interfaces for the request and response classes.
 
 ## What gets generated
 

@@ -78,7 +78,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
     private function validatePrecognitiveRequest(ClassMapping $mapping, Request $request): never
     {
         // A precognitive response is consumed by front-end form tooling, so
-        // its form-data errors are keyed and named by the bare field the
+        // its form-data errors are keyed by, and refer to, the bare field the
         // client posted ("email", not "input.email") — the shape the official
         // laravel-precognition-* helpers map onto form fields. Ordinary
         // validation keeps Roma's source-prefixed keys.

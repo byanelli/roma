@@ -25,7 +25,7 @@ class Rule implements RulesAttribute
     public function getRules(AttributeTarget $target): array
     {
         // Each argument is a rule. An array argument is a list of rules and is
-        // spread so every element reaches the validator as its own rule —
+        // spread so each element is passed to the validator as its own rule —
         // wrapping it instead nests it, and Laravel then treats the first element
         // as a parameterless rule name (e.g. "url:http,https" becomes an unknown
         // rule rather than "url" with parameters). A closure argument (a

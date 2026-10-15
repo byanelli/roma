@@ -46,11 +46,11 @@ use RuntimeException;
 readonly class InterfaceBuilder
 {
     /**
-     * Every property is keyed by its wire key and always carries its declared
+     * Properties are keyed by their wire keys and always keep their declared
      * nullability. `$isPropertyOptional` decides the `?` (it threads into nested
      * objects); `$includeProperty` restricts which top-level properties are
      * emitted — request source bucketing, or dropping response properties lifted
-     * out of the body. `$stringValued` forces every field to `string` regardless
+     * out of the body. `$stringValued` forces all fields to `string` regardless
      * of its PHP type, for HTTP header interfaces: header values are strings on
      * the wire, and the caller sends / receives them as strings with no coercion
      * layer of its own. Validation-only pseudo-properties and file uploads are

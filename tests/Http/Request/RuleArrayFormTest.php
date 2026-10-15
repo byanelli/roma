@@ -18,7 +18,7 @@ readonly class MultiRuleRequest
     ) {}
 }
 
-it('applies every rule in an array-form #[Rule]', function () {
+it('applies all rules in an array-form #[Rule]', function () {
     /** @var TestCase $this */
     $this->setRequest(
         headers: ['Content-Type' => 'application/json'],

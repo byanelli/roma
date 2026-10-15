@@ -15,9 +15,8 @@ interface HasRequestSource
 {
     /**
      * The source attribute this type is equivalent to. A single attribute
-     * carries every facet of the mapping it needs (source, key, rules, error
-     * key); a property that also wants extra validation rules implements
-     * HasValidationRules.
+     * specifies all parts of the mapping (source, key, rules, error key); for
+     * extra validation rules, the type also implements HasValidationRules.
      */
     public static function requestSourceAttribute(): SourceAttribute;
 }

@@ -52,7 +52,7 @@ readonly class ValidationRules
     private array $dataDependent;
 
     /**
-     * The prefix of every error key, e.g. "input", or "request" for "request.ip".
+     * The prefix of the error keys, e.g. "input", or "request" for "request.ip".
      */
     private string $prefix;
 
@@ -177,7 +177,7 @@ readonly class ValidationRules
     }
 
     /**
-     * The presence rules that lead every value's rule list: "nullable"
+     * The presence rules at the start of each value's rule list: "nullable"
      * (allow an explicit null) and the requiredness rule. A required member of
      * a nested object or shape becomes a RequiredWithinObject rule keyed on
      * that object, so it is only required when the object is actually present —
@@ -219,7 +219,7 @@ readonly class ValidationRules
 
     /**
      * The entries for a value of `$type` at `$keySegments`, followed by those
-     * of its members. A '*' key segment stands for every member of an
+     * of its members. A '*' key segment stands for the members of an
      * enclosing array.
      *
      * @param  list<string>  $keySegments
@@ -322,7 +322,7 @@ readonly class ValidationRules
     }
 
     /**
-     * Fills `$found` for every class `$type` reaches. A class reached again while its own
+     * Fills `$found` for the classes `$type` reaches. A class reached again while its own
      * members are being visited contains itself.
      *
      * @param  array<class-string, true>  $visiting
@@ -357,7 +357,7 @@ readonly class ValidationRules
     }
 
     /**
-     * Visits every type, so that `$found` covers all the classes they reach.
+     * Visits the types, so that `$found` covers all the classes they reach.
      *
      * @param  list<Type>  $types
      * @param  array<class-string, true>  $visiting
@@ -505,7 +505,7 @@ readonly class ValidationRules
     }
 
     /**
-     * The prefix of every error key, e.g. "input", or "request" for "request.ip".
+     * The prefix of the error keys, e.g. "input", or "request" for "request.ip".
      */
     public function errorPrefix(): string
     {
@@ -521,7 +521,7 @@ readonly class ValidationRules
     }
 
     /**
-     * Where an error for `$key` belongs among the errors of every source: a key without a
+     * Where an error for `$key` belongs among the errors of all sources: a key without a
      * wildcard first, by declaration, then the keys a wildcard rule expands to. This is the
      * order of one Laravel validator over all the sources' rules.
      *

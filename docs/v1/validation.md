@@ -99,7 +99,7 @@ readonly class UpdatePostRequest {
 ## Class-level constraints
 
 Some accessor and header attributes can be applied at the class level to enforce a global
-requirement on every request mapped to the class:
+requirement on all requests mapped to the class:
 
 ```php
 use BYanelli\Roma\Http\Attributes\Accessors\Ajax;

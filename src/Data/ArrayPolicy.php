@@ -6,7 +6,7 @@ use BYanelli\Roma\Data\Sources\Data;
 use BYanelli\Roma\Serialization\Destination;
 
 /**
- * Maps every property from the plain array of an ArrayPayload. Use Facades\Mapper::fromArray().
+ * Maps the properties from the plain array of an ArrayPayload. Use Facades\Mapper::fromArray().
  *
  * @internal
  */

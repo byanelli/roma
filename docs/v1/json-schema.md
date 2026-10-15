@@ -56,7 +56,7 @@ with `Mapper::fromArray(SearchInput::class, $arguments)` (see
 | `array<string, T>`                     | `object`, with the value type in the description     |
 | `array{a: int, b?: string}`            | `object` with `properties`                           |
 | a discriminated union                  | `anyOf`, one `object` per member                     |
-| `mixed` or no type                     | every JSON type                                      |
+| `mixed` or no type                     | any JSON type                                        |
 
 Each member of a [discriminated union](/docs/roma/v1/nested-objects#discriminated-unions) has
 the discriminator key as a required property whose `enum` is its one value:

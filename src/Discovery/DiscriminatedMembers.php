@@ -42,8 +42,8 @@ class DiscriminatedMembers
     }
 
     /**
-     * Every concrete class in the discover directories, grouped under each of its parents and
-     * interfaces that has #[AutoDiscriminated]. A contract outside the directories is included
+     * The concrete classes in the discover directories, grouped under their parents and
+     * interfaces that have #[AutoDiscriminated]. A contract outside the directories is included
      * when a member is inside them.
      *
      * @return array<class-string, list<class-string>>

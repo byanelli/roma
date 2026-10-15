@@ -5,9 +5,9 @@ namespace BYanelli\Roma\Http\Request\Precognition;
 use Illuminate\Http\Request;
 
 /**
- * Narrows the rules of one form-data source to the fields a precognitive request names in
+ * Narrows the rules of one form-data source to the fields a precognitive request lists in
  * Precognition-Validate-Only, using the same pattern semantics as Laravel's own filtering
- * (Illuminate\Http\Concerns\CanBePrecognitive). Without the header every rule is kept.
+ * (Illuminate\Http\Concerns\CanBePrecognitive). Without the header all rules are kept.
  */
 readonly class PrecognitiveRuleFilter
 {

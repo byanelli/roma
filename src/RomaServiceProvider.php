@@ -40,7 +40,7 @@ class RomaServiceProvider extends PackageServiceProvider
      * Lets a class carrying a class-level #[Request] attribute be resolved from
      * the container by type-hint alone, without the parameter-level #[Request]
      * hint. The first time such a class is resolved we bind it to the mapper;
-     * the binding then serves every later resolution, so the reflection cost is
+     * the binding is then used for all later resolutions, so the reflection cost is
      * paid once per class per process and skipped entirely once bound.
      *
      * The gate is checked only once we know we are looking at an unbound,
@@ -58,7 +58,7 @@ class RomaServiceProvider extends PackageServiceProvider
                 return;
             }
 
-            // Narrowed by the isMarkedOn() guard above: $abstract names a class.
+            // Narrowed by the isMarkedOn() guard above: $abstract is a class name.
             /** @var class-string $abstract */
             $app->bind(
                 $abstract,

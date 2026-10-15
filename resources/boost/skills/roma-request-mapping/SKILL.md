@@ -145,8 +145,8 @@ serializer writes the key only through a discriminated property, and TypeScript 
 `({ type: 'Card' } & Card) | ...`.
 
 `#[AutoDiscriminated]` (class-level only; on a property it throws) on an interface or
-abstract class makes every concrete implementation in the `roma.discover` directories a
-member, with the same rules.
+abstract class makes all concrete implementations in the `roma.discover` directories
+members, with the same rules.
 Members come from discovery, so a production deploy must run `php artisan optimize` or
 `php artisan roma:cache` after a member is added: while `bootstrap/cache/roma.php` exists it
 is the only source, even if stale. `roma:clear` deletes it. Prefer `#[Discriminated]` with
@@ -162,7 +162,7 @@ an explicit list unless the member list changes often.
 - **Guards:** a `#[Guard]` method runs after validation, resolved through the container
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
 - **Class-level constraints:** apply `#[Ajax]`, `#[ContentType(...)]`, etc. at the class
-  level to require them of every request.
+  level to require them of all requests.
 
 ### Error-key contract (important)
 
