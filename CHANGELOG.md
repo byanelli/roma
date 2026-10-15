@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[AutoDiscriminated]` on a property or parameter throws a message that says it applies
+  only to an interface or abstract class and suggests `#[Discriminated([...])]`, in mapping,
+  serialization, TypeScript and JSON Schema. PHP used to throw a generic `Error` when the
+  attribute was instantiated, and the serializer ignored it.
 - `#[DateFormat]` on `mixed`, an untyped property, an `array` without a PHPDoc type, or an
   array of `mixed` throws when the definition is built and when serializing, as on other
   types with no date. A union with a date, such as `DateTimeImmutable|string`, is still

@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
@@ -11,6 +12,7 @@ use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Serialization\Destination;
 use BYanelli\Roma\Serialization\DestinationAttribute;
+use ReflectionAttribute;
 use ReflectionNamedType;
 use ReflectionType;
 use RuntimeException;
@@ -72,6 +74,25 @@ final class PropertyAttributes
     }
 
     /**
+     * Checks the attributes before they are instantiated, since PHP throws a generic Error for
+     * an attribute on a target it doesn't allow.
+     *
+     * @param  array<int, ReflectionAttribute<object>>  $attributes
+     */
+    public static function assertNotClassOnly(array $attributes, string $subject): void
+    {
+        foreach ($attributes as $attribute) {
+            if ($attribute->getName() === AutoDiscriminated::class) {
+                throw new RuntimeException(
+                    "Roma property \"{$subject}\" has #[AutoDiscriminated], which applies only to an interface or abstract "
+                    .'class, since its members are found and cached per contract. Put it on the interface or abstract class, '
+                    .'or list the classes on the property with #[Discriminated([...])].'
+                );
+            }
+        }
+    }
+
+    /**
      * @param  list<object>  $attributes
      */
     private static function assertNoEmptyKey(array $attributes, string $subject): void
@@ -109,8 +130,8 @@ final class PropertyAttributes
     }
 
     /**
-     * A status is always written, so its property is a plain int. A status that varies takes a
-     * default, such as 200, instead of null or Missing.
+     * A status is always written, so its property is a plain int. A status that is usually the
+     * same takes a default, such as 200, instead of null or Missing.
      *
      * @param  list<object>  $attributes
      */

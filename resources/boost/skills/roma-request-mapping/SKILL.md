@@ -138,8 +138,9 @@ property under the key. Unknown values fail validation at `input.payment.type`. 
 serializer writes the key only through a discriminated property, and TypeScript emits
 `({ type: 'Card' } & Card) | ...`.
 
-`#[AutoDiscriminated]` (class-level only) on an interface or abstract class makes every
-concrete implementation in the `roma.discover` directories a member, with the same rules.
+`#[AutoDiscriminated]` (class-level only; on a property it throws) on an interface or
+abstract class makes every concrete implementation in the `roma.discover` directories a
+member, with the same rules.
 Members come from discovery, so a production deploy must run `php artisan optimize` or
 `php artisan roma:cache` after a member is added: while `bootstrap/cache/roma.php` exists it
 is the only source, even if stale. `roma:clear` deletes it. Prefer `#[Discriminated]` with

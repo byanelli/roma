@@ -214,3 +214,20 @@ it('runs with optimize and optimize:clear', function () {
 
     expect(autoMembers()->isCached())->toBeFalse();
 });
+
+class AutoOnProperty
+{
+    public function __construct(
+        #[AutoDiscriminated] public ?Shape $shape = null,
+    ) {}
+}
+
+it('rejects #[AutoDiscriminated] on a property', function () {
+    $message = 'Roma property "AutoOnProperty::$shape" has #[AutoDiscriminated], which applies only to an interface or abstract class';
+
+    expect(fn () => mapAuto(AutoOnProperty::class, []))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => Serializer::toArray(new AutoOnProperty))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => ClassSchema::object(AutoOnProperty::class))->toThrow(RuntimeException::class, $message)
+        ->and(fn () => new TypeScriptGenerator(responses: [AutoOnProperty::class])->generate())
+        ->toThrow(RuntimeException::class, 'list the classes on the property with #[Discriminated([...])]');
+});

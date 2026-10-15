@@ -137,6 +137,7 @@ class ClassDefinitionBuilder
 
     private function getFromReflectionParameterOrProperty(ReflectionParameter|ReflectionProperty $obj): Property
     {
+        PropertyAttributes::assertNotClassOnly($obj->getAttributes(), $this->subject($obj));
         $attributes = $this->getAttributeInstances($obj->getAttributes());
 
         $typeName = $this->declaredTypeName($obj);

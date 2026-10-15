@@ -178,6 +178,8 @@ so its value fails validation as unknown. `php artisan roma:clear` (also run by
 `optimize:clear`) deletes the file, and without it Roma scans the directories once per
 process.
 
-The attribute goes only on the interface or abstract class, not on a property. A contract
-with no members, or with both `#[Discriminated]` and `#[AutoDiscriminated]`, throws when the
-definition is built; while the cache file exists, the message says to run `roma:cache`.
+The attribute goes only on the interface or abstract class, since the members are found and
+cached per contract. On a property or parameter it throws, in mapping, serialization,
+TypeScript and JSON Schema; list the classes with `#[Discriminated([...])]` there instead.
+A contract with no members, or with both `#[Discriminated]` and `#[AutoDiscriminated]`,
+throws when the definition is built; while the cache file exists, the message says to run `roma:cache`.

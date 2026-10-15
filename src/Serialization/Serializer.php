@@ -344,6 +344,7 @@ class Serializer
             }
 
             $subject = $property->getDeclaringClass()->getShortName().'::$'.$property->getName();
+            PropertyAttributes::assertNotClassOnly($property->getAttributes(), $subject);
             $attributes = $this->checkedAttributes($property);
             PropertyAttributes::assertCombinable($attributes, $subject);
             PropertyAttributes::assertStatusType($attributes, $property->getType(), $subject);
