@@ -2,8 +2,6 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
-use Illuminate\Http\Request;
-
 final readonly class Cookie extends RequestSource
 {
     public function getKey(): string
@@ -14,8 +12,8 @@ final readonly class Cookie extends RequestSource
     /**
      * @return array<array-key, mixed>
      */
-    protected function readRequest(Request $request): array
+    protected function read(object $input): array
     {
-        return $request->cookies->all();
+        return $input->cookies->all();
     }
 }

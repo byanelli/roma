@@ -3,7 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Rule;
-use BYanelli\Roma\Data\ArrayPayload;
+use BYanelli\Roma\Data\ArrayInput;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Attributes\Header;
@@ -102,7 +102,7 @@ it('does not let a rule refer to another source', function () {
     }
 });
 
-it('rejects a payload of another type when a source reads it', function () {
-    expect(fn () => new QuerySource()->readFrom(new ArrayPayload([])))
-        ->toThrow(RuntimeException::class, 'Roma source "query" reads from RequestPayload, but the payload is ArrayPayload.');
+it('rejects an input of another type when a source reads it', function () {
+    expect(fn () => new QuerySource()->readFrom(new ArrayInput([])))
+        ->toThrow(RuntimeException::class, 'Roma source "query" reads from Request, but the input is ArrayInput.');
 });

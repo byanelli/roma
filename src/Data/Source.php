@@ -5,9 +5,16 @@ namespace BYanelli\Roma\Data;
 use RuntimeException;
 
 /**
- * A part of the payload with its own data, such as the query string of a request. Its key is
+ * A part of the input with its own data, such as the query string of a request. Its key is
  * the prefix of its properties' error keys, and its data is validated on its own, so rules
  * refer to keys relative to it.
+ *
+ * A subclass declares its input class with `@extends Source<Request>`, and PHPStan then types
+ * read()'s `$input` as that class.
+ *
+ * The default allows `Source` as a type with no template argument.
+ *
+ * @template I of object = object
  */
 abstract readonly class Source
 {
@@ -17,18 +24,20 @@ abstract readonly class Source
     abstract public function getKey(): string;
 
     /**
-     * The payload class or interface this source reads from. A policy allows the source when
-     * its payload type is this one or a subtype.
+     * The class or interface of the input this source reads from. A policy allows the source
+     * when its input type is this one or a subtype.
      *
-     * @return class-string<Payload>
+     * @return class-string<I>
      */
-    abstract public function payloadType(): string;
+    abstract public function inputType(): string;
 
     /**
      * The raw data: an array keyed by property key, or the property's value when
-     * isSingleValue() is true. `$payload` is an instance of payloadType().
+     * isSingleValue() is true.
+     *
+     * @param  I  $input
      */
-    abstract protected function read(Payload $payload): mixed;
+    abstract protected function read(object $input): mixed;
 
     /**
      * The key a property's value has in read()'s array.
@@ -57,19 +66,19 @@ abstract readonly class Source
     }
 
     /**
-     * @throws RuntimeException when the payload is not an instance of payloadType()
+     * @throws RuntimeException when the input is not an instance of inputType()
      */
-    final public function readFrom(Payload $payload): mixed
+    final public function readFrom(object $input): mixed
     {
-        if (! is_a($payload, $this->payloadType())) {
+        if (! is_a($input, $this->inputType())) {
             throw new RuntimeException(sprintf(
-                'Roma source "%s" reads from %s, but the payload is %s.',
+                'Roma source "%s" reads from %s, but the input is %s.',
                 $this->getKey(),
-                class_basename($this->payloadType()),
-                class_basename($payload),
+                class_basename($this->inputType()),
+                class_basename($input),
             ));
         }
 
-        return $this->read($payload);
+        return $this->read($input);
     }
 }

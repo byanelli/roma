@@ -45,12 +45,12 @@ class ClassMapping
     /**
      * Reads only the sources the class's properties map from.
      */
-    public static function fromPayload(Class_ $class, Payload $payload, DateFactory $dateFactory = new DateFactory): self
+    public static function fromInput(Class_ $class, object $input, DateFactory $dateFactory = new DateFactory): self
     {
         $data = [];
 
         foreach ($class->sources() as $key => $source) {
-            $data[$key] = $source->readFrom($payload);
+            $data[$key] = $source->readFrom($input);
         }
 
         return new self($class, $data, $dateFactory);

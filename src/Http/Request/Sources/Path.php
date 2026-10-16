@@ -2,7 +2,6 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
-use Illuminate\Http\Request;
 use Illuminate\Routing\Route;
 
 final readonly class Path extends RequestSource
@@ -18,9 +17,9 @@ final readonly class Path extends RequestSource
      *
      * @return array<string, mixed>
      */
-    protected function readRequest(Request $request): array
+    protected function read(object $input): array
     {
-        $route = $request->route();
+        $route = $input->route();
 
         if (! $route instanceof Route) {
             return [];

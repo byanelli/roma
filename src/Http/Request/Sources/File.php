@@ -2,8 +2,6 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
-use Illuminate\Http\Request;
-
 final readonly class File extends RequestSource
 {
     public function getKey(): string
@@ -14,8 +12,8 @@ final readonly class File extends RequestSource
     /**
      * @return array<array-key, mixed>
      */
-    protected function readRequest(Request $request): array
+    protected function read(object $input): array
     {
-        return $request->files->all();
+        return $input->files->all();
     }
 }

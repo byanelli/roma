@@ -6,7 +6,7 @@ use BYanelli\Roma\Serialization\Destination;
 
 /**
  * The rules of one mapping context, such as an HTTP request. A source is allowed when
- * the policy's payload type is the source's payload type or a subtype of it.
+ * the policy's input type is the source's input type or a subtype of it.
  */
 interface SourcePolicy
 {
@@ -16,11 +16,11 @@ interface SourcePolicy
     public function cacheKey(): string;
 
     /**
-     * The payload this policy maps from.
+     * The class of the input this policy maps from.
      *
-     * @return class-string<Payload>
+     * @return class-string
      */
-    public function payloadType(): string;
+    public function inputType(): string;
 
     /**
      * The source of a top-level property with no source attribute.

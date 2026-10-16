@@ -6,7 +6,7 @@ use BYanelli\Roma\Data\Sources\Data;
 use BYanelli\Roma\Serialization\Destination;
 
 /**
- * Maps the properties from the plain array of an ArrayPayload. Use Facades\Mapper::fromArray().
+ * Maps the properties from the plain array of an ArrayInput. Use Facades\Mapper::fromArray().
  *
  * @internal
  */
@@ -17,9 +17,9 @@ readonly class ArrayPolicy implements SourcePolicy
         return self::class;
     }
 
-    public function payloadType(): string
+    public function inputType(): string
     {
-        return ArrayPayload::class;
+        return ArrayInput::class;
     }
 
     public function defaultSource(): Source

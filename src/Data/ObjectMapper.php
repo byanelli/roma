@@ -35,9 +35,9 @@ readonly class ObjectMapper
      *
      * @throws \ReflectionException|MappingValidationException
      */
-    public function map(string $className, Payload $payload, SourcePolicy $policy)
+    public function map(string $className, object $input, SourcePolicy $policy)
     {
-        return $this->instantiate($this->mapping($className, $payload, $policy));
+        return $this->instantiate($this->mapping($className, $input, $policy));
     }
 
     /**
@@ -53,7 +53,7 @@ readonly class ObjectMapper
      */
     public function fromArray(string $className, array $data): object
     {
-        return $this->map($className, new ArrayPayload($data), new ArrayPolicy);
+        return $this->map($className, new ArrayInput($data), new ArrayPolicy);
     }
 
     /**
@@ -61,11 +61,11 @@ readonly class ObjectMapper
      *
      * @param  class-string  $className
      */
-    public function mapping(string $className, Payload $payload, SourcePolicy $policy): ClassMapping
+    public function mapping(string $className, object $input, SourcePolicy $policy): ClassMapping
     {
         $class = new ClassDefinitionBuilder($policy)->buildClassDefinition($className);
 
-        return ClassMapping::fromPayload($class, $payload);
+        return ClassMapping::fromInput($class, $input);
     }
 
     /**

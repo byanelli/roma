@@ -11,12 +11,13 @@ All notable changes to `roma` will be documented in this file.
   `#[Guard]` to compare values across sources. Error keys, messages and their order are
   unchanged (`input.email`, `header.X-Flag`, `request.ip`, "The input.email field is
   required."), and so are precognitive responses.
-- Breaking: a source extends `BYanelli\Roma\Data\Source`, which is a part of the payload
+- Breaking: a source extends `BYanelli\Roma\Data\Source`, which is a part of the input
   and no longer a step in a property's key. Its key, from `getKey()` (formerly
-  `getOwnKey()`), is the prefix of its error keys, `payloadType()` returns the payload class
-  it reads from, and `read()` returns its data. `Payload` has no `data()` method:
-  `RequestPayload::$request` contains the request and `ArrayPayload::$data` the array. The
-  HTTP sources extend `Http\Request\Sources\RequestSource`, and each accessor, such as
+  `getOwnKey()`), is the prefix of its error keys, `inputType()` returns the class of the
+  input it reads from, such as `Illuminate\Http\Request`, and `read()` returns its data.
+  `Source` is generic over that class: with `@extends Source<Request>`, PHPStan types
+  `read()`'s `$input` as a `Request`. The HTTP sources extend
+  `Http\Request\Sources\RequestSource`, a `Source<Request>`, and each accessor, such as
   `#[Ip]`, is its own `Sources\Accessor` source under `request.ip`, replacing
   `Sources\RequestObject_`. Only the sources a class uses are read, so a class with only
   `#[Query]` properties doesn't decode the JSON body. `SourceAttribute::getSource()`,
@@ -28,9 +29,9 @@ All notable changes to `roma` will be documented in this file.
   `Class_::sources()` replaces `rootSources()`. `RequiredWithinObject` and `DiscriminatorIn`
   take the object's `KeyPath`.
 - Breaking: `ClassDefinitionBuilder::getTypeFromReflectionObject()` is private.
-- Breaking: `SourcePolicy::allowsSource()` is replaced by `payloadType()`. A policy allows a
-  source when its payload type is the source's payload type or a subtype of it, and the
-  message for a source it doesn't allow states both payload types.
+- Breaking: `SourcePolicy::allowsSource()` is replaced by `inputType()`. A policy allows a
+  source when its input type is the source's input type or a subtype of it, and the message
+  for a source it doesn't allow states both input types.
 - Two different sources with the same key in one class, such as a custom source keyed
   `query` beside `#[Query]`, throw when the definition is built.
 - Breaking: `AccessorAttribute` and `Property::$accessor` are removed; an accessor attribute's
@@ -53,7 +54,7 @@ All notable changes to `roma` will be documented in this file.
   can't carry an uploaded file, and a map of file uploads throws too.
 - `BYanelli\Roma\Facades\Mapper::fromArray($class, $array)` maps a plain array onto a class
   and throws `MappingValidationException` on invalid data. Its return type is the class, for
-  PHPStan. Its root is `ObjectMapper`, which gains `fromArray()`. `ArrayPayload` and
+  PHPStan. Its root is `ObjectMapper`, which gains `fromArray()`. `ArrayInput` and
   `ArrayPolicy` are `@internal`.
 - `#[AutoDiscriminated]` on a property or parameter throws a message that says it applies
   only to an interface or abstract class and suggests `#[Discriminated([...])]`, in mapping,
@@ -185,8 +186,8 @@ All notable changes to `roma` will be documented in this file.
   `#[Key('page')]` or a response `#[Header('X-Foo')]` with `#[Key('foo')]`, throws when the
   definition is built.
 - The mapping core no longer depends on HTTP. It is in `BYanelli\Roma\Data` (`ObjectMapper`,
-  `ClassMapping`, `ClassDefinitionBuilder`, `Payload`, `SourcePolicy`) and
-  `BYanelli\Roma\Validation`; `RequestMapper` wraps it with `RequestPayload` and
+  `ClassMapping`, `ClassDefinitionBuilder`, `SourcePolicy`) and
+  `BYanelli\Roma\Validation`; `RequestMapper` calls it with the request and
   `RequestSourcePolicy`. Breaking: the attribute interfaces (`SourceAttribute`, `KeyAttribute`,
   `RulesAttribute`, etc.) moved to `BYanelli\Roma\Data\Attributes`, `ParsesStringValue` and
   `HasValidationRules` to `BYanelli\Roma\Data\Values`, and `NormalizesRawValue` to

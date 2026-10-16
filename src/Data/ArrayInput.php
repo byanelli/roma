@@ -7,7 +7,7 @@ namespace BYanelli\Roma\Data;
  *
  * @internal
  */
-readonly class ArrayPayload implements Payload
+readonly class ArrayInput
 {
     /**
      * @param  array<array-key, mixed>  $data

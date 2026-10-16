@@ -2,14 +2,15 @@
 
 namespace BYanelli\Roma\Data\Sources;
 
-use BYanelli\Roma\Data\ArrayPayload;
-use BYanelli\Roma\Data\Payload;
+use BYanelli\Roma\Data\ArrayInput;
 use BYanelli\Roma\Data\Source;
 
 /**
  * The whole plain array mapped with ArrayPolicy.
  *
  * @internal
+ *
+ * @extends Source<ArrayInput>
  */
 final readonly class Data extends Source
 {
@@ -18,17 +19,16 @@ final readonly class Data extends Source
         return 'data';
     }
 
-    public function payloadType(): string
+    public function inputType(): string
     {
-        return ArrayPayload::class;
+        return ArrayInput::class;
     }
 
     /**
-     * @param  ArrayPayload  $payload
      * @return array<array-key, mixed>
      */
-    protected function read(Payload $payload): array
+    protected function read(object $input): array
     {
-        return $payload->data;
+        return $input->data;
     }
 }

@@ -6,6 +6,7 @@ use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Http\Enums\HasRequestSource;
 use BYanelli\Roma\Serialization\Destination;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
 
@@ -16,9 +17,9 @@ readonly class RequestSourcePolicy implements SourcePolicy
         return self::class;
     }
 
-    public function payloadType(): string
+    public function inputType(): string
     {
-        return RequestPayload::class;
+        return Request::class;
     }
 
     public function defaultSource(): Source

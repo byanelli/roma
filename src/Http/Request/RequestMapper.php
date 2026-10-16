@@ -36,7 +36,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
     {
         $request = $this->requestResolver->get();
 
-        $mapping = $this->objectMapper->mapping($className, new RequestPayload($request), new RequestSourcePolicy);
+        $mapping = $this->objectMapper->mapping($className, $request, new RequestSourcePolicy);
 
         if ($request->isPrecognitive()) {
             $this->validatePrecognitiveRequest($mapping, $request);

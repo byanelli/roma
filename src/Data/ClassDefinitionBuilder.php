@@ -199,13 +199,13 @@ class ClassDefinitionBuilder
 
     private function assertSourceAllowed(Source $source, string $description): void
     {
-        if (! is_a($this->policy->payloadType(), $source->payloadType(), true)) {
+        if (! is_a($this->policy->inputType(), $source->inputType(), true)) {
             $policy = class_basename($this->policy);
 
             throw new RuntimeException(
                 "Roma {$description} maps from the \"{$source->getKey()}\" source, which {$policy} does not allow: "
-                .'the source reads from '.class_basename($source->payloadType()).", and {$policy} maps from "
-                .class_basename($this->policy->payloadType()).'.'
+                .'the source reads from '.class_basename($source->inputType()).", and {$policy} maps from "
+                .class_basename($this->policy->inputType()).'.'
             );
         }
     }

@@ -93,10 +93,11 @@ Default source is the merged input bag (query + body). Bind explicitly:
 | `#[Cookie]` | a cookie (pass a name for dotted cookie names) |
 | `Illuminate\Http\UploadedFile` type | a file upload (top-level only) |
 
-A custom source extends `BYanelli\Roma\Data\Source` (`getKey()`, the error-key prefix;
-`payloadType()`, e.g. `RequestPayload::class`; `read()`, which returns the source's values)
-and is used through an attribute that implements `SourceAttribute`. Only the sources a class
-uses are read, and each one is validated on its own.
+A custom source extends `BYanelli\Roma\Data\Source` with `@extends Source<Request>`
+(`getKey()`, the error-key prefix; `inputType()`, here `Request::class`; `read(object $input)`,
+which returns the source's values) and is used through an attribute that implements
+`SourceAttribute`. Only the sources a class uses are read, and each one is validated on its
+own.
 
 ## Headers & metadata — prefer the value objects over hand-parsing
 

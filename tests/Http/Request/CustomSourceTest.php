@@ -5,16 +5,17 @@
 use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
-use BYanelli\Roma\Data\Payload;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Attributes\Accessors\Ajax;
 use BYanelli\Roma\Http\Attributes\Query;
-use BYanelli\Roma\Http\Request\RequestPayload;
 use BYanelli\Roma\Tests\TestCase;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @extends Source<Request>
+ */
 final readonly class Tenant extends Source
 {
     public function getKey(): string
@@ -22,18 +23,17 @@ final readonly class Tenant extends Source
         return 'tenant';
     }
 
-    public function payloadType(): string
+    public function inputType(): string
     {
-        return RequestPayload::class;
+        return Request::class;
     }
 
     /**
-     * @param  RequestPayload  $payload
      * @return array<string, mixed>
      */
-    protected function read(Payload $payload): array
+    protected function read(object $input): array
     {
-        return $payload->request->attributes->all();
+        return $input->attributes->all();
     }
 }
 
@@ -55,6 +55,8 @@ readonly class FromTenant implements ExplicitKeyAttribute, SourceAttribute
 
 /**
  * A source under a key that #[Query] already uses.
+ *
+ * @extends Source<Request>
  */
 final readonly class QueryLookalike extends Source
 {
@@ -63,12 +65,12 @@ final readonly class QueryLookalike extends Source
         return 'query';
     }
 
-    public function payloadType(): string
+    public function inputType(): string
     {
-        return RequestPayload::class;
+        return Request::class;
     }
 
-    protected function read(Payload $payload): array
+    protected function read(object $input): array
     {
         return [];
     }
@@ -157,9 +159,9 @@ it('validates a custom source under its own prefix', function () {
     }
 });
 
-it('rejects a source whose payload type the policy does not provide', function () {
+it('rejects a source whose input type the policy does not provide', function () {
     expect(fn () => Mapper::fromArray(TenantRequest::class, ['name' => 'Acme']))
-        ->toThrow(RuntimeException::class, 'maps from the "tenant" source, which ArrayPolicy does not allow: the source reads from RequestPayload, and ArrayPolicy maps from ArrayPayload.');
+        ->toThrow(RuntimeException::class, 'maps from the "tenant" source, which ArrayPolicy does not allow: the source reads from Request, and ArrayPolicy maps from ArrayInput.');
 });
 
 it('rejects two sources with the same key', function () {

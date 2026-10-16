@@ -156,10 +156,10 @@ often sets:
 use Attribute;
 use BYanelli\Roma\Data\Attributes\ExplicitKeyAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
-use BYanelli\Roma\Data\Payload;
 use BYanelli\Roma\Data\Source;
-use BYanelli\Roma\Http\Request\RequestPayload;
+use Illuminate\Http\Request;
 
+/** @extends Source<Request> */
 final readonly class Tenant extends Source
 {
     public function getKey(): string
@@ -167,15 +167,14 @@ final readonly class Tenant extends Source
         return 'tenant';                  // the prefix of its error keys
     }
 
-    public function payloadType(): string
+    public function inputType(): string
     {
-        return RequestPayload::class;
+        return Request::class;
     }
 
-    /** @param  RequestPayload  $payload */
-    protected function read(Payload $payload): array
+    protected function read(object $input): array
     {
-        return $payload->request->attributes->all();
+        return $input->attributes->all();
     }
 }
 
@@ -205,9 +204,11 @@ readonly class InvoiceRequest {
 ```
 
 `read()` returns the source's values keyed by property key. Roma calls it only for a class
-with a property from the source, and only with an instance of `payloadType()`. A source is
-allowed wherever the payload is of that type, so `Tenant` works in a request, and a class
-that uses it throws under `Mapper::fromArray()`.
+with a property from the source, and only with an instance of `inputType()`. The
+`@extends Source<Request>` tag gives PHPStan the same class, so it types `$input` as a
+`Request` and reports an `inputType()` that returns another class. A source is allowed
+wherever the input is of its type, so `Tenant` works in a request, and a class that uses it
+throws under `Mapper::fromArray()`.
 
 Two methods are optional. `normalizeKey()` converts a property's key to its key in `read()`'s
 array, as the header source does with `Content-Type` and `content_type`. `isSingleValue()`

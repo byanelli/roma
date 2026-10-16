@@ -2,7 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
-use BYanelli\Roma\Data\ArrayPayload;
+use BYanelli\Roma\Data\ArrayInput;
 use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
@@ -124,7 +124,7 @@ it('checks the discriminator key against a member that contains its own union', 
 })->throws(RuntimeException::class, 'Roma property "BadFolder::$name" uses the key "name"');
 
 it('builds rules for a class that contains itself only as deep as the data', function () {
-    $mapping = app(ObjectMapper::class)->mapping(Thread::class, new ArrayPayload(['title' => 't', 'replies' => [['body' => 'a', 'replies' => [['body' => 'b']]]]]), new ArrayPolicy);
+    $mapping = app(ObjectMapper::class)->mapping(Thread::class, new ArrayInput(['title' => 't', 'replies' => [['body' => 'a', 'replies' => [['body' => 'b']]]]]), new ArrayPolicy);
 
     expect(array_keys($mapping->validationRules()[0]->toArray()))->toBe([
         'title',
