@@ -29,6 +29,7 @@ final readonly class Tenant extends Source
     }
 
     /**
+     * @param  Request  $input
      * @return array<string, mixed>
      */
     protected function read(object $input): array
@@ -70,6 +71,9 @@ final readonly class QueryLookalike extends Source
         return Request::class;
     }
 
+    /**
+     * @param  Request  $input
+     */
     protected function read(object $input): array
     {
         return [];

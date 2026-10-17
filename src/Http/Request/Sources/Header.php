@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Http\Request\Sources;
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 final readonly class Header extends RequestSource
@@ -20,11 +21,12 @@ final readonly class Header extends RequestSource
     }
 
     /**
+     * @param  Request  $request
      * @return array<string, mixed>
      */
-    protected function read(object $input): array
+    protected function read(object $request): array
     {
-        return collect($input->server->getHeaders())
+        return collect($request->server->getHeaders())
             ->mapWithKeys(fn ($value, $key) => [Str::lower($key) => $value])
             ->all();
     }

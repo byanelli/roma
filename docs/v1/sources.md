@@ -172,6 +172,9 @@ final readonly class Tenant extends Source
         return Request::class;
     }
 
+    /**
+     * @param  Request  $input
+     */
     protected function read(object $input): array
     {
         return $input->attributes->all();
@@ -206,7 +209,8 @@ readonly class InvoiceRequest {
 `read()` returns the source's values keyed by property key. Roma calls it only for a class
 with a property from the source, and only with an instance of `inputType()`. The
 `@extends Source<Request>` tag gives PHPStan the same class, so it types `$input` as a
-`Request` and reports an `inputType()` that returns another class. A source is allowed
+`Request` and reports an `inputType()` that returns another class. PhpStorm doesn't apply
+the tag to an overridden method, so the `@param` on `read()` repeats the type for it. A source is allowed
 wherever the input is of its type, so `Tenant` works in a request, and a class that uses it
 throws under `Mapper::fromArray()`.
 

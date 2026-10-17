@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Http\Request\Sources;
 
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Attributes\Accessor as AccessorAttribute;
+use Illuminate\Http\Request;
 
 /**
  * One value read from the request object by an accessor attribute such as #[Ip], under
@@ -30,8 +31,11 @@ final readonly class Accessor extends RequestSource
             && $other->accessor::class === $this->accessor::class;
     }
 
-    protected function read(object $input): mixed
+    /**
+     * @param  Request  $request
+     */
+    protected function read(object $request): mixed
     {
-        return $this->accessor->read($input);
+        return $this->accessor->read($request);
     }
 }

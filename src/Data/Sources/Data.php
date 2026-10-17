@@ -25,6 +25,7 @@ final readonly class Data extends Source
     }
 
     /**
+     * @param  ArrayInput  $input
      * @return array<array-key, mixed>
      */
     protected function read(object $input): array
