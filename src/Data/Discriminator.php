@@ -5,7 +5,7 @@ namespace BYanelli\Roma\Data;
 use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\DiscriminatorValue;
-use BYanelli\Roma\Discovery\DiscriminatedMembers;
+use BYanelli\Roma\Discovery\RomaCache;
 use Illuminate\Container\Container;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -76,11 +76,11 @@ final readonly class Discriminator
      */
     private static function discovered(AutoDiscriminated $attribute, string $contract): self
     {
-        $members = Container::getInstance()->make(DiscriminatedMembers::class);
-        $hint = $members->isCached()
-            ? " The members are read from {$members->cachePath()}; if you added or removed an implementation, run php artisan roma:cache."
+        $cache = Container::getInstance()->make(RomaCache::class);
+        $hint = $cache->isCached()
+            ? " The members are read from {$cache->cachePath()}; if you added or removed an implementation, run php artisan roma:cache."
             : '';
-        $classes = $members->of($contract);
+        $classes = $cache->membersOf($contract);
 
         if ($classes === []) {
             throw new RuntimeException(

@@ -6,7 +6,7 @@ use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Discovery\DiscriminatedMembers;
+use BYanelli\Roma\Discovery\RomaCache;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\JsonSchema\ClassSchema;
@@ -30,17 +30,17 @@ function autoFixtures(string ...$directories): array
     return array_map(fn (string $directory) => dirname(__DIR__)."/Fixtures/AutoDiscriminated/{$directory}", $directories);
 }
 
-function autoMembers(): DiscriminatedMembers
+function autoMembers(): RomaCache
 {
-    return app(DiscriminatedMembers::class);
+    return app(RomaCache::class);
 }
 
 /**
  * Drops the members already read in this application, as a new process would.
  */
-function freshAutoMembers(): DiscriminatedMembers
+function freshAutoMembers(): RomaCache
 {
-    app()->forgetInstance(DiscriminatedMembers::class);
+    app()->forgetInstance(RomaCache::class);
 
     return autoMembers();
 }
@@ -71,7 +71,7 @@ afterEach(function () {
 });
 
 it('finds the concrete members of each #[AutoDiscriminated] contract in the discover directories', function () {
-    expect(autoMembers()->all())->toBe([
+    expect(autoMembers()->members())->toBe([
         Animal::class => [Cat::class, Dog::class],
         Shape::class => [Circle::class, Square::class, Triangle::class],
     ]);
@@ -154,11 +154,11 @@ it('writes the members to the cache file and reads them from it', function () {
     $path = autoMembers()->cachePath();
 
     expect($path)->toEndWith('bootstrap/cache/roma.php')
-        ->and((require $path)['auto_discriminated'])->toBe(autoMembers()->scan());
+        ->and(require $path)->toBe(autoMembers()->scan());
 
     config()->set('roma.discover', []);
 
-    expect(freshAutoMembers()->of(Shape::class))->toBe([Circle::class, Square::class, Triangle::class]);
+    expect(freshAutoMembers()->membersOf(Shape::class))->toBe([Circle::class, Square::class, Triangle::class]);
 });
 
 readonly class AutoStaleHolder
@@ -169,7 +169,7 @@ readonly class AutoStaleHolder
 it('uses a stale cache as it is', function () {
     writeAutoCache([Shape::class => [Circle::class]]);
 
-    expect(freshAutoMembers()->of(Shape::class))->toBe([Circle::class])
+    expect(freshAutoMembers()->membersOf(Shape::class))->toBe([Circle::class])
         ->and(Discriminator::ofContract(Shape::class)->classes)->toBe(['Circle' => Circle::class]);
 
     expect(fn () => mapAuto(AutoStaleHolder::class, ['shape' => ['type' => 'sq', 'side' => 1]]))

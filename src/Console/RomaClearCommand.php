@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Console;
 
-use BYanelli\Roma\Discovery\DiscriminatedMembers;
+use BYanelli\Roma\Discovery\RomaCache;
 use Illuminate\Console\Command;
 
 class RomaClearCommand extends Command
@@ -11,9 +11,9 @@ class RomaClearCommand extends Command
 
     protected $description = 'Remove the Roma cache file';
 
-    public function handle(DiscriminatedMembers $members): int
+    public function handle(RomaCache $cache): int
     {
-        $members->clear();
+        $cache->clear();
 
         $this->components->info('Roma cache cleared.');
 

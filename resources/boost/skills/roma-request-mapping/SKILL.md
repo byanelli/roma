@@ -7,8 +7,9 @@ description: >-
   (#[Body], #[Query], #[Header], #[Path], #[Cookie]), header value objects
   (Authorization), self-sourcing metadata enums (Method, ContentType, Scheme),
   #[Guard], #[Rule], Roma TypeScript generation (roma:typescript), or Roma
-  Precognition, or Roma JSON Schema for tools (ClassSchema). Do NOT use for plain Laravel FormRequests that are not mapped to a
-  typed object, for Eloquent API Resources, or for non-HTTP DTOs.
+  Precognition, Roma JSON Schema for tools (ClassSchema), or Roma config objects
+  (#[ConfigObject], #[ConfigKey], roma:config:validate). Do NOT use for plain Laravel FormRequests that are not mapped to a
+  typed object, for Eloquent API Resources, or for other DTOs that Roma doesn't map.
 ---
 
 # Roma request & response mapping
@@ -32,8 +33,9 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
 | `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
-| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`), `Serializer` |
+| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`), `Serializer` |
 | `BYanelli\Roma\JsonSchema` | `ClassSchema` |
+| `BYanelli\Roma\Config` | `ConfigObject`, `ConfigKey`, `ConfigValidationException` |
 
 ## Defining and injecting a request
 
@@ -210,6 +212,40 @@ are an `object` without a value schema; the description gives the value type
 ("Values: Address"). Map the tool's arguments with
 `Mapper::fromArray(SearchInput::class, $arguments)`, which throws
 `MappingValidationException` on invalid input.
+
+## Config objects
+
+A class with `#[ConfigObject('services.scrapfly')]` reads its properties from the config
+repository (never `env()`), coerced and validated like a request. Inject it by type-hint.
+
+```php
+#[ConfigObject('services.scrapfly')]
+readonly class ScrapflyConfig {
+    public function __construct(
+        #[Key('key'), \SensitiveParameter] public string $apiKey,   // services.scrapfly.key
+        public bool $renderJs = false,                              // services.scrapfly.render_js
+        #[ConfigKey('articles.scrapfly_timeout'), Rule('min:1')] public int $timeout = 180,
+    ) {}
+}
+```
+
+- A property without a key attribute reads the snake_case of its name (config only).
+  `#[Key('a.b')]` is relative to the prefix and a dot nests; `#[ConfigKey]` is absolute and
+  top-level only. Nested objects and arrays read from under their property's key.
+- Missing, `null` and blank strings (`KEY=` in .env) are missing: the default applies, a
+  nullable property gets `null`, a required one fails "required".
+- Remove `(int)`/`(bool)` casts from config files so Roma validates the raw strings.
+- Errors use full config keys ("The services.scrapfly.key field is required.") and throw
+  `ConfigValidationException` on resolve; its message lists the class and all errors, with
+  `#[\SensitiveParameter]` values replaced by `[redacted]`.
+- The binding isn't shared, so `config([...])` in a test applies; Laravel's `#[Singleton]`
+  on the class shares it. `#[ConfigObject('...')]` on a constructor parameter sets a prefix
+  for that parameter, so one class (e.g. credentials) serves several services.
+  `Mapper::fromConfig(Foo::class, ?$prefix)` maps by hand.
+- `php artisan roma:config:validate` checks the classes with a class-level `#[ConfigObject]`
+  in `roma.discover` and exits 1 on failure. Run it in CI and in the deploy script:
+  `optimize` runs it too but ignores failures. Classes used only with parameter-level
+  prefixes aren't checked.
 
 ## Precognition
 

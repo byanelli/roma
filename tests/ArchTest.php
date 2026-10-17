@@ -22,6 +22,10 @@ arch('the JSON Schema builder does not depend on HTTP')
     ->expect('BYanelli\Roma\JsonSchema')
     ->not->toUse($http);
 
-arch('union member discovery does not depend on HTTP')
-    ->expect(['BYanelli\Roma\Discovery\DiscriminatedMembers', 'BYanelli\Roma\Discovery\ClassFinder'])
+arch('the discovery cache does not depend on HTTP')
+    ->expect(['BYanelli\Roma\Discovery\RomaCache', 'BYanelli\Roma\Discovery\ClassFinder'])
+    ->not->toUse($http);
+
+arch('config objects do not depend on HTTP')
+    ->expect('BYanelli\Roma\Config')
     ->not->toUse($http);

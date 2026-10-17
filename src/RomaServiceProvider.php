@@ -2,9 +2,12 @@
 
 namespace BYanelli\Roma;
 
+use BYanelli\Roma\Config\ConfigMapper;
+use BYanelli\Roma\Config\ConfigObject;
+use BYanelli\Roma\Config\ConfigValidateCommand;
 use BYanelli\Roma\Console\RomaCacheCommand;
 use BYanelli\Roma\Console\RomaClearCommand;
-use BYanelli\Roma\Discovery\DiscriminatedMembers;
+use BYanelli\Roma\Discovery\RomaCache;
 use BYanelli\Roma\Http\Request\Contracts;
 use BYanelli\Roma\Http\Request\Injection\Request;
 use BYanelli\Roma\Http\Request\RequestMapper;
@@ -21,12 +24,20 @@ class RomaServiceProvider extends PackageServiceProvider
     {
         $package->name('roma')
             ->hasConfigFile()
-            ->hasCommands([RomaTypeScriptCommand::class, RomaCacheCommand::class, RomaClearCommand::class]);
+            ->hasCommands([RomaTypeScriptCommand::class, RomaCacheCommand::class, RomaClearCommand::class, ConfigValidateCommand::class]);
 
         $this->app->bind(Contracts\RequestResolver::class, fn () => $this->app->make(RequestResolver::class));
         $this->app->bind(Contracts\RequestMapper::class, fn () => $this->app->make(RequestMapper::class));
         $this->app->singleton(Serializer::class);
-        $this->app->singleton(DiscriminatedMembers::class);
+        $this->app->singleton(RomaCache::class);
+    }
+
+    /**
+     * Config objects resolve from the register phase on, so other providers can use them in boot().
+     */
+    public function packageRegistered(): void
+    {
+        $this->registerConfigObjectResolution();
     }
 
     public function packageBooted(): void
@@ -34,6 +45,25 @@ class RomaServiceProvider extends PackageServiceProvider
         $this->registerRequestAutoResolution();
 
         $this->optimizes(optimize: 'roma:cache', clear: 'roma:clear', key: 'roma');
+        // optimize reports a failed task and continues, so a deploy must run the command itself to stop on invalid config.
+        $this->optimizes(optimize: 'roma:config:validate', key: 'roma config');
+    }
+
+    /**
+     * Binds a class with a class-level #[ConfigObject] to the config mapper on its first
+     * resolution. The binding isn't shared, so the object reflects the current config, unless
+     * the class has Laravel's #[Singleton] or #[Scoped].
+     */
+    private function registerConfigObjectResolution(): void
+    {
+        $this->app->beforeResolving(function (string $abstract, array $parameters, Container $app): void {
+            if ($app->bound($abstract) || ConfigObject::prefixOf($abstract) === null) {
+                return;
+            }
+
+            /** @var class-string $abstract */
+            $app->bind($abstract, fn (Container $app) => $app->make(ConfigMapper::class)->map($abstract));
+        });
     }
 
     /**

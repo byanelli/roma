@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Tests\PHPStan;
 
+use BYanelli\Roma\Config\ConfigMapper;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Facades\Mapper;
 
@@ -16,3 +17,5 @@ final readonly class MappedSettings
 
 assertType(MappedSettings::class, Mapper::fromArray(MappedSettings::class, ['theme' => 'dark']));
 assertType(MappedSettings::class, app(ObjectMapper::class)->fromArray(MappedSettings::class, []));
+assertType(MappedSettings::class, Mapper::fromConfig(MappedSettings::class, 'app.settings'));
+assertType(MappedSettings::class, app(ConfigMapper::class)->map(MappedSettings::class));

@@ -20,9 +20,12 @@ and DTO in one.
   `#[ContentType]` and the `Method` / `Scheme` / `ContentType` metadata enums.
 - Roma generates TypeScript interfaces for requests and responses, and supports Laravel
   Precognition.
+- For typed, validated config, prefer a Roma config object (`#[ConfigObject('services.x')]`)
+  over `(string) config('services.x.key')` casts; inject it by type-hint and run
+  `php artisan roma:config:validate` in CI and deploys.
 
 Full documentation: https://yanelli.dev/docs/roma (Markdown: https://yanelli.dev/docs/roma.md).
 
 IMPORTANT: Activate the `roma-request-mapping` skill whenever creating or editing Roma
-request/response objects, source-binding attributes, header value objects, TypeScript
-generation, or Precognition validation.
+request/response objects, config objects, source-binding attributes, header value objects,
+TypeScript generation, or Precognition validation.

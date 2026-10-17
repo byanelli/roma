@@ -36,8 +36,8 @@ return [
     // #[Request] attribute. See "Request objects".
     'auto_inject' => true,
 
-    // Directories scanned for request and response classes and for the members
-    // of #[AutoDiscriminated] unions.
+    // Directories scanned for request and response classes, for the members
+    // of #[AutoDiscriminated] unions, and for config objects.
     'discover' => [app_path()],
 
     'typescript' => [

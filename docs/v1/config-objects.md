@@ -1,0 +1,197 @@
+---
+extends: _layouts.docs.roma
+section: content
+title: Config Objects
+package: roma
+version: v1
+weight: 1
+group: Config
+---
+
+# Config objects
+
+A config object is a class whose properties Roma reads from Laravel's config repository,
+with the same coercion and `#[Rule]` validation as a request. A missing API key or a timeout
+of `"abc"` is reported when the object is resolved, with the config key in the message,
+instead of surfacing later as a 401 or a zero.
+
+```php
+use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Config\ConfigKey;
+use BYanelli\Roma\Config\ConfigObject;
+
+#[ConfigObject('services.scrapfly')]
+readonly class ScrapflyConfig
+{
+    public function __construct(
+        #[Key('key'), \SensitiveParameter] public string $apiKey,  // services.scrapfly.key
+        public bool $renderJs = false,                             // services.scrapfly.render_js
+        #[ConfigKey('articles.scrapfly_timeout'), Rule('min:1')]
+        public int $timeout = 180,                                 // articles.scrapfly_timeout
+    ) {}
+}
+```
+
+Type-hint the class wherever you need it:
+
+```php
+class ScrapflyClient
+{
+    public function __construct(private ScrapflyConfig $config) {}
+}
+```
+
+## Keys
+
+`#[ConfigObject('services.scrapfly')]` sets the prefix. A property's key is relative to it:
+
+| Declaration                                  | Config key                     |
+| -------------------------------------------- | ------------------------------ |
+| `public string $apiKey`                      | `services.scrapfly.api_key`    |
+| `#[Key('key')] public string $apiKey`        | `services.scrapfly.key`        |
+| `#[Key('limits.per_minute')] public int $x`  | `services.scrapfly.limits.per_minute` |
+| `#[ConfigKey('articles.timeout')] public int $x` | `articles.timeout`         |
+
+- A property without a key attribute reads the snake_case form of its name. This applies to
+  config objects only; requests and arrays use the property name as it is.
+- A dot in `#[Key]` separates keys, as in `config()`.
+- `#[ConfigKey]` is an absolute key. Only a top-level property may have one.
+- A nested object or an array of them reads from under its property's key, and its own keys
+  follow the same rules: `public Credentials $oxylabs` reads
+  `services.scrapfly.oxylabs.user` and `services.scrapfly.oxylabs.password`.
+
+Roma reads the config repository only, never `env()`, so a cached config (`config:cache`)
+needs no special handling.
+
+## Values
+
+Config files read most values from the environment, so they are strings. Roma coerces them
+to the property's type as it does query parameters, so remove the casts from your config
+files and let Roma validate the raw value:
+
+```php
+// config/articles.php
+return [
+    'scrapfly_timeout' => env('SCRAPFLY_TIMEOUT', 180),   // not (int) env(...)
+];
+```
+
+`(int) env('SCRAPFLY_TIMEOUT')` turns `"abc"` into `0`, which passes an `int` property. Without
+the cast, Roma reports "The articles.scrapfly_timeout field must be an integer." A boolean
+accepts `true`/`false`, `1`/`0`, `yes`/`no` and `on`/`off`, in any case, so
+`(bool) env(...)` can go as well. An enum property lists the valid values in its message:
+"The services.scraper.provider field must be one of: scrapfly, zyte."
+
+### Missing and blank values
+
+A key that is missing, `null`, or a blank string (empty or only whitespace) is missing. An
+unset variable copied from `.env.example` is `KEY=`, an empty string, so it counts as
+missing too:
+
+| Property                             | Value missing, `null` or blank |
+| ------------------------------------ | ------------------------------ |
+| `public int $timeout = 180`          | `180`                          |
+| `public ?string $region`             | `null`                         |
+| `public string $apiKey`              | "The services.scrapfly.key field is required." |
+
+A nested object whose values are all missing is missing as well, so a nullable one is
+`null`.
+
+## Resolving
+
+A class with `#[ConfigObject]` resolves from the container by type. Laravel's container
+doesn't share the object, so it is mapped and validated on each resolution and reflects the
+current config. A test can change the config with `config([...])` before it resolves the
+object.
+
+Add Laravel's `#[Singleton]` (or `#[Scoped]`) to share it:
+
+```php
+use Illuminate\Container\Attributes\Singleton;
+
+#[ConfigObject('services.scrapfly'), Singleton]
+readonly class ScrapflyConfig { /* ... */ }
+```
+
+An explicit binding in a service provider takes precedence.
+
+### One class, several prefixes
+
+`#[ConfigObject]` on a constructor parameter sets the prefix for that parameter, and
+overrides a class-level prefix. One class can then be used for several services:
+
+```php
+readonly class ProxyCredentials
+{
+    public function __construct(
+        public string $user,
+        #[\SensitiveParameter] public string $password,
+    ) {}
+}
+
+class OxylabsProxy
+{
+    public function __construct(
+        #[ConfigObject('services.oxylabs.residential')] private ProxyCredentials $credentials,
+    ) {}
+}
+```
+
+### Mapping by hand
+
+```php
+use BYanelli\Roma\Facades\Mapper;
+
+$config = Mapper::fromConfig(ScrapflyConfig::class);
+$credentials = Mapper::fromConfig(ProxyCredentials::class, 'services.data_impulse.residential');
+```
+
+The second argument overrides the class's prefix, and is required for a class without one.
+
+## Errors
+
+Invalid config throws `BYanelli\Roma\Config\ConfigValidationException`, a subclass of
+`MappingValidationException`. Its error keys are full config keys, and its message lists the
+class and all the errors, since it is usually thrown while the application boots and read in
+a log:
+
+```
+Roma config object App\Apis\Scrapfly\ScrapflyConfig is invalid:
+  services.scrapfly.key: The services.scrapfly.key field is required.
+  articles.scrapfly_timeout: The articles.scrapfly_timeout field must be an integer.
+```
+
+`$e->errors()` returns the same messages keyed by config key.
+
+### Secrets
+
+PHP keeps the arguments of a `#[\SensitiveParameter]` parameter out of stack traces. Roma also
+replaces its value with `[redacted]` in the messages of a `ConfigValidationException`, so a
+rule message that includes the value, such as a custom rule's, doesn't put a secret in the
+log. The exception doesn't chain the original one, whose messages aren't redacted.
+
+## Validating before a deploy
+
+```
+$ php artisan roma:config:validate
+
+  App\Apis\Scrapfly\ScrapflyConfig ........................ FAIL
+    services.scrapfly.key  The services.scrapfly.key field is required.
+  App\Apis\Tts\GeminiConfig ............................... OK
+
+   ERROR  1 of 2 config objects failed validation.
+```
+
+The command maps each class with a class-level `#[ConfigObject]` in the
+[`roma.discover`](/docs/roma/v1/typescript#auto-detection) directories and exits with 1 if any fails. Run it in
+CI and in your deploy script after `config:cache`, so it checks the config the application
+will use.
+
+- `php artisan optimize` runs it as well, but `optimize` reports a failed task and still
+  succeeds, so it won't stop a deploy. Call `roma:config:validate` yourself for that.
+- A class used only with a parameter-level prefix has no prefix of its own, so the command
+  can't validate it. It is still validated when it is resolved.
+- `php artisan roma:cache`, which `optimize` runs, saves the list of classes to
+  `bootstrap/cache/roma.php`. While that file exists it is the only source, so run it again
+  after adding a config object.

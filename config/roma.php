@@ -40,11 +40,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | Directories scanned for Roma classes: the requests and responses that
-    | `roma:typescript` generates, and the members of interfaces and
-    | abstract classes with #[AutoDiscriminated]. `php artisan roma:cache`, which
-    | `php artisan optimize` runs, saves the members to bootstrap/cache/roma.php.
-    | While that file exists it is the only source, so run it again after
-    | adding a member class.
+    | `roma:typescript` generates, the members of interfaces and abstract
+    | classes with #[AutoDiscriminated], and the config objects that
+    | `roma:config:validate` checks. `php artisan roma:cache`, which
+    | `php artisan optimize` runs, saves the members and config objects to
+    | bootstrap/cache/roma.php. While that file exists it is the only source,
+    | so run it again after adding a member class or a config object.
     |
     */
 
