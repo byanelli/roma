@@ -11,10 +11,10 @@ use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Values\HasValidationRules;
 use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\DiscriminatorIn;
+use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\RejectBlankString;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
-use Illuminate\Validation\Rule;
 
 /**
  * The rules for the data of one source, keyed relative to the source: "email",
@@ -169,7 +169,7 @@ readonly class ValidationRules
                 default => ['array'],
             },
             $type instanceof Class_, $type instanceof Types\Shape, $type instanceof Types\Union => ['array'],
-            $type instanceof Types\Enum => [Rule::enum($type->class)],
+            $type instanceof Types\Enum => [new EnumCase($type->class)],
             default => [],
         };
     }

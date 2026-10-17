@@ -165,11 +165,10 @@ it('fails to map invalid requests', function () {
                 'The header.X-Flag field must be true or false.',
             ],
             'input.color' => [
-                // todo: better error messages for enums
-                'The selected input.color is invalid.',
+                'The input.color field must be one of: Red, Green, Blue.',
             ],
             'input.intensity' => [
-                'The selected input.intensity is invalid.',
+                'The input.intensity field must be one of: 10, 20, 30.',
             ],
             'input.name' => [
                 'The input.name field is required.',

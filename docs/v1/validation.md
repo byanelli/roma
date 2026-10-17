@@ -27,6 +27,9 @@ readonly class CreateContactRequest {
 
 Type coercion and enum/nested-object validation are applied automatically on top of your
 rules — a `public int $page` is validated as an integer without you writing `integer`.
+A value that isn't a case of an enum property's type gets a message that lists the valid
+values: "The input.size field must be one of: s, m, l." A backed enum lists its values and
+a unit enum its case names.
 
 ## Dynamic rules
 
