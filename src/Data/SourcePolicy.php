@@ -40,6 +40,16 @@ interface SourcePolicy
     public function sourceForType(string $typeName): ?Source;
 
     /**
+     * The key of a property with no key attribute.
+     */
+    public function defaultKey(string $propertyName): string;
+
+    /**
+     * The key path of a property's key within its source or nested object.
+     */
+    public function keyPath(string $key): KeyPath;
+
+    /**
      * Whether a top-level property may have a destination attribute, such as #[Status], for
      * this destination.
      */

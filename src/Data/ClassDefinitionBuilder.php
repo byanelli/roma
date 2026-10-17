@@ -55,7 +55,7 @@ class ClassDefinitionBuilder
         $source = $this->nested ? null : $this->topLevelSource($prop);
 
         $type = $this->propertyType($prop);
-        $key = $attributes->declaredKey() ?: $prop->name;
+        $key = $attributes->declaredKey() ?: $this->policy->defaultKey($prop->name);
         $optional = $prop->acceptsMissing || $attributes->hasInstanceOf(Optional::class);
 
         return new Property(
@@ -172,10 +172,10 @@ class ClassDefinitionBuilder
         }
 
         return match (true) {
-            $source === null => new KeyPath([$key]),
+            $source === null => $this->policy->keyPath($key),
             // A single-value source's property is the whole value, so its key path is empty.
             $source->isSingleValue() => KeyPath::empty(),
-            default => new KeyPath([$source->normalizeKey($key)]),
+            default => $this->policy->keyPath($source->normalizeKey($key)),
         };
     }
 
