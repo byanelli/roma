@@ -135,7 +135,7 @@ final readonly class ClassSchema
         }
 
         $schema = match (true) {
-            $type instanceof Types\String_ => new Schema\StringType,
+            $type instanceof Types\String_, $type instanceof Types\Interval => new Schema\StringType,
             $type instanceof Types\Integer => new Schema\IntegerType,
             $type instanceof Types\Float_ => new Schema\NumberType,
             $type instanceof Types\Boolean => new Schema\BooleanType,
@@ -167,7 +167,7 @@ final readonly class ClassSchema
     private function typeName(Type $type): ?string
     {
         return match (true) {
-            $type instanceof Types\String_, $type instanceof Class_ && $type->parsesStringValue() => 'string',
+            $type instanceof Types\String_, $type instanceof Types\Interval, $type instanceof Class_ && $type->parsesStringValue() => 'string',
             $type instanceof Types\Integer => 'integer',
             $type instanceof Types\Float_ => 'number',
             $type instanceof Types\Boolean => 'boolean',

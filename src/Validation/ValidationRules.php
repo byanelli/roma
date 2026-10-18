@@ -15,6 +15,7 @@ use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\RejectBlankString;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
+use BYanelli\Roma\Validation\Rules\ValidInterval;
 
 /**
  * The rules for the data of one source, keyed relative to the source: "email",
@@ -162,6 +163,7 @@ readonly class ValidationRules
             $type instanceof Types\Integer => ['integer'],
             $type instanceof Types\Float_ => ['numeric'],
             $type instanceof Types\Date => [$type->format !== null ? "date_format:{$type->format}" : 'date'],
+            $type instanceof Types\Interval => [new ValidInterval($type->unit)],
             $type instanceof Types\String_ => ['string'],
             $type instanceof Types\Array_ => match (true) {
                 $type->isList => ['array', 'list'],

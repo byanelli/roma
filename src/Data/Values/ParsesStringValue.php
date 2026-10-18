@@ -6,7 +6,8 @@ namespace BYanelli\Roma\Data\Values;
  * Implemented by value-object classes that hydrate from a single raw string
  * (e.g. an Authorization or Accept header) rather than from an array.
  * The returned array is keyed by the object's own property names and is then
- * hydrated through the ordinary nested-object pipeline.
+ * hydrated through the ordinary nested-object pipeline. An int value is passed as its string
+ * form.
  *
  * A string-parsed value is validated as a raw string at its own key (not
  * descended into), so the parse runs only at construction time, after

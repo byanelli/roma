@@ -3,11 +3,14 @@
 namespace BYanelli\Roma\Data;
 
 use BackedEnum;
+use BYanelli\Roma\Attributes\Delimited;
 use BYanelli\Roma\Data\Enums\NormalizesRawValue;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Missing;
 use BYanelli\Roma\Validation\ValidationRules;
 use Carbon\CarbonInterface;
+use Carbon\CarbonInterval;
+use DateInterval;
 use DateTimeInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\DateFactory;
@@ -202,6 +205,33 @@ class ClassMapping
     }
 
     /**
+     * A string such as "90 seconds" or "PT90S", or with #[Unit], a number of the unit.
+     */
+    private function toInterval(Types\Interval $type, mixed $val): DateInterval
+    {
+        $class = is_a($type->class, CarbonInterval::class, true) ? $type->class : CarbonInterval::class;
+
+        if ($val instanceof DateInterval) {
+            return $class::instance($val);
+        }
+
+        $isNumber = is_int($val) || is_float($val) || (is_string($val) && is_numeric($val));
+
+        try {
+            $interval = match (true) {
+                $isNumber && $type->unit !== null => $class::make(+$val, $type->unit),
+                is_string($val) && ! $isNumber => $class::make($val),
+                default => null,
+            };
+        } catch (\Throwable $e) {
+            // Carbon throws several exception types for a string it can't parse.
+            throw new CoercionException('Invalid interval: '.get_debug_type($val), previous: $e);
+        }
+
+        return $interval ?? throw new CoercionException('Invalid interval: '.get_debug_type($val));
+    }
+
+    /**
      * Fields the format doesn't contain are zero rather than the current time, as in Laravel's
      * date_format rule.
      */
@@ -388,6 +418,12 @@ class ClassMapping
                 continue;
             }
 
+            $delimited = $property->attribute(Delimited::class);
+
+            if ($delimited !== null && is_string($rawValue)) {
+                $rawValue = $delimited->split($rawValue);
+            }
+
             try {
                 $typedValue = $this->castValue($type, $rawValue);
             } catch (CoercionException $e) {
@@ -408,6 +444,7 @@ class ClassMapping
             $type instanceof Types\Integer => $this->toInteger($rawValue),
             $type instanceof Types\Float_ => $this->toFloat($rawValue),
             $type instanceof Types\Date => $type->format !== null ? $rawValue : $this->toDate($type, $rawValue),
+            $type instanceof Types\Interval => $this->toInterval($type, $rawValue),
             $type instanceof Types\String_ => $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($type, $rawValue),
@@ -484,6 +521,10 @@ class ClassMapping
      */
     private function castObjectValue(Class_ $type, mixed $rawValue): mixed
     {
+        if (is_int($rawValue) && $type->parsesStringValue()) {
+            $rawValue = (string) $rawValue;
+        }
+
         if (is_string($rawValue) && $type->defersStringParsing()) {
             return $rawValue;
         }

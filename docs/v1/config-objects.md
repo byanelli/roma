@@ -98,6 +98,49 @@ missing too:
 A nested object whose values are all missing is missing as well, so a nullable one is
 `null`.
 
+## Lists, durations and sizes
+
+Three types cover values that are often set in `.env`. They work in requests and plain
+arrays as well.
+
+```php
+use BYanelli\Roma\Attributes\Delimited;
+use BYanelli\Roma\Attributes\Unit;
+use BYanelli\Roma\Values\ByteSize;
+use Carbon\CarbonInterval;
+
+#[ConfigObject('services.uploads')]
+readonly class UploadsConfig
+{
+    /**
+     * @param  list<string>  $mimeTypes
+     */
+    public function __construct(
+        #[Delimited] public array $mimeTypes = ['image/png'],      // "image/png, image/webp"
+        public CarbonInterval $retention = new CarbonInterval(days: 30), // "90 days", "PT12H"
+        #[Unit('seconds')] public CarbonInterval $timeout = new CarbonInterval(seconds: 30), // "90" or "2 minutes"
+        public ByteSize $maxSize = new ByteSize(10_000_000),       // "25MB", "512KiB" or 1048576
+    ) {}
+}
+```
+
+- **`#[Delimited]`** on an array property splits a string on `,` (or the delimiter you
+  pass), trims the items and drops empty ones. An array value is used as it is. The items are
+  coerced and validated as the array's element type.
+- **`CarbonInterval`** (or `DateInterval`) accepts what `CarbonInterval::make()` does:
+  `"90 seconds"`, `"1 hour 30 minutes"`, `"2h 5m"` or an ISO 8601 duration such as `"PT90S"`.
+  With `#[Unit('seconds')]`, a number or numeric string is a count of that unit; any unit
+  Carbon accepts works, such as `milliseconds`, `minutes` or `days`. An invalid value fails
+  with "The services.uploads.timeout field must be a number of seconds or a duration such as
+  "90 seconds"."
+- **`ByteSize`** accepts a number of bytes, as an int or a string, or a number with a unit:
+  `KB`, `MB`, `GB` and `TB` are powers of 1000, and `KiB`, `MiB`, `GiB` and `TiB` powers of
+  1024. Units are case-insensitive, and a fraction is allowed when the result is a whole
+  number of bytes (`"1.5GB"`). `"10M"` is rejected, since it could mean either. Read the size
+  from `$size->bytes`. It serializes as its number of bytes, as a string.
+
+In TypeScript and JSON Schema, an interval and a `ByteSize` are strings.
+
 ## Resolving
 
 A class with `#[ConfigObject]` resolves from the container by type. Laravel's container

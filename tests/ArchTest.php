@@ -29,3 +29,7 @@ arch('the discovery cache does not depend on HTTP')
 arch('config objects do not depend on HTTP')
     ->expect('BYanelli\Roma\Config')
     ->not->toUse($http);
+
+arch('the generic value objects do not depend on HTTP')
+    ->expect('BYanelli\Roma\Values')
+    ->not->toUse($http);

@@ -49,6 +49,7 @@ with `Mapper::fromArray(SearchInput::class, $arguments)` (see
 | a date                                 | `string` with `format: date-time`                    |
 | a date with `#[DateFormat('Y-m-d')]`   | `string` with `format: date`                         |
 | a date with another `#[DateFormat]`    | `string`, with the PHP format in the description     |
+| `CarbonInterval`, `DateInterval`, `ByteSize` | `string`                                       |
 | a backed enum                          | `enum` of its values (`string` or `integer`)         |
 | a unit enum                            | `enum` of its case names                             |
 | a class                                | `object`                                             |

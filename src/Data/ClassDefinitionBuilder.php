@@ -2,8 +2,10 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\Delimited;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\Unit;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
@@ -14,6 +16,7 @@ use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
+use DateInterval;
 use Illuminate\Http\UploadedFile;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -159,6 +162,22 @@ class ClassDefinitionBuilder
 
         if ($dateFormat !== null && ! Types\Date::isIn($type) && ! $prop->isUnionWithDate) {
             throw $attributes->dateFormatWithoutDate();
+        }
+
+        if ($attributes->hasInstanceOf(Delimited::class) && ! $type instanceof Types\Array_) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[Delimited], which splits a string into an array, but its type is not an array."
+            );
+        }
+
+        $unit = $attributes->firstInstanceOf(Unit::class);
+
+        if ($unit !== null) {
+            $type instanceof Types\Interval || throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[Unit], which applies only to a CarbonInterval or DateInterval property."
+            );
+
+            $type = new Types\Interval($type->class, $unit->unit);
         }
 
         return $this->withDateFormat($type, $dateFormat);
@@ -367,6 +386,7 @@ class ClassDefinitionBuilder
                 // Any DateTimeInterface implementor is a date. The bare interface
                 // has no concrete target class; a concrete class carries its own.
                 is_a($name, \DateTimeInterface::class, true) => new Types\Date(interface_exists($name) ? null : $name),
+                is_a($name, DateInterval::class, true) => new Types\Interval($name),
                 enum_exists($name) => new Types\Enum($name),
                 interface_exists($name) || (class_exists($name) && new ReflectionClass($name)->isAbstract()) => $this->getContractType($prop, $name, $discriminated),
                 class_exists($name) => $this->nestedBuilder()->buildClassDefinition($name),
@@ -440,6 +460,7 @@ class ClassDefinitionBuilder
         return (class_exists($name) || interface_exists($name))
             && ! enum_exists($name)
             && ! is_a($name, \DateTimeInterface::class, true)
+            && ! is_a($name, DateInterval::class, true)
             && ! is_a($name, SymfonyUploadedFile::class, true);
     }
 

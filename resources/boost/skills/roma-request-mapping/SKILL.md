@@ -242,6 +242,10 @@ readonly class ScrapflyConfig {
   on the class shares it. `#[ConfigObject('...')]` on a constructor parameter sets a prefix
   for that parameter, so one class (e.g. credentials) serves several services.
   `Mapper::fromConfig(Foo::class, ?$prefix)` maps by hand.
+- Value types (also in requests and arrays): `#[Delimited(',')]` on an array splits a string
+  (`"a, b"`), trimming items and dropping empty ones; `CarbonInterval` accepts `"90 seconds"`
+  or `"PT90S"`, and with `#[Unit('seconds')]` a number; `BYanelli\Roma\Values\ByteSize`
+  accepts `"10MB"` (1000-based), `"512KiB"` (1024-based) or an int of bytes (`->bytes`).
 - `php artisan roma:config:validate` checks the classes with a class-level `#[ConfigObject]`
   in `roma.discover` and exits 1 on failure. Run it in CI and in the deploy script:
   `optimize` runs it too but ignores failures. Classes used only with parameter-level

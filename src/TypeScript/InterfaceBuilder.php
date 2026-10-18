@@ -14,6 +14,7 @@ use BYanelli\Roma\Data\Types\Enum as PhpEnum;
 use BYanelli\Roma\Data\Types\File as PhpFile;
 use BYanelli\Roma\Data\Types\Float_ as PhpFloat;
 use BYanelli\Roma\Data\Types\Integer as PhpInteger;
+use BYanelli\Roma\Data\Types\Interval as PhpInterval;
 use BYanelli\Roma\Data\Types\Mixed_ as PhpMixed;
 use BYanelli\Roma\Data\Types\Shape as PhpShape;
 use BYanelli\Roma\Data\Types\ShapeItem as PhpShapeItem;
@@ -160,6 +161,7 @@ readonly class InterfaceBuilder
             $type instanceof PhpInteger, $type instanceof PhpFloat => new Number,
             $type instanceof PhpBoolean => new Boolean,
             $type instanceof PhpDate => new Date,
+            $type instanceof PhpInterval => new String_,
             $type instanceof PhpEnum => new Enum($type->class),
             $type instanceof PhpArray && $type->keyType !== null => new Record_(
                 $type->keyType instanceof PhpInteger ? new Number : new String_,
