@@ -49,8 +49,10 @@ final readonly class ConfigObject implements ContextualAttribute
     }
 
     /**
+     * A lazy proxy, which throws ConfigValidationException on first access when the config is
+     * invalid.
+     *
      * @throws BindingResolutionException when the parameter isn't typed with a class
-     * @throws ConfigValidationException
      */
     public static function resolve(self $attribute, Container $container, ReflectionParameter $parameter): object
     {
@@ -63,6 +65,6 @@ final readonly class ConfigObject implements ContextualAttribute
             );
         }
 
-        return $container->make(ConfigMapper::class)->map($class, $attribute->prefix);
+        return $container->make(ConfigMapper::class)->lazy($class, $attribute->prefix);
     }
 }

@@ -12,8 +12,9 @@ group: Config
 
 A config object is a class whose properties Roma reads from Laravel's config repository,
 with the same coercion and `#[Rule]` validation as a request. A missing API key or a timeout
-of `"abc"` is reported when the object is resolved, with the config key in the message,
-instead of surfacing later as a 401 or a zero.
+of `"abc"` is reported when the object is first used, with the config key in the message,
+instead of surfacing later as a 401 or a zero. `roma:config:validate` reports it
+[before a deploy](#validating-before-a-deploy).
 
 ```php
 use BYanelli\Roma\Attributes\Key;
@@ -143,12 +144,31 @@ In TypeScript and JSON Schema, an interval and a `ByteSize` are strings.
 
 ## Resolving
 
-A class with `#[ConfigObject]` resolves from the container by type. Laravel's container
-doesn't share the object, so it is mapped and validated on each resolution and reflects the
-current config. A test can change the config with `config([...])` before it resolves the
-object.
+A class with `#[ConfigObject]` resolves from the container by type. The container returns a
+[lazy proxy](https://www.php.net/manual/en/language.oop5.lazy-objects.php): the object is
+mapped and validated when a property is first read, and invalid config throws then. A class
+that injects the config of a service it doesn't use, such as the scraper a request never
+calls, resolves without that service's keys.
 
-Add Laravel's `#[Singleton]` (or `#[Scoped]`) to share it:
+```php
+$config = app(ScrapflyConfig::class);  // doesn't read the config
+$config->apiKey;                       // maps it, or throws ConfigValidationException
+```
+
+- The config is read on first access, so a test can change it with `config([...])` after
+  resolving the object.
+- If the first access throws, the object stays unmapped, and the next access maps it again
+  and throws again if the config is still invalid.
+- PHPUnit's `assertEquals()` and Pest's `toEqual()` see no properties on an object that
+  hasn't been read, so the comparison fails. Read a property first, or use
+  [`Mapper::fromConfig()`](#mapping-by-hand).
+
+Since an error appears only when the config is used, run
+[`roma:config:validate`](#validating-before-a-deploy) in CI and in your deploy script to
+catch it before then.
+
+Laravel's container doesn't share the object, so each resolution maps the config again. Add
+Laravel's `#[Singleton]` (or `#[Scoped]`) to share it:
 
 ```php
 use Illuminate\Container\Attributes\Singleton;
@@ -157,12 +177,14 @@ use Illuminate\Container\Attributes\Singleton;
 readonly class ScrapflyConfig { /* ... */ }
 ```
 
-An explicit binding in a service provider takes precedence.
+The container then shares the proxy, so the config is mapped once, on first access. An
+explicit binding in a service provider takes precedence.
 
 ### One class, several prefixes
 
 `#[ConfigObject]` on a constructor parameter sets the prefix for that parameter, and
-overrides a class-level prefix. One class can then be used for several services:
+overrides a class-level prefix. The parameter is a lazy proxy as well. One class can then be
+used for several services:
 
 ```php
 readonly class ProxyCredentials
@@ -191,13 +213,13 @@ $credentials = Mapper::fromConfig(ProxyCredentials::class, 'services.data_impuls
 ```
 
 The second argument overrides the class's prefix, and is required for a class without one.
+`fromConfig()` maps and validates immediately and returns the object itself, not a proxy.
 
 ## Errors
 
 Invalid config throws `BYanelli\Roma\Config\ConfigValidationException`, a subclass of
 `MappingValidationException`. Its error keys are full config keys, and its message lists the
-class and all the errors, since it is usually thrown while the application boots and read in
-a log:
+class and all the errors, since it is usually read in a log:
 
 ```
 Roma config object App\Apis\Scrapfly\ScrapflyConfig is invalid:
@@ -229,14 +251,15 @@ $ php artisan roma:config:validate
 ```
 
 The command maps each class with a class-level `#[ConfigObject]` in the
-[`roma.discover`](/docs/roma/v1/typescript#auto-detection) directories and exits with 1 if any fails. Run it in
-CI and in your deploy script after `config:cache`, so it checks the config the application
-will use.
+[`roma.discover`](/docs/roma/v1/typescript#auto-detection) directories and exits with 1 if any fails. It
+maps them immediately, unlike the container, so it reports config that the application would
+reject only when a request uses it. Run it in CI and in your deploy script after
+`config:cache`, so it checks the config the application will use.
 
 - `php artisan optimize` runs it as well, but `optimize` reports a failed task and still
   succeeds, so it won't stop a deploy. Call `roma:config:validate` yourself for that.
 - A class used only with a parameter-level prefix has no prefix of its own, so the command
-  can't validate it. It is still validated when it is resolved.
+  can't validate it. It is still validated on first access.
 - `php artisan roma:cache`, which `optimize` runs, saves the list of classes to
   `bootstrap/cache/roma.php`. While that file exists it is the only source, so run it again
   after adding a config object.

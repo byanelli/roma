@@ -8,12 +8,13 @@ use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Data\Types\Class_;
 use Illuminate\Contracts\Config\Repository;
+use ReflectionClass;
 use RuntimeException;
 use SensitiveParameter;
 
 /**
  * Maps config objects from the config repository. Use Facades\Mapper::fromConfig(), or
- * resolve the class from the container.
+ * resolve the class from the container, which returns a lazy proxy.
  */
 final readonly class ConfigMapper
 {
@@ -56,6 +57,24 @@ final readonly class ConfigMapper
 
         /** @var T */
         return $this->mapper->build($mapping);
+    }
+
+    /**
+     * A lazy proxy that maps the object on first access, so the config is read and validated
+     * then. PHP leaves a proxy whose initializer threw uninitialized, so the next access maps
+     * it again.
+     *
+     * @template T of object
+     *
+     * @param  class-string<T>  $className
+     * @param  ?string  $prefix  overrides the class's #[ConfigObject] prefix
+     * @return T
+     *
+     * @throws \ReflectionException
+     */
+    public function lazy(string $className, ?string $prefix = null): object
+    {
+        return new ReflectionClass($className)->newLazyProxy(fn () => $this->map($className, $prefix));
     }
 
     /**

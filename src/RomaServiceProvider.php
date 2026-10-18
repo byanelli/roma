@@ -50,9 +50,10 @@ class RomaServiceProvider extends PackageServiceProvider
     }
 
     /**
-     * Binds a class with a class-level #[ConfigObject] to the config mapper on its first
-     * resolution. The binding isn't shared, so the object reflects the current config, unless
-     * the class has Laravel's #[Singleton] or #[Scoped].
+     * Binds a class with a class-level #[ConfigObject] to a lazy proxy on its first resolution,
+     * so a class can inject config it doesn't use without it being validated. The binding isn't
+     * shared, so the object reflects the current config, unless the class has Laravel's
+     * #[Singleton] or #[Scoped].
      */
     private function registerConfigObjectResolution(): void
     {
@@ -62,7 +63,7 @@ class RomaServiceProvider extends PackageServiceProvider
             }
 
             /** @var class-string $abstract */
-            $app->bind($abstract, fn (Container $app) => $app->make(ConfigMapper::class)->map($abstract));
+            $app->bind($abstract, fn (Container $app) => $app->make(ConfigMapper::class)->lazy($abstract));
         });
     }
 

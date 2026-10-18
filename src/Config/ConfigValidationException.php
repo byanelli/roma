@@ -5,8 +5,8 @@ namespace BYanelli\Roma\Config;
 use BYanelli\Roma\Data\MappingValidationException;
 
 /**
- * Config that failed validation while being mapped onto a config object. It is usually
- * thrown while the application boots, so the message lists all the errors.
+ * Config that failed validation while being mapped onto a config object. It is usually read
+ * in a log, so the message lists all the errors.
  */
 class ConfigValidationException extends MappingValidationException
 {
