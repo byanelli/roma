@@ -212,7 +212,9 @@ Roma config object App\Apis\Scrapfly\ScrapflyConfig is invalid:
 PHP keeps the arguments of a `#[\SensitiveParameter]` parameter out of stack traces. Roma also
 replaces its value with `[redacted]` in the messages of a `ConfigValidationException`, so a
 rule message that includes the value, such as a custom rule's, doesn't put a secret in the
-log. The exception doesn't chain the original one, whose messages aren't redacted.
+log. The exception doesn't chain the original one, whose messages aren't redacted. The
+[serializer](/docs/roma/v1/responses) leaves the property out of its output, so a config object
+passed to `Serializer::toArray()` doesn't include the secret.
 
 ## Validating before a deploy
 

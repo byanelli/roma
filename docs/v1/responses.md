@@ -106,6 +106,29 @@ A property typed with `BYanelli\Roma\Missing`, such as `string|Missing`, is opti
 the attribute: it is omitted when unset or when its value is `Missing::instance()`, and
 TypeScript marks it optional.
 
+## Leave out secrets with `#[\SensitiveParameter]`
+
+A property whose constructor parameter has PHP's `#[\SensitiveParameter]` is never
+serialized. Its key is left out of the body and the headers in all profiles, including in
+nested objects, and the generated TypeScript response types leave it out as well. A property
+assigned in the constructor from a sensitive parameter of the same name is left out too.
+
+```php
+use BYanelli\Roma\Facades\Serializer;
+
+readonly class ProxyCredentials {
+    public function __construct(
+        public string $user,
+        #[\SensitiveParameter] public string $password,
+    ) {}
+}
+
+Serializer::toArray(new ProxyCredentials('ox', 'secret')); // ['user' => 'ox']
+```
+
+`Profile::storage()` leaves the value out too, so such an object doesn't round-trip through
+storage. Request types in TypeScript keep the property, since the client sends it.
+
 ## Status and headers
 
 Mark an `int` property `#[Status]` to make its value the HTTP status code, or a property

@@ -16,6 +16,7 @@ use BYanelli\Roma\TypeScript\Types\Interface_;
 use BYanelli\Roma\TypeScript\Types\Object_;
 use BYanelli\Roma\TypeScript\Types\Record_;
 use BYanelli\Roma\TypeScript\Types\Union;
+use SensitiveParameter;
 
 /**
  * Emits TypeScript definitions for Roma request and response objects by walking
@@ -181,6 +182,8 @@ readonly class TypeScriptGenerator
                     includeProperty: fn (PhpProperty $p) => $this->includeResponseProperty($p, $bucket),
                     name: TypeScriptName::for($response).$bucket->name,
                     stringValued: $bucket === Bucket::Headers,
+                    // The serializer leaves these out.
+                    omitProperty: fn (PhpProperty $p) => $p->hasAttribute(SensitiveParameter::class),
                 );
             }
         }

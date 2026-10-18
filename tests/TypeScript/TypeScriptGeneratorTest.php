@@ -244,6 +244,65 @@ it('marks a response field optional only when #[Optional], not when it has a def
         TS);
 });
 
+class TsSecretCredentials
+{
+    public function __construct(
+        public string $user,
+        #[SensitiveParameter] public string $password,
+    ) {}
+}
+
+class TsAccountResponse extends Response
+{
+    /**
+     * @param  list<TsSecretCredentials>  $fallbacks
+     */
+    public function __construct(
+        public string $name,
+        #[SensitiveParameter] public string $apiKey,
+        #[Header('X-Token'), SensitiveParameter] public string $token,
+        public TsSecretCredentials $primary,
+        public array $fallbacks,
+    ) {}
+}
+
+class TsLoginRequest
+{
+    public function __construct(
+        public string $user,
+        #[SensitiveParameter] public string $password,
+    ) {}
+}
+
+it('leaves #[\SensitiveParameter] properties out of response types, since the serializer omits them', function () {
+    $ts = new TypeScriptGenerator([], [TsAccountResponse::class])->generate();
+
+    expect($ts)->toContain(<<<'TS'
+        export interface TsAccountResponseBody {
+          name: string;
+          primary: TsSecretCredentials;
+          fallbacks: TsSecretCredentials[];
+        }
+        TS)
+        ->toContain(<<<'TS'
+        export interface TsSecretCredentials {
+          user: string;
+        }
+        TS)
+        ->not->toContain('TsAccountResponseHeaders');
+});
+
+it('keeps #[\SensitiveParameter] properties in request types', function () {
+    $ts = new TypeScriptGenerator([TsLoginRequest::class])->generate();
+
+    expect($ts)->toContain(<<<'TS'
+        export interface TsLoginRequestBody {
+          user: string;
+          password: string;
+        }
+        TS);
+});
+
 class TsChapterLink
 {
     public function __construct(

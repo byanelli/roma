@@ -16,6 +16,7 @@ use ReflectionProperty;
 use ReflectionType;
 use ReflectionUnionType;
 use RuntimeException;
+use SensitiveParameter;
 
 /**
  * A constructor parameter or a property that Roma maps or serializes. A promoted property's
@@ -207,6 +208,26 @@ final class ReflectionParamOrProperty
             }
 
             return $this->reflection;
+        }
+    }
+
+    /**
+     * Whether the parameter, or for a property the constructor parameter of the same name, has
+     * #[\SensitiveParameter]. PHP doesn't copy the attribute to a promoted property.
+     */
+    public bool $isSensitive {
+        get {
+            if ($this->reflection instanceof ReflectionParameter) {
+                return $this->reflection->getAttributes(SensitiveParameter::class) !== [];
+            }
+
+            foreach ($this->declaringClass?->getConstructor()?->getParameters() ?? [] as $parameter) {
+                if ($parameter->getName() === $this->name) {
+                    return $parameter->getAttributes(SensitiveParameter::class) !== [];
+                }
+            }
+
+            return false;
         }
     }
 

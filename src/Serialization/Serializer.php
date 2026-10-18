@@ -30,7 +30,8 @@ use UnitEnum;
 
 /**
  * Serializes an object's public properties, recursing through nested objects
- * and arrays with the same profile.
+ * and arrays with the same profile. A property whose constructor parameter has
+ * #[\SensitiveParameter] is left out.
  */
 class Serializer
 {
@@ -343,6 +344,11 @@ class Serializer
             }
 
             $prop = new ReflectionParamOrProperty($property, instantiate: self::ATTRIBUTES);
+
+            if ($prop->isSensitive) {
+                continue;
+            }
+
             $attributes = $prop->attributes;
             $attributes->assertCombinable();
             $attributes->assertStatusType();
