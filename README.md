@@ -14,6 +14,8 @@ PHP objects, and serializes objects back out:
   the underlying Laravel request.
 - **Responses.** Typed response objects become JSON, with properties that can set the
   status code or headers.
+- **APIs you call.** Request objects sent through Laravel's HTTP client, with the response
+  mapped onto a class chosen by its status.
 - **Config.** Values from Laravel's config repository. A missing API key is reported with
   its config key when the object is used, instead of surfacing later as a 401.
 - **Plain arrays**, such as tool input or a stored value.
@@ -89,6 +91,12 @@ readonly class ScrapflyConfig {
 - **Response objects.** Return a typed `Response` object and Roma serializes it to JSON,
   with properties liftable to the status code or headers. The `Serializer` facade serializes any
   object, with profiles for responses, outgoing requests and storage.
+- **Typed HTTP client.** Send a request object with `$http->sendRequest(new GetVideo($id))`:
+  `#[Get('/videos/{id}')]` sets the method and path, and `#[Query]`, `#[Body]`, `#[Header]` and
+  `#[Path]` say where each property goes. The response maps onto the class for its status
+  (`#[Status(404)]`, `'4xx'`, `'default'`), exception classes are thrown, and Laravel's
+  `retry()`, `Http::fake()` and events still apply. Typed fakes and assertions match on the
+  request class.
 - **Config objects.** Mark a class `#[ConfigObject('services.scrapfly')]` and type-hint it.
   A property's key is the snake_case of its name under the prefix, and values get the same
   coercion and `#[Rule]` validation as a request. Injected objects are mapped when first used, and
@@ -97,7 +105,8 @@ readonly class ScrapflyConfig {
   `CarbonInterval` accepts `"90 seconds"` (or a number with `#[Unit('seconds')]`), and
   `ByteSize` accepts `"25MB"`. They work in requests and config alike.
 - **Secrets stay out of output.** Properties marked `#[\SensitiveParameter]` are left out of
-  serialized output and validation messages.
+  serialized output and validation messages. The HTTP client sends them, and redacts them
+  from its exception messages.
 - **Plain arrays too.** `Mapper::fromArray(Settings::class, $array)` maps and validates an
   array, such as tool input or a stored value, onto the same classes.
 - **TypeScript generation.** `php artisan roma:typescript` emits interfaces for your
@@ -109,8 +118,8 @@ readonly class ScrapflyConfig {
   coding agents know when and how to reach for Roma.
 
 See the **[full documentation](https://yanelli.dev/docs/roma)** for everything: request
-objects, sources, validation & guards, headers & metadata, nested objects, responses, config
-objects, TypeScript generation, JSON Schema, and Precognition.
+objects, sources, validation & guards, headers & metadata, nested objects, responses, the HTTP
+client, config objects, TypeScript generation, JSON Schema, and Precognition.
 
 ## Testing
 

@@ -32,7 +32,7 @@ final readonly class ResponseMapper
      */
     public function map(ResponseClasses $classes, Response $response, ?RequestException $thrown, object $request): object
     {
-        // Laravel doesn't throw for a failed response when a throwIf() condition says not to.
+        // Laravel doesn't throw for a failed response when a throwIf() condition is false.
         $original = $thrown ?? ($response->failed() ? $response->toException() : null);
         $match = $classes->match($response->status());
 

@@ -4,6 +4,51 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- A typed HTTP client. `BYanelli\Roma\Http\Client\Contracts\TypedFactory` (and the `RomaHttp`
+  facade) wraps the container's `Illuminate\Http\Client\Factory`, so `Http::fake()`,
+  `preventStrayRequests()`, global middleware and events apply; its configuring methods return
+  a `TypedPendingRequest`. `sendRequest($request, $responses, $url)` serializes a request
+  object with `Profile::clientRequest()` and maps the response onto the class for its status.
+  - Request classes declare the method and path with `#[Get('/videos/{id}')]`, `#[Head]`,
+    `#[Post]`, `#[Put]`, `#[Patch]` or `#[Delete]`. Each property needs `#[Body]`, `#[Query]`,
+    `#[Header]`, `#[Path]` or `#[Url]`, or a name in the path template, and a `#[Body]`
+    property on a GET or HEAD request throws. `#[AsForm]` and `#[AsMultipart]` change the
+    encoding from JSON, and a file property makes the request multipart.
+  - Response classes map from the JSON body, `#[Header]` from the response headers and a
+    `#[Status]` property from the status code. A class-level `#[Status]` (a code, a range such
+    as `'4xx'`, or `'default'`) gives the statuses a class goes with, and a class without one
+    goes with 2xx. Classes from the `sendRequest()` argument, `#[Responses]` on the request
+    class and its parents, and `withResponses()` are merged by status, the earlier list
+    winning.
+  - A matched `Throwable` class is thrown and other classes are returned. Laravel throws and
+    retries first; an unmatched status of 400 and up rethrows Laravel's exception unchanged,
+    and one below 400 throws `UnmatchedResponseException`. A `'default'` fallback that fails
+    to map rethrows the original exception, and another class that fails to map throws
+    `MalformedResponseException`. Neither message includes the URL, and sensitive values are
+    redacted. Constructor parameters typed as Laravel's `Response`, `Throwable`, `Exception` or
+    `RequestException` receive the response and its exception.
+  - `RomaHttp::fake()` takes request classes as keys and response objects as values,
+    `RomaHttp::response()` serializes a response object for `Http::fake()`, and
+    `assertSent()`, `assertNotSent()` and `sent()` match on the request class.
+- `#[Status]` takes an optional code and is allowed on a class. On a server response class,
+  `#[Status(201)]` sets the status when the class has no `#[Status]` property.
+- Breaking: `#[Query]`, `#[Path]` and `#[Body]` are destination attributes as well as sources
+  (`Serialization\FallsBackToBody`). Under a profile that doesn't allow their destination,
+  such as `Profile::response()`, they are still written to the body.
+  `RequestSourcePolicy::allowsDestination()` allows them along with `#[Header]`.
+- Breaking: `SourcePolicy` has a `sourceFor()` method, which gives a policy the chance to read
+  a source attribute's part from its own input, as the client response policy reads `#[Header]`
+  from response headers. `Source::isInjected()` marks a source whose value is passed to the
+  constructor as is; its property is not coerced, validated, or included in TypeScript and
+  JSON Schema.
+- Breaking: a `Profile` sets whether `#[\SensitiveParameter]` properties are written.
+  `Profile::clientRequest()` and the new `Profile::clientResponse()` write them; the other
+  profiles leave them out as before. `Profile::clientRequest()` allows the new `Url`
+  destination, and `Serialized` has a `$url`.
+- The serializer leaves out a header whose value is null.
+- An exception class is mapped through its constructor only: public properties declared
+  outside it, such as Laravel's `RequestException::$response`, are not mapped.
+
 - Breaking: a dot in a key nests in sources with nested data (input, query, body, file
   uploads, config and `Mapper::fromArray()`), as in Laravel: `#[Key('error.message')]` reads
   `{"error": {"message": ...}}` and reports errors under `input.error.message`. It used to
@@ -90,12 +135,12 @@ All notable changes to `roma` will be documented in this file.
   used to cast the value with `(int)`. A status that is usually the same takes a default.
 - Breaking: `#[Status]` on a class mapped from a request or a plain array throws when the
   definition is built. `SourcePolicy::allowsDestination()` decides which destination
-  attributes a mapped class may have; `RequestSourcePolicy` allows `#[Header]` only.
-  TypeScript generation builds response classes with its own policy, which allows both.
-- `#[Rule]`, `#[Present]` or a source attribute such as `#[Query]` or an accessor on a virtual
-  (hooked, backing-less) property throws when the definition is built and when serializing,
-  since the property is never mapped. `#[Key]`, `#[Header]`, `#[DateFormat]` and
-  `#[Description]` are still allowed.
+  attributes a mapped class may have; `RequestSourcePolicy` doesn't allow `#[Status]`.
+  TypeScript generation builds response classes with its own policy, which allows it.
+- `#[Rule]`, `#[Present]`, or a source attribute that is only a source, such as `#[Input]` or
+  an accessor, on a virtual (hooked, backing-less) property throws when the definition is
+  built and when serializing, since the property is never mapped. `#[Key]`, `#[Header]`,
+  `#[Query]`, `#[Body]`, `#[Path]`, `#[DateFormat]` and `#[Description]` are still allowed.
 - Breaking: the key given to a source attribute, as in `#[Query('page_num')]`,
   `#[Body('display.name')]` or `#[Input('sort_by')]`, is also the key the serializer writes,
   so a request class serializes back to its own keys. It used to write the property name.
@@ -117,7 +162,8 @@ All notable changes to `roma` will be documented in this file.
 - Breaking: `#[Header]` or `#[Status]` on a property of a nested object throws when the
   definition is built, in mapping and TypeScript generation, and when the object is
   serialized, including through its own `toArray()`. The serializer used to drop it. The
-  message says headers and `#[Status]` can only be declared on the top-level class.
+  message says destination attributes such as `#[Header]` and `#[Status]` can only be declared
+  on the top-level class.
 - Breaking: attribute combinations with no meaning throw when the definition is built and
   when serializing, instead of being ignored: `#[Key]` with `#[Status]`, `#[Status]` with
   `#[Header]`, two source attributes such as `#[Query]` with `#[Body]`, and `#[Optional]` with

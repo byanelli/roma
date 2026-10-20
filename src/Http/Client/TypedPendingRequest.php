@@ -65,7 +65,7 @@ use RuntimeException;
 class TypedPendingRequest
 {
     /**
-     * The request attribute that holds the request object, for fakes and assertions.
+     * The request attribute that contains the request object, for fakes and assertions.
      */
     public const string REQUEST_ATTRIBUTE = 'roma.request';
 

@@ -325,6 +325,12 @@ it('maps the body, headers and status of a 2xx response', function () {
     expect($video)->toEqual(new ClientVideoWithMeta(7, 41, 202));
 });
 
+it('reads a response header in any case', function () {
+    Http::fake(['api.test/*' => Http::response(['id' => 7], 200, ['x-ratelimit-remaining' => '3'])]);
+
+    expect(RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientVideoWithMeta::class])->remaining)->toBe(3);
+});
+
 it('returns Laravel\'s response for Response::class', function () {
     Http::fake(['api.test/*' => Http::response('<xml/>')]);
 

@@ -126,9 +126,11 @@ TypeScript marks it optional.
 
 ## Leave out secrets with `#[\SensitiveParameter]`
 
-A property whose constructor parameter has PHP's `#[\SensitiveParameter]` is never
-serialized. Its key is left out of the body and the headers in all profiles, including in
-nested objects, and the generated TypeScript response types leave it out as well. A property
+A property whose constructor parameter has PHP's `#[\SensitiveParameter]` is not
+serialized. Its key is left out of the body and the headers, including in nested objects, and
+the generated TypeScript response types leave it out as well. The
+[HTTP client's](/docs/roma/v1/http-client) profiles are the exception: a request sends the
+value to the server, and a fake response includes it. A property
 assigned in the constructor from a sensitive parameter of the same name is left out too.
 
 ```php
@@ -173,9 +175,10 @@ class CreatedResponse extends Response {
 A property can have only one of `#[Status]` and `#[Header]`, and both can only be declared
 on the top-level class: a nested object with either throws when it is serialized or its
 definition is built. The `#[Status]` property must be typed `int`; for a status that is
-usually the same, give it a default such as `201` rather than making it nullable. A class
-mapped from a request can't have `#[Status]`, since a request has no status. Without a
-`#[Status]` property the response defaults to 200. For values computed at
+usually the same, give it a default such as `201` rather than making it nullable, or put
+`#[Status(201)]` on the class, which applies when the class has no `#[Status]` property. A
+class mapped from a request can't have `#[Status]`, since a request has no status. Without
+either, the response defaults to 200. For values computed at
 runtime, override the public `responseStatus()` or `responseHeaders()` methods. Both receive
 the serialized object, which contains the attribute values:
 
@@ -202,9 +205,10 @@ class UserResponse extends Response {
 }
 ```
 
-A hooked property with no backing value is never mapped, so `#[Rule]`, `#[Present]` or a
-source attribute such as `#[Query]` on one throws. `#[Key]`, `#[Header]`, `#[DateFormat]` and
-`#[Description]` apply to it as usual.
+A hooked property with no backing value is never mapped, so `#[Rule]`, `#[Present]`, or a
+source attribute that is only a source, such as `#[Input]` or `#[Cookie]`, on one throws.
+`#[Key]`, `#[Header]`, `#[Query]`, `#[Body]`, `#[Path]`, `#[DateFormat]` and `#[Description]`
+apply to it as usual, since they also say where the value is written.
 
 Overriding `toArray()` is the escape hatch for output the properties can't describe. Keys it
 adds are not in the generated TypeScript. When the object is nested in another, the
@@ -273,17 +277,20 @@ use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Profile;
 
 Serializer::toArray($object);                      // the body, as a response would send it
-Serializer::serialize($object);                    // body, headers, status, query and path
+Serializer::serialize($object);                    // body, headers, status, query, path and URL
 Serializer::toArray($object, Profile::storage());  // output Mapper::fromArray() can map back
 ```
 
 A `Profile` sets the enum style, the default date format and which destinations are allowed:
 
-| Profile                    | Backed enums       | Destinations                 |
-| -------------------------- | ------------------ | ---------------------------- |
-| `Profile::response()`      | `{ name, value }`  | body, header, status         |
-| `Profile::clientRequest()` | value              | body, query, path, header    |
-| `Profile::storage()`       | value              | body                         |
+| Profile                     | Backed enums       | Destinations                   | Sensitive values |
+| --------------------------- | ------------------ | ------------------------------ | ---------------- |
+| `Profile::response()`       | `{ name, value }`  | body, header, status           | left out         |
+| `Profile::clientRequest()`  | value              | body, query, path, header, URL | written          |
+| `Profile::clientResponse()` | value              | body, header, status           | written          |
+| `Profile::storage()`        | value              | body                           | left out         |
 
 The profile applies to nested objects too. A property whose destination the profile doesn't
-allow, such as `#[Status]` under `Profile::storage()`, throws.
+allow, such as `#[Status]` under `Profile::storage()`, throws. `#[Query]`, `#[Path]` and
+`#[Body]` are sources as well, so under such a profile their properties are written to the
+body, and a request object serializes back to the keys it maps from.

@@ -21,6 +21,11 @@ never touch the underlying Laravel request directly.
 On the response side, Roma converts a plain object (recursively) into the JSON body of a
 `JsonResponse`, with properties that can instead drive the status code or headers.
 
+Roma's [HTTP client](/docs/roma/v1/http-client) works in both directions for APIs you call:
+it serializes a request object into the query string, body, headers and path of an outgoing
+request, and maps the response onto a class chosen by its status, throwing the ones that are
+exceptions. It wraps Laravel's HTTP client, so `Http::fake()` and its other features apply.
+
 [Config objects](/docs/roma/v1/config-objects) get the same treatment for Laravel's config
 repository: a class marked `#[ConfigObject('services.scrapfly')]` is mapped and validated
 from that part of the config, so a missing API key is reported with its config key instead
@@ -66,7 +71,8 @@ class CreateContactController {
 ```
 
 The rest of these docs walk through defining requests, the sources a property can bind to,
-headers and request metadata, nested objects, response objects, and TypeScript generation.
+headers and request metadata, nested objects, response objects, the HTTP client, config
+objects, and TypeScript generation.
 
 ## These docs as Markdown
 

@@ -26,7 +26,7 @@ use ReflectionNamedType;
 
 /**
  * Fakes and assertions that match requests by their request class. Requests sent with
- * sendRequest() carry the request object in a request attribute.
+ * sendRequest() have the request object in a request attribute.
  *
  * @phpstan-require-extends TypedFactory
  */

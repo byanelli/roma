@@ -7,8 +7,9 @@ description: >-
   (#[Body], #[Query], #[Header], #[Path], #[Cookie]), header value objects
   (Authorization), self-sourcing metadata enums (Method, ContentType, Scheme),
   #[Guard], #[Rule], Roma TypeScript generation (roma:typescript), or Roma
-  Precognition, Roma JSON Schema for tools (ClassSchema), or Roma config objects
-  (#[ConfigObject], #[ConfigKey], roma:config:validate). Do NOT use for plain Laravel FormRequests that are not mapped to a
+  Precognition, Roma JSON Schema for tools (ClassSchema), Roma config objects
+  (#[ConfigObject], #[ConfigKey], roma:config:validate), or Roma's typed HTTP client
+  (TypedFactory, sendRequest(), RomaHttp, #[Get]/#[Post], #[Responses]). Do NOT use for plain Laravel FormRequests that are not mapped to a
   typed object, for Eloquent API Resources, or for other DTOs that Roma doesn't map.
 ---
 
@@ -33,9 +34,10 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
 | `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
-| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`), `Serializer` |
+| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`), `Serializer`, `RomaHttp` |
 | `BYanelli\Roma\JsonSchema` | `ClassSchema` |
 | `BYanelli\Roma\Config` | `ConfigObject`, `ConfigKey`, `ConfigValidationException` |
+| `BYanelli\Roma\Http\Client` | `Contracts\TypedFactory`, `TypedPendingRequest`; `Attributes\{Get, Head, Post, Put, Patch, Delete, Url, AsForm, AsMultipart, Responses}`; `Exceptions\{MalformedResponseException, UnmatchedResponseException}` |
 
 ## Defining and injecting a request
 
@@ -192,8 +194,8 @@ class) or `#[Header('Name')]`, on the top-level class only (in a nested object t
 objects don't need the traits. For runtime values, override the public
 `responseStatus(Serialized $serialized)` / `responseHeaders(Serialized $serialized)`, or
 implement `CustomizesSerialization` for date formats. Prefer get-only hooked properties for
-computed values (they reach TypeScript, and `#[Rule]`, `#[Present]` or a source attribute on
-one throws); an overridden `toArray(?Profile $profile = null)` is
+computed values (they reach TypeScript, and `#[Rule]`, `#[Present]`, `#[Input]`, `#[Cookie]` or
+an accessor on one throws); an overridden `toArray(?Profile $profile = null)` is
 the escape hatch and should pass `$profile` to `Serializer::toArray($this, $profile)`; a
 `Response`'s HTTP body uses the override. `Serializer::toArray($obj, $profile)` /
 `Serializer::serialize()` (facade `BYanelli\Roma\Facades\Serializer`) serialize any object
@@ -257,6 +259,64 @@ readonly class ScrapflyConfig {
   in `roma.discover` and exits 1 on failure. Run it in CI and in the deploy script:
   `optimize` runs it too but ignores failures. Classes used only with parameter-level
   prefixes aren't checked.
+
+## HTTP client
+
+For a third-party API, inject `BYanelli\Roma\Http\Client\Contracts\TypedFactory` (or use the
+`RomaHttp` facade). It wraps the container's `Http` factory, so `Http::fake()`,
+`preventStrayRequests()`, middleware and events apply. Configuring methods (`baseUrl()`,
+`withToken()`, `retry()`, ...) return a `TypedPendingRequest`; `sendRequest($request,
+[Video::class, NotFound::class], url: null)` sends and maps, and PHPStan infers
+`Video|NotFound` from that list. `withResponses(X::class)` adds classes, such as an SDK's
+fallback exception, for all calls on that pending request.
+
+```php
+#[Get('/videos/{id}')]                                     // or #[Post('/path')], #[Put], ...
+#[Responses(Video::class, NotFound::class, SubscriberOnlyException::class)]
+final readonly class GetVideo {
+    public function __construct(
+        public string $id,                                 // fills {id} by name
+        #[Query] public bool $full = false,                // ?full=false
+        #[Header('X-Request-Id')] public ?string $requestId = null,
+    ) {}
+}
+
+#[Status(404)]                                             // a code, '4xx' or 'default'
+final readonly class NotFound {}                           // returned
+
+#[Status(403)]
+class SubscriberOnlyException extends RequestException {   // thrown
+    public function __construct(Response $response, #[Key('error.message')] public readonly string $reason) {
+        parent::__construct($response);
+    }
+}
+```
+
+- Every request property needs `#[Body]`, `#[Query]`, `#[Header]`, `#[Path]` or `#[Url]`, or a
+  name in the path template; otherwise it throws. No `#[Body]` on GET/HEAD. JSON by default;
+  `#[AsForm]`, `#[AsMultipart]`, or an `UploadedFile` property (multipart). Sensitive values
+  are sent.
+- Response classes map from the JSON body (dots nest), `#[Header]` and a `#[Status]` int
+  property. A class without class-level `#[Status]` goes with 2xx. Exact code beats range
+  beats `'default'`. Lists merge by status, most specific first: `sendRequest()` argument,
+  `#[Responses]` on the class, on its parents, then `withResponses()`; two classes with one
+  status in one list throw. `Illuminate\Http\Client\Response::class` returns the raw response.
+- `Throwable` classes are thrown, others returned. Constructor parameters typed `Response`,
+  `Throwable`, `Exception` or `RequestException` are injected (the response; Laravel's
+  exception, for `previous`). Extend `RequestException`; exception classes are built through
+  their constructor only. Use `#[Guard]` for a 2xx with an error body.
+- Laravel throws first (`throw()` is called), so `retry()` works as usual. An unmatched
+  status ≥ 400 rethrows Laravel's exception unchanged; below 400 throws
+  `UnmatchedResponseException`. A `'default'` fallback that fails to map rethrows the original;
+  any other mapping failure throws `MalformedResponseException` (status, errors, start of
+  body). Messages never contain the URL, and sensitive values are redacted. Give fallback
+  properties defaults.
+- Tests: `RomaHttp::fake([GetVideo::class => new NotFound])` (objects are serialized with
+  their status; closures typed `fn (GetVideo $r)` get the request object; URL keys work as in
+  `Http::fake()`), `RomaHttp::response($obj, 500)`, `RomaHttp::assertSent(fn (GetVideo $r) =>
+  ...)`, `assertNotSent()`, `sent(GetVideo::class)`. Keep contract tests on recorded JSON
+  through `Http::fake()`.
+- Not supported: async requests and pools.
 
 ## Precognition
 
