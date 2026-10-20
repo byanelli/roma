@@ -13,16 +13,39 @@ class NamesBag
     /** @var array<string, string> already resolved name per type identity (uniqueKey). */
     private array $alreadyResolved = [];
 
+    /** @var array<string, true> preferred names of the types that aren't response variants. */
+    private array $baseNames = [];
+
+    /**
+     * Registers the preferred names of the types that aren't response variants. A response
+     * variant skips these names, so it never takes the name of another class's type.
+     *
+     * @param  list<string>  $names
+     */
+    public function registerBaseNames(array $names): void
+    {
+        $this->baseNames += array_fill_keys($names, true);
+    }
+
     /**
      * The TypeScript name for an interface. Resolution is idempotent per
      * interface identity: an interface's definition and all properties that
      * reference it resolve to the same name (they are the same Interface_
      * object, sharing a uniqueKey). Two genuinely different classes that share a
      * basename still get distinct, suffixed names (e.g. Address, Address2).
+     *
+     * A response variant is named after its class's resolved name plus the
+     * response suffix (Address2 becomes Address2Response).
      */
     public function nameFor(Interface_ $interface): string
     {
-        return $this->reserve($interface->uniqueKey, $interface->name);
+        if (! $interface->isResponseVariant) {
+            return $this->reserve($interface->uniqueKey, $interface->name);
+        }
+
+        $base = $this->nameFor(new Interface_($interface->name, [], $interface->phpFqcn));
+
+        return $this->reserve($interface->uniqueKey, $base.Interface_::RESPONSE_SUFFIX, isVariant: true);
     }
 
     /**
@@ -44,22 +67,26 @@ class NamesBag
      *
      * @param  class-string  $contract
      */
-    public function nameForUnion(string $contract): string
+    public function nameForUnion(string $contract, bool $isResponseVariant = false): string
     {
-        return $this->reserve('union/'.$contract, TypeScriptName::for($contract));
+        $base = $this->reserve('union/'.$contract, TypeScriptName::for($contract));
+
+        return $isResponseVariant
+            ? $this->reserve('union/'.$contract.'/response', $base.Interface_::RESPONSE_SUFFIX, isVariant: true)
+            : $base;
     }
 
-    private function reserve(string $uniqueKey, string $preferred): string
+    private function reserve(string $uniqueKey, string $preferred, bool $isVariant = false): string
     {
-        return $this->alreadyResolved[$uniqueKey] ??= $this->reserveName($preferred);
+        return $this->alreadyResolved[$uniqueKey] ??= $this->reserveName($preferred, $isVariant);
     }
 
-    private function reserveName(string $preferred): string
+    private function reserveName(string $preferred, bool $isVariant): string
     {
         $name = $preferred;
         $suffix = 2;
 
-        while (isset($this->usedNames[$name])) {
+        while (isset($this->usedNames[$name]) || ($isVariant && isset($this->baseNames[$name]))) {
             $name = $preferred.$suffix++;
         }
 

@@ -46,6 +46,8 @@ readonly class TypeScriptGenerator
         $enums = $this->collectEnums($interfaces);
         $unions = $this->collectUnionAliases($interfaces);
 
+        $this->renderer->registerBaseNames($this->baseNames($enums, $unions, $interfaces));
+
         // Enums referenced by any interface are emitted as their own named types,
         // ahead of the interfaces that reference them.
         $blocks = [
@@ -118,16 +120,41 @@ readonly class TypeScriptGenerator
             }
         }
 
-        return array_values(collect($unions)->sortBy(fn (Union $union, string $contract) => TypeScriptName::for($contract))->all());
+        return array_values(collect($unions)->sortBy(fn (Union $union) => $union->preferredName())->all());
     }
 
     /**
-     * @param  array<class-string, Union>  $unions
+     * The preferred names of the types, leaving out the response suffix.
+     *
+     * @param  list<class-string<\UnitEnum>>  $enums
+     * @param  list<Union>  $unions
+     * @param  list<Interface_>  $interfaces
+     * @return list<string>
+     */
+    private function baseNames(array $enums, array $unions, array $interfaces): array
+    {
+        $names = array_map(TypeScriptName::for(...), $enums);
+
+        foreach ($unions as $union) {
+            if ($union->contract !== null) {
+                $names[] = TypeScriptName::for($union->contract);
+            }
+        }
+
+        foreach ($interfaces as $interface) {
+            $names[] = $interface->name;
+        }
+
+        return $names;
+    }
+
+    /**
+     * @param  array<string, Union>  $unions
      */
     private function collectUnionAliasesFromType(Type $type, array &$unions): void
     {
         if ($type instanceof Union && $type->contract !== null) {
-            $unions[$type->contract] ??= $type;
+            $unions[$type->contract.($type->isResponseVariant ? '/response' : '')] ??= $type;
         } elseif ($type instanceof Array_) {
             $this->collectUnionAliasesFromType($type->memberType, $unions);
         } elseif ($type instanceof Record_) {
@@ -140,25 +167,51 @@ readonly class TypeScriptGenerator
     }
 
     /**
+     * A nested class used in both requests and responses gets one interface when its request and
+     * response types are the same, and a separate response variant when they differ.
+     *
      * @return list<Interface_>
      */
     private function collectInterfaces(): array
     {
-        $requestDefinitions = new PhpClassDefinitionBuilder(new RequestSourcePolicy);
-        $responseDefinitions = new PhpClassDefinitionBuilder(new ResponseDefinitionPolicy);
-        $tsInterfaceBuilder = new InterfaceBuilder;
+        $builder = new InterfaceBuilder;
+        $requestInterfaces = $this->buildRequestInterfaces($builder);
+        $responseInterfaces = $this->buildResponseInterfaces($builder);
+        $responseVariants = ResponseVariants::find($requestInterfaces, $responseInterfaces);
 
+        if ($responseVariants !== []) {
+            $responseInterfaces = $this->buildResponseInterfaces($builder, $responseVariants);
+        }
+
+        // Remove empty interfaces, flatten nested interfaces into the top
+        // level, deduplicate and sort by name.
+        $collected = collect([...$requestInterfaces, ...$responseInterfaces])
+            ->filter(fn (Interface_ $i) => ! $i->isEmpty)
+            ->flatMap(fn (Interface_ $i) => $i->flatten())
+            ->unique(fn (Interface_ $i) => $i->uniqueKey)
+            ->sortBy(fn (Interface_ $i) => $i->preferredName())
+            ->all();
+
+        return array_values($collected);
+    }
+
+    /**
+     * @return list<Interface_>
+     */
+    private function buildRequestInterfaces(InterfaceBuilder $builder): array
+    {
+        $definitions = new PhpClassDefinitionBuilder(new RequestSourcePolicy);
         $interfaces = [];
 
         foreach ($this->requests as $request) {
-            $phpClass = $requestDefinitions->buildClassDefinition($request);
+            $phpClass = $definitions->buildClassDefinition($request);
 
             foreach ($phpClass->properties as $property) {
-                $tsInterfaceBuilder->assertBucketAttribute($request, $property, $property->source instanceof Sources\Input);
+                $builder->assertBucketAttribute($request, $property, $property->source instanceof Sources\Input);
             }
 
             foreach ([Bucket::Body, Bucket::Query, Bucket::Headers] as $bucket) {
-                $interfaces[] = $tsInterfaceBuilder->buildInterface(
+                $interfaces[] = $builder->buildInterface(
                     $phpClass,
                     isPropertyOptional: $this->isRequestPropertyOptional(...),
                     includeProperty: fn (PhpProperty $p) => $this->includeRequestProperty($p, $bucket),
@@ -168,15 +221,27 @@ readonly class TypeScriptGenerator
             }
         }
 
+        return $interfaces;
+    }
+
+    /**
+     * @param  array<class-string, true>  $responseVariants
+     * @return list<Interface_>
+     */
+    private function buildResponseInterfaces(InterfaceBuilder $builder, array $responseVariants = []): array
+    {
+        $definitions = new PhpClassDefinitionBuilder(new ResponseDefinitionPolicy);
+        $interfaces = [];
+
         foreach ($this->responses as $response) {
-            $phpClass = $responseDefinitions->buildClassDefinition($response);
+            $phpClass = $definitions->buildClassDefinition($response);
 
             foreach ($phpClass->properties as $property) {
-                $tsInterfaceBuilder->assertBucketAttribute($response, $property, false);
+                $builder->assertBucketAttribute($response, $property, false);
             }
 
             foreach ([Bucket::Body, Bucket::Headers] as $bucket) {
-                $interfaces[] = $tsInterfaceBuilder->buildInterface(
+                $interfaces[] = $builder->buildInterface(
                     $phpClass,
                     isPropertyOptional: $this->isResponsePropertyOptional(...),
                     includeProperty: fn (PhpProperty $p) => $this->includeResponseProperty($p, $bucket),
@@ -184,20 +249,12 @@ readonly class TypeScriptGenerator
                     stringValued: $bucket === Bucket::Headers,
                     // The serializer leaves these out.
                     omitProperty: fn (PhpProperty $p) => $p->hasAttribute(SensitiveParameter::class),
+                    responseVariants: $responseVariants,
                 );
             }
         }
 
-        // Remove empty interfaces, flatten nested interfaces into the top
-        // level, deduplicate and sort by name.
-        $collected = collect($interfaces)
-            ->filter(fn (Interface_ $i) => ! $i->isEmpty)
-            ->flatMap(fn (Interface_ $i) => $i->flatten())
-            ->unique(fn (Interface_ $i) => $i->uniqueKey)
-            ->sortBy(fn (Interface_ $i) => $i->name)
-            ->all();
-
-        return array_values($collected);
+        return $interfaces;
     }
 
     /**

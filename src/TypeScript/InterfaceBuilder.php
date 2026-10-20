@@ -57,10 +57,13 @@ readonly class InterfaceBuilder
      * the wire, and the caller sends / receives them as strings with no coercion
      * layer of its own. `$omitProperty` removes properties in nested objects as
      * well. Validation-only pseudo-properties and file uploads are never emitted.
+     * `$responseVariants` lists the nested classes and union contracts whose
+     * types are marked as response variants.
      *
      * @param  Closure(PhpProperty): bool  $isPropertyOptional
      * @param  ?Closure(PhpProperty): bool  $includeProperty
      * @param  ?Closure(PhpProperty): bool  $omitProperty
+     * @param  array<class-string, true>  $responseVariants
      */
     public function buildInterface(
         Class_ $class,
@@ -69,15 +72,17 @@ readonly class InterfaceBuilder
         ?string $name = null,
         bool $stringValued = false,
         ?Closure $omitProperty = null,
+        array $responseVariants = [],
     ): Interface_ {
         $omitProperty ??= fn (PhpProperty $property): bool => false;
 
-        return $this->interface($class, $isPropertyOptional, $omitProperty, $includeProperty, $name, $stringValued, []);
+        return $this->interface($class, $isPropertyOptional, $omitProperty, $responseVariants, $includeProperty, $name, $stringValued, []);
     }
 
     /**
      * @param  Closure(PhpProperty): bool  $isPropertyOptional
      * @param  Closure(PhpProperty): bool  $omitProperty
+     * @param  array<class-string, true>  $variants
      * @param  ?Closure(PhpProperty): bool  $includeProperty
      * @param  array<class-string, true>  $ancestors  the nested classes being built, which a class
      *                                                that contains itself refers to by name
@@ -86,6 +91,7 @@ readonly class InterfaceBuilder
         Class_ $class,
         Closure $isPropertyOptional,
         Closure $omitProperty,
+        array $variants,
         ?Closure $includeProperty,
         ?string $name,
         bool $stringValued,
@@ -108,7 +114,7 @@ readonly class InterfaceBuilder
 
             $properties[] = new Property(
                 key: $property->wireKey,
-                type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional, $omitProperty, $ancestors),
+                type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional, $omitProperty, $variants, $ancestors),
                 optional: $isPropertyOptional($property),
                 nullable: $property->nullable,
                 description: $property->attribute(Description::class)?->text,
@@ -120,6 +126,7 @@ readonly class InterfaceBuilder
             properties: $properties,
             phpFqcn: $class->class,
             description: Description::ofClass($class->class),
+            isResponseVariant: $name === null && isset($variants[$class->class]),
         );
     }
 
@@ -151,9 +158,10 @@ readonly class InterfaceBuilder
     /**
      * @param  Closure(PhpProperty): bool  $optional
      * @param  Closure(PhpProperty): bool  $omit
+     * @param  array<class-string, true>  $variants
      * @param  array<class-string, true>  $ancestors
      */
-    private function buildType(PhpType $type, Closure $optional, Closure $omit, array $ancestors): Type
+    private function buildType(PhpType $type, Closure $optional, Closure $omit, array $variants, array $ancestors): Type
     {
         return match (true) {
             // A value object that parses from a single string (e.g. an
@@ -164,7 +172,7 @@ readonly class InterfaceBuilder
             $type instanceof Class_ && $type->parsesStringValue() => new String_,
             // A nested object emits all of its properties (no top-level filter)
             // but inherits the same optionality policy as its parent.
-            $type instanceof Class_ => $this->nested($type, $optional, $omit, $ancestors),
+            $type instanceof Class_ => $this->nested($type, $optional, $omit, $variants, $ancestors),
             $type instanceof PhpString => new String_,
             $type instanceof PhpInteger, $type instanceof PhpFloat => new Number,
             $type instanceof PhpBoolean => new Boolean,
@@ -173,13 +181,13 @@ readonly class InterfaceBuilder
             $type instanceof PhpEnum => new Enum($type->class),
             $type instanceof PhpArray && $type->keyType !== null => new Record_(
                 $type->keyType instanceof PhpInteger ? new Number : new String_,
-                $this->buildType($type->memberType, $optional, $omit, $ancestors),
+                $this->buildType($type->memberType, $optional, $omit, $variants, $ancestors),
             ),
-            $type instanceof PhpArray => new Array_($this->buildType($type->memberType, $optional, $omit, $ancestors)),
+            $type instanceof PhpArray => new Array_($this->buildType($type->memberType, $optional, $omit, $variants, $ancestors)),
             $type instanceof PhpShape => new Object_(array_map(
                 fn (PhpShapeItem $item) => new Property(
                     key: $item->key,
-                    type: $this->buildType($item->type, $optional, $omit, $ancestors),
+                    type: $this->buildType($item->type, $optional, $omit, $variants, $ancestors),
                     optional: $item->optional,
                     nullable: $item->nullable,
                 ),
@@ -187,8 +195,9 @@ readonly class InterfaceBuilder
             )),
             $type instanceof PhpUnion => new Union(
                 $type->key,
-                array_map(fn (Class_ $member) => $this->nested($member, $optional, $omit, $ancestors), $type->members),
+                array_map(fn (Class_ $member) => $this->nested($member, $optional, $omit, $variants, $ancestors), $type->members),
                 $type->contract,
+                $type->contract !== null && isset($variants[$type->contract]),
             ),
             $type instanceof PhpFile => new File,
             $type instanceof PhpMixed => new Mixed_,
@@ -201,14 +210,15 @@ readonly class InterfaceBuilder
      *
      * @param  Closure(PhpProperty): bool  $optional
      * @param  Closure(PhpProperty): bool  $omit
+     * @param  array<class-string, true>  $variants
      * @param  array<class-string, true>  $ancestors
      */
-    private function nested(Class_ $class, Closure $optional, Closure $omit, array $ancestors): Interface_
+    private function nested(Class_ $class, Closure $optional, Closure $omit, array $variants, array $ancestors): Interface_
     {
         if (isset($ancestors[$class->class])) {
-            return new Interface_(TypeScriptName::for($class->class), [], $class->class);
+            return new Interface_(TypeScriptName::for($class->class), [], $class->class, isResponseVariant: isset($variants[$class->class]));
         }
 
-        return $this->interface($class, $optional, $omit, null, null, false, [...$ancestors, $class->class => true]);
+        return $this->interface($class, $optional, $omit, $variants, null, null, false, [...$ancestors, $class->class => true]);
     }
 }

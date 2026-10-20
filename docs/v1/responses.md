@@ -127,7 +127,9 @@ Serializer::toArray(new ProxyCredentials('ox', 'secret')); // ['user' => 'ox']
 ```
 
 `Profile::storage()` leaves the value out too, so such an object doesn't round-trip through
-storage. Request types in TypeScript keep the property, since the client sends it.
+storage. Request types in TypeScript keep the property, since the client sends it, so a class
+nested in both a request and a response gets
+[a separate response type](/docs/roma/v1/typescript#classes-used-in-requests-and-responses).
 
 ## Status and headers
 

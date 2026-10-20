@@ -82,11 +82,29 @@ it('parenthesizes an inline union in an array', function () {
     expect($ts)->toContain("refunds: (({ type: 'Card' } & Card) | ({ type: 'Voucher' } & Voucher))[];");
 });
 
-it('emits each alias and member once', function () {
+it('gives a union shared by a request and a response a response alias when a member differs', function () {
+    // Card's `saved` has a default, so it is optional in the request only.
     $ts = new TypeScriptGenerator([Checkout::class], [TsReceiptResponse::class])->generate();
 
-    expect(substr_count($ts, 'export type PaymentMethod ='))->toBe(1)
-        ->and(substr_count($ts, 'export interface '.class_basename(BankAccount::class).' {'))->toBe(1);
+    expect($ts)
+        ->toContain("export type PaymentMethod = ({ type: 'Card' } & Card) | ({ type: 'bank' } & BankAccount);")
+        ->toContain("export type PaymentMethodResponse = ({ type: 'Card' } & CardResponse) | ({ type: 'bank' } & BankAccount);")
+        ->toContain(<<<'TS'
+            export interface CardResponse {
+              last4: string;
+              saved: boolean;
+            }
+            TS)
+        ->toContain(<<<'TS'
+            export interface TsReceiptResponseBody {
+              payment: PaymentMethodResponse;
+              refund: ({ type: 'Card' } & CardResponse) | ({ type: 'Voucher' } & Voucher) | null;
+            }
+            TS)
+        ->and(substr_count($ts, 'export type PaymentMethod ='))->toBe(1)
+        ->and(substr_count($ts, 'export interface '.class_basename(BankAccount::class).' {'))->toBe(1)
+        ->and($ts)->not->toContain('BankAccountResponse')
+        ->not->toContain('VoucherResponse');
 });
 
 class TsUndiscriminatedResponse extends Response

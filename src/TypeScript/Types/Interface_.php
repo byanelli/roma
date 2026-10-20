@@ -7,37 +7,53 @@ use BYanelli\Roma\TypeScript\Type;
 
 readonly class Interface_ extends Type
 {
+    /** Appended to the name of a nested class's response variant. */
+    public const string RESPONSE_SUFFIX = 'Response';
+
     public bool $isEmpty;
 
     public string $uniqueKey;
 
     /**
+     * @param  string  $name  the preferred name, without the response suffix
      * @param  list<Property>  $properties
+     * @param  class-string  $phpFqcn
+     * @param  bool  $isResponseVariant  whether this is the response type of a nested class whose request
+     *                                   and response types differ
      */
     public function __construct(
         public string $name,
         public array $properties,
         public string $phpFqcn,
         public ?string $description = null,
+        public bool $isResponseVariant = false,
     ) {
         $this->isEmpty = $this->properties === [];
-        $this->uniqueKey = $this->phpFqcn.'/'.$this->name;
+        $this->uniqueKey = $this->phpFqcn.'/'.$this->name.($this->isResponseVariant ? '/response' : '');
+    }
+
+    /**
+     * The preferred name, with the response suffix for a response variant.
+     */
+    public function preferredName(): string
+    {
+        return $this->name.($this->isResponseVariant ? self::RESPONSE_SUFFIX : '');
     }
 
     /**
      * Collect this interface and the nested Interface_ objects referenced by
-     * property types into a flat, de-duplicated list keyed by interface name.
+     * property types into a flat list, de-duplicated by unique key.
      *
      * @param  array<string, true>  $seen
      * @return list<Interface_>
      */
     public function flatten(array &$seen = []): array
     {
-        if (isset($seen[$this->name])) {
+        if (isset($seen[$this->uniqueKey])) {
             return [];
         }
 
-        $seen[$this->name] = true;
+        $seen[$this->uniqueKey] = true;
 
         $nested = [[]];
 
@@ -56,7 +72,7 @@ readonly class Interface_ extends Type
      *
      * @return list<Interface_>
      */
-    private static function referencedBy(Type $type): array
+    public static function referencedBy(Type $type): array
     {
         return match (true) {
             $type instanceof self => [$type],

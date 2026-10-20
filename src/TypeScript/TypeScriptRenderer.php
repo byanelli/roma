@@ -13,6 +13,14 @@ readonly class TypeScriptRenderer
         private NamesBag $namesBag = new NamesBag,
     ) {}
 
+    /**
+     * @param  list<string>  $names  the preferred names of the types that aren't response variants
+     */
+    public function registerBaseNames(array $names): void
+    {
+        $this->namesBag->registerBaseNames($names);
+    }
+
     public function renderInterface(Interface_ $interface): string
     {
         $name = $this->namesBag->nameFor($interface);
@@ -79,7 +87,7 @@ readonly class TypeScriptRenderer
             $type instanceof Types\Record_ => 'Record<'.$this->renderType($type->keyType).', '.$this->renderType($type->valueType).'>',
             $type instanceof Types\Object_ => $this->renderObjectType($type),
             $type instanceof Interface_ => $this->namesBag->nameFor($type),
-            $type instanceof Types\Union && $type->contract !== null => $this->namesBag->nameForUnion($type->contract),
+            $type instanceof Types\Union && $type->contract !== null => $this->namesBag->nameForUnion($type->contract, $type->isResponseVariant),
             $type instanceof Types\Union => $this->renderUnionMembers($type),
             $type instanceof Types\File => 'Blob',
             default => 'unknown', // Mixed_ and any future type
@@ -102,7 +110,7 @@ readonly class TypeScriptRenderer
             throw new \InvalidArgumentException('Only a union defined on an interface or abstract class has an alias.');
         }
 
-        return 'export type '.$this->namesBag->nameForUnion($union->contract).' = '.$this->renderUnionMembers($union).';';
+        return 'export type '.$this->namesBag->nameForUnion($union->contract, $union->isResponseVariant).' = '.$this->renderUnionMembers($union).';';
     }
 
     private function renderUnionMembers(Types\Union $union): string
