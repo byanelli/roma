@@ -46,6 +46,15 @@ class MappingValidationException extends RuntimeException
 
     protected function summarize(): string
     {
+        return "Roma could not map {$this->className}: ".$this->listedErrors();
+    }
+
+    /**
+     * The first message of each of the first few error keys, e.g. "data.email: The data.email
+     * field is required. (and 2 more)".
+     */
+    protected function listedErrors(): string
+    {
         $listed = array_slice($this->errors, 0, static::LISTED_ERRORS, preserve_keys: true);
         $lines = array_map(
             fn (string $key, array $messages) => "{$key}: ".($messages[0] ?? ''),
@@ -54,7 +63,6 @@ class MappingValidationException extends RuntimeException
         );
         $more = count($this->errors) - count($listed);
 
-        return "Roma could not map {$this->className}: ".implode('; ', $lines)
-            .($more > 0 ? " (and {$more} more)" : '');
+        return implode('; ', $lines).($more > 0 ? " (and {$more} more)" : '');
     }
 }

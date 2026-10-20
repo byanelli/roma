@@ -2,12 +2,15 @@
 
 namespace BYanelli\Roma\Http\Client;
 
+use BYanelli\Roma\Http\Client\Exceptions\MalformedResponseException;
 use BYanelli\Roma\Http\Client\Request\RequestDefinition;
+use BYanelli\Roma\Http\Client\Response\ResponseClasses;
 use BYanelli\Roma\Http\Client\Response\ResponseMapper;
 use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Serialization\Serializer;
 use GuzzleHttp\Psr7\Query;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -99,13 +102,20 @@ class TypedPendingRequest
     }
 
     /**
-     * Sends a request object and maps the response onto one of `$responses`.
+     * Sends a request object and maps the response onto the class for its status, from
+     * `$responses`, the request class's #[Responses] (its parents' after its own), or
+     * withResponses(), in that order of precedence. A matched exception class is thrown, and
+     * other classes are returned. An unmatched status of 400 and up rethrows Laravel's
+     * RequestException, and one below throws UnmatchedResponseException.
+     *
      *
      * @template T of object
      *
      * @param  array<class-string<T>>  $responses
      * @param  ?string  $url  replaces the URL from the request class
      * @return ($responses is non-empty-array ? T : object)
+     *
+     * @throws MalformedResponseException when the matched class fails to map, unless it is the fallback
      */
     public function sendRequest(object $request, array $responses = [], ?string $url = null): object
     {
@@ -132,14 +142,27 @@ class TypedPendingRequest
             $options[$definition->bodyFormat] = $outgoing->body;
         }
 
-        $response = $pending->send($definition->method->value, $url, $options);
+        $classes = ResponseClasses::merge([
+            'the sendRequest() call' => array_values($responses),
+            ...$definition->responses,
+            'withResponses()' => $this->responses,
+        ]);
+
+        try {
+            $response = $pending->send($definition->method->value, $url, $options);
+            $thrown = null;
+        } catch (RequestException $e) {
+            // Thrown by throw(), after Laravel's retries.
+            $response = $e->response;
+            $thrown = $e;
+        }
 
         if (! $response instanceof Response) {
             throw new RuntimeException('Roma sendRequest() does not support async requests.');
         }
 
         /** @var T */
-        return $this->mapper->map([...array_values($responses), ...$this->responses], $response);
+        return $this->mapper->map($classes, $response, $thrown, $request);
     }
 
     /**

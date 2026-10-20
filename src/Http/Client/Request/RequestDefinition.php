@@ -40,7 +40,7 @@ final class RequestDefinition
      * @param  list<string>  $boundByName  properties without a destination attribute that fill the path parameter of their name
      * @param  array<string, string>  $files  the multipart field name of each file property
      * @param  'json'|'form_params'|'multipart'  $bodyFormat  Laravel's name for the body encoding
-     * @param  list<list<class-string>>  $responses  the #[Responses] of the class, then of its parents
+     * @param  array<string, list<class-string>>  $responses  the #[Responses] of the class, then of its parents, keyed by where each is declared
      */
     private function __construct(
         public readonly string $class,
@@ -225,8 +225,10 @@ final class RequestDefinition
     }
 
     /**
+     * PHP doesn't return a parent's attributes with the class's, so the parents are read too.
+     *
      * @param  ReflectionClass<object>  $class
-     * @return list<list<class-string>>
+     * @return array<string, list<class-string>>
      */
     private static function responses(ReflectionClass $class): array
     {
@@ -234,7 +236,7 @@ final class RequestDefinition
 
         for ($current = $class; $current !== false; $current = $current->getParentClass()) {
             foreach ($current->getAttributes(Responses::class) as $attribute) {
-                $lists[] = $attribute->newInstance()->classes;
+                $lists["#[Responses] on {$current->getShortName()}"] = $attribute->newInstance()->classes;
             }
         }
 
