@@ -12,7 +12,9 @@ readonly class Property
 
     /**
      * `$source` is null for a property of a nested object, whose key path is relative to the
-     * object, so the object's definition is the same wherever it appears.
+     * object, so the object's definition is the same wherever it appears. `$wirePath` is where
+     * the property appears in the client's data, which differs from `$keyPath` for a header,
+     * whose key path is normalized ("x_api_key" for "X-Api-Key"), and for a single-value source.
      *
      * @param  array<int, mixed>  $rules
      * @param  array<int, object>  $rawAttributes
@@ -20,7 +22,7 @@ readonly class Property
     public function __construct(
         public string $name,
         public KeyPath $keyPath,
-        public string $wireKey,
+        public KeyPath $wirePath,
         public Type $type,
         public Role $role,
         mixed $default,

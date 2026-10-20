@@ -115,6 +115,11 @@ final readonly class Discriminator
             throw new RuntimeException("{$prefix} has an empty key.");
         }
 
+        // Reserved, so that a dotted discriminator key can nest later as #[Key] does.
+        if (str_contains($attribute->key, '.')) {
+            throw new RuntimeException("{$prefix} has the key \"{$attribute->key}\". A discriminator key is a key at the top of the object and may not contain a dot.");
+        }
+
         if ($attribute->classes === []) {
             throw new RuntimeException("{$prefix} lists no classes.");
         }

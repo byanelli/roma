@@ -84,14 +84,48 @@ final readonly class ClassSchema
      */
     private function propertiesOf(Class_ $class, array $ancestors): array
     {
-        $properties = [];
+        $entries = [];
 
         foreach ($class->properties as $property) {
             if ($property->role === Role::ValidationOnly || $property->isVirtual) {
                 continue;
             }
 
-            $properties[$property->keyPath->toKey()] = $this->propertySchema($property, $ancestors);
+            $entries[] = [$property->keyPath->segments, $this->propertySchema($property, $ancestors), $property->isRequired];
+        }
+
+        return self::nest($entries);
+    }
+
+    /**
+     * Properties whose key paths start with the same key, such as "error.message" and
+     * "error.code", become one object under that key, in the position of the first. The object
+     * is required when one of its members is.
+     *
+     * @param  list<array{list<string>, Schema\Type, bool}>  $entries  the key path, schema and requiredness of each property
+     * @return array<string, Schema\Type>
+     */
+    private static function nest(array $entries): array
+    {
+        $groups = [];
+
+        foreach ($entries as $entry) {
+            $groups[$entry[0][0] ?? ''][] = $entry;
+        }
+
+        $properties = [];
+
+        foreach ($groups as $key => $group) {
+            [$segments, $schema] = $group[0];
+
+            if (count($segments) <= 1) {
+                $properties[$key] = $schema;
+
+                continue;
+            }
+
+            $object = new Schema\ObjectType(self::nest(array_map(fn (array $entry) => [array_slice($entry[0], 1), $entry[1], $entry[2]], $group)));
+            $properties[$key] = array_any($group, fn (array $entry) => $entry[2]) ? $object->required() : $object;
         }
 
         return $properties;

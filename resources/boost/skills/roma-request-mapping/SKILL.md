@@ -92,13 +92,20 @@ Default source is the merged input bag (query + body). Bind explicitly:
 | `#[Query]` / `#[Body]` | query string / request body |
 | `#[Header('X-Api-Key')]` | a request header |
 | `#[Path]` | a route parameter (name = property unless given) |
-| `#[Cookie]` | a cookie (pass a name for dotted cookie names) |
+| `#[Cookie]` | a cookie (pass a name for cookie names with dots) |
 | `Illuminate\Http\UploadedFile` type | a file upload (top-level only) |
+
+A dot in a key nests in input, query, body, plain arrays and config:
+`#[Key('error.message')]` reads `{"error": {"message": ...}}`, its errors are under
+`input.error.message`, and the serializer, TypeScript and JSON Schema write it as nested
+objects. Escape a literal dot Laravel's way (`#[Key('created\.at')]`). Header, cookie and
+`#[Path]` names are flat, so their dots are part of the name. A key inside another key of the
+same source (`error` beside `error.message`) throws.
 
 A custom source extends `BYanelli\Roma\Data\Source` with `@extends Source<Request>`
 (`getKey()`, the error-key prefix; `inputType()`, here `Request::class`; `read(object $input)`,
-which returns the source's values) and is used through an attribute that implements
-`SourceAttribute`. Only the sources a class uses are read, and each one is validated on its
+which returns the source's values; `nestsKeys()`, false for flat data) and is used through an
+attribute that implements `SourceAttribute`. Only the sources a class uses are read, and each one is validated on its
 own.
 
 ## Headers & metadata — prefer the value objects over hand-parsing
@@ -129,8 +136,8 @@ accessors take `mustBe:` to become a constraint (`#[Secure(mustBe: true)]`).
 
 Type a property as another plain object to deserialize nested JSON. A nested object inherits
 its location from the parent — **source attributes and metadata enums are top-level only**;
-declaring one on a nested property throws. Use `#[Key]` to override a nested key, e.g. one
-containing a literal dot; on a top-level property it sets the key within the source
+declaring one on a nested property throws. Use `#[Key]` to override a nested key (a dot
+nests there too); on a top-level property it sets the key within the source
 (`#[Key('page_num')]` reads `input.page_num`). A property may get its key from only one
 attribute, so `#[Query('a')]` with `#[Key('b')]` throws, as does an empty key
 (`#[Key('')]`) or two properties on the same key of one source or nested class. The serializer writes the property under the same key, from `#[Key]` or a

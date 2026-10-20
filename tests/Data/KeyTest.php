@@ -95,7 +95,7 @@ readonly class TestSourceKeyRoundTrip
 {
     public function __construct(
         #[Query('page_num')] public int $page,
-        #[Body('display.name')] public string $name,
+        #[Body('display\.name')] public string $name,
         #[Input('sort_by')] public string $sort,
         #[Query] public bool $draft,
     ) {}
@@ -125,7 +125,7 @@ class TestKeyRoundTrip
 {
     public function __construct(
         #[Key('user_id')] public int $id,
-        #[Key('home.address')] public TestKeyRoundTripAddress $address,
+        #[Key('home\.address')] public TestKeyRoundTripAddress $address,
     ) {}
 }
 

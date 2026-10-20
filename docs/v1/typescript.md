@@ -55,6 +55,10 @@ export interface SearchRequestQuery {
 }
 ```
 
+Dotted keys under one parent, such as `#[Key('error.message')]` and `#[Key('error.code')]`,
+become one inline object, `error: { message: string; code?: number }`, which is optional when
+all of its members are.
+
 Enums become a named `const` of `{ name, value }` objects plus a union type, emitted ahead
 of the interfaces that use them. A map such as `array<string, T>` becomes `Record<string, T>`
 (`Record<number, T>` for `int` keys), and an array shape becomes an inline object type such

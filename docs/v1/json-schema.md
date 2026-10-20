@@ -83,6 +83,9 @@ A property is required when it has no default, isn't nullable, isn't `#[Optional
 isn't typed with `Missing`, as when mapping. A nullable property allows `null`. A default that JSON can represent, such as a
 scalar, an enum or an array of them, becomes the schema's `default`.
 
+Dotted keys under one parent, such as `#[Key('error.message')]` and `#[Key('error.code')]`,
+become one `object` property, `error`, which is required when one of its members is.
+
 ## Descriptions
 
 `#[Description]` on a class or property sets the schema's `description`. On a property it

@@ -12,6 +12,11 @@ final readonly class Path extends RequestSource
         return 'path';
     }
 
+    public function nestsKeys(): bool
+    {
+        return false;
+    }
+
     /**
      * @param  Request  $request
      *                            The bound route's parameters. A request with no route, or with a route that isn't bound

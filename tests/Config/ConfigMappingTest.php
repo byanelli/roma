@@ -154,6 +154,23 @@ it('reads nested objects, lists and dotted keys relative to the prefix', functio
     ));
 });
 
+final readonly class CfgEscapedDot
+{
+    public function __construct(#[Key('hosts.api\.example\.com')] public string $token) {}
+}
+
+it('reads an escaped dot in a config key as part of the key', function () {
+    config(['services.escaped' => ['hosts' => ['api.example.com' => 'abc']]]);
+
+    expect(Mapper::fromConfig(CfgEscapedDot::class, 'services.escaped')->token)->toBe('abc');
+
+    config(['services.escaped' => ['hosts' => ['api' => ['example' => ['com' => 'abc']]]]]);
+
+    expect(configErrors(fn () => Mapper::fromConfig(CfgEscapedDot::class, 'services.escaped')))->toBe([
+        'services.escaped.hosts.api.example.com' => ['The services.escaped.hosts.api.example.com field is required.'],
+    ]);
+});
+
 it('treats a nested object whose values are all blank as missing', function () {
     config(['services.proxies' => [
         'oxylabs' => ['user' => 'ox', 'password' => 'secret'],

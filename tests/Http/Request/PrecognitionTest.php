@@ -3,6 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\Guard;
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Request\Injection\Request as RomaRequest;
@@ -46,6 +47,15 @@ readonly class PrecognitiveHeaderRequest
         public string $name,
         #[Header('X-Api-Key'), Rule('size:8')]
         public string $apiKey,
+    ) {}
+}
+
+#[RomaRequest]
+readonly class PrecognitiveDottedRequest
+{
+    public function __construct(
+        #[Key('contact.email'), Rule('email')] public string $email,
+        #[Key('contact.name')] public string $name,
     ) {}
 }
 
@@ -163,6 +173,20 @@ it('matches Validate-Only patterns given as source-prefixed keys', function () {
 
     $this->assertArrayHasKey('email', $errors);
     $this->assertArrayNotHasKey('name', $errors);
+});
+
+it('validates only the listed dotted field and reports it by its bare path', function () {
+    /** @var TestCase $this */
+    Route::post('/contact', fn (PrecognitiveDottedRequest $request) => response()->json(['ran' => true]))
+        ->middleware(HandlePrecognitiveRequests::class);
+
+    $response = $this->withPrecognition()
+        ->withHeader('Precognition-Validate-Only', 'contact.email')
+        ->postJson('/contact', ['contact' => ['email' => 'nope']]);
+
+    $response->assertUnprocessable();
+
+    expect(array_keys($response->json('errors')))->toBe(['contact.email']);
 });
 
 it('matches Validate-Only patterns against expanded array rules', function () {

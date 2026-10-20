@@ -8,6 +8,7 @@ use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\Discriminator;
+use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\PhpDocTypeParser;
 use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Type;
@@ -17,6 +18,7 @@ use BYanelli\Roma\Missing;
 use DateTimeInterface;
 use Generator;
 use Illuminate\Contracts\Support\Arrayable;
+use InvalidArgumentException;
 use JsonSerializable;
 use ReflectionClass;
 use ReflectionMethod;
@@ -65,14 +67,15 @@ class Serializer
         $status = null;
 
         foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
-            $key = $property->key;
+            $key = $property->path;
 
             match ($property->destination) {
-                Destination::Body => $body[$key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated),
-                Destination::Header => $headers[$key] = $this->headerValue($value, $dateFormat),
+                Destination::Body => $key->setIn($body, $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated)),
+                // A header's key never nests.
+                Destination::Header => $headers[$key->toKey()] = $this->headerValue($value, $dateFormat),
                 Destination::Status => $status = $value,
-                Destination::Query => $query[$key] = $this->queryValue($this->normalizeValue($value, $profile, $dateFormat, $property->discriminated), $profile),
-                Destination::Path => $path[$key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated),
+                Destination::Query => $key->setIn($query, $this->queryValue($this->normalizeValue($value, $profile, $dateFormat, $property->discriminated), $profile)),
+                Destination::Path => $key->setIn($path, $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated)),
             };
         }
 
@@ -114,7 +117,7 @@ class Serializer
 
         foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
             if ($property->destination === Destination::Body) {
-                $body[$property->key] = $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated);
+                $property->path->setIn($body, $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated));
             }
         }
 
@@ -370,7 +373,7 @@ class Serializer
             $plan[] = new PropertyPlan(
                 reflection: $property,
                 attributes: $attributes,
-                key: $destination?->destinationKey() ?? $attributes->explicitKey() ?? $prop->name,
+                path: $this->path($attributes, $destination?->destinationKey() ?? $attributes->explicitKey() ?? $prop->name, $prop->printableName),
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $dateFormat,
                 optional: $attributes->hasInstanceOf(Optional::class) || $prop->acceptsMissing,
@@ -378,7 +381,52 @@ class Serializer
             );
         }
 
+        $this->assertDistinctPaths($plan);
+
         return $plan;
+    }
+
+    /**
+     * A dot nests, as when mapping, unless the property's source keeps it in the key, as a
+     * header does.
+     */
+    private function path(AttributesCollection $attributes, string $key, string $printableName): KeyPath
+    {
+        if ($attributes->source()?->nestsKeys() === false) {
+            return new KeyPath([$key]);
+        }
+
+        try {
+            return KeyPath::fromDotted($key);
+        } catch (InvalidArgumentException $e) {
+            throw new RuntimeException("Roma property \"{$printableName}\": {$e->getMessage()} Write a literal dot as \"\\.\".", previous: $e);
+        }
+    }
+
+    /**
+     * A value written inside another property's value would replace it, or be replaced by it.
+     *
+     * @param  list<PropertyPlan>  $plan
+     */
+    private function assertDistinctPaths(array $plan): void
+    {
+        foreach ([Destination::Body, Destination::Query] as $destination) {
+            $properties = array_values(array_filter($plan, fn (PropertyPlan $property) => $property->destination === $destination));
+            $conflict = KeyPath::firstConflict(array_map(fn (PropertyPlan $property) => $property->path, $properties));
+
+            if ($conflict !== null) {
+                [$first, $second] = [$properties[$conflict[0]], $properties[$conflict[1]]];
+
+                throw new RuntimeException(sprintf(
+                    'Roma class %s writes $%s to "%s" and $%s to "%s", so one would replace the other. Give one of them another key.',
+                    class_basename($first->reflection->getDeclaringClass()->getName()),
+                    $first->reflection->getName(),
+                    $first->path->toKey(),
+                    $second->reflection->getName(),
+                    $second->path->toKey(),
+                ));
+            }
+        }
     }
 
     /**

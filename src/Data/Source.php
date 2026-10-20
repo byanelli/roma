@@ -48,6 +48,16 @@ abstract readonly class Source
     }
 
     /**
+     * Whether a dot in a property's key separates nested keys, as in "error.message". A source
+     * whose data is a flat list of names, such as headers, returns false and keeps a dot as part
+     * of the key.
+     */
+    public function nestsKeys(): bool
+    {
+        return true;
+    }
+
+    /**
      * Whether read() returns the value of one property, such as a request accessor's,
      * instead of an array of values keyed by property key.
      */

@@ -24,6 +24,11 @@ final readonly class Accessor extends RequestSource
         return true;
     }
 
+    public function nestsKeys(): bool
+    {
+        return false;
+    }
+
     public function isSameAs(Source $other): bool
     {
         return parent::isSameAs($other)

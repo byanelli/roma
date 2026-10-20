@@ -26,7 +26,7 @@ use SensitiveParameter;
  * {Name}Headers — because its properties are sourced from different parts of the
  * HTTP request. A response maps to a single interface. In both directions fields
  * are keyed by their wire key (the request source key / the response #[Key] or
- * property name), not the PHP property name.
+ * property name), not the PHP property name, and a dotted key becomes an inline object.
  */
 readonly class TypeScriptGenerator
 {

@@ -2,7 +2,6 @@
 
 namespace BYanelli\Roma\Http\Request;
 
-use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Http\Enums\HasRequestSource;
@@ -42,14 +41,6 @@ readonly class RequestSourcePolicy implements SourcePolicy
     public function defaultKey(string $propertyName): string
     {
         return $propertyName;
-    }
-
-    /**
-     * A key is one segment and may contain a literal dot.
-     */
-    public function keyPath(string $key): KeyPath
-    {
-        return new KeyPath([$key]);
     }
 
     public function sourceForType(string $typeName): ?Source

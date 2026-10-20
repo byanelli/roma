@@ -48,9 +48,9 @@ use RuntimeException;
 readonly class InterfaceBuilder
 {
     /**
-     * Properties are keyed by their wire keys and always keep their declared
-     * nullability. `$isPropertyOptional` decides the `?` (it threads into nested
-     * objects); `$includeProperty` restricts which top-level properties are
+     * Properties are keyed by their wire paths, so dotted keys become inline objects,
+     * and always keep their declared nullability. `$isPropertyOptional` decides the `?`
+     * (it threads into nested objects); `$includeProperty` restricts which top-level properties are
      * emitted — request source bucketing, or dropping response properties lifted
      * out of the body. `$stringValued` forces all fields to `string` regardless
      * of its PHP type, for HTTP header interfaces: header values are strings on
@@ -112,22 +112,64 @@ readonly class InterfaceBuilder
                 continue;
             }
 
-            $properties[] = new Property(
-                key: $property->wireKey,
+            $segments = $property->wirePath->segments;
+
+            $properties[] = [$segments, new Property(
+                key: $segments[count($segments) - 1] ?? $property->name,
                 type: $stringValued ? new String_ : $this->buildType($property->type, $isPropertyOptional, $omitProperty, $variants, $ancestors),
                 optional: $isPropertyOptional($property),
                 nullable: $property->nullable,
                 description: $property->attribute(Description::class)?->text,
-            );
+            )];
         }
 
         return new Interface_(
             name: $name ?: TypeScriptName::for($class->class),
-            properties: $properties,
+            properties: self::nest($properties),
             phpFqcn: $class->class,
             description: Description::ofClass($class->class),
             isResponseVariant: $name === null && isset($variants[$class->class]),
         );
+    }
+
+    /**
+     * Properties whose wire paths start with the same key, such as "error.message" and
+     * "error.code", become one inline object under that key, in the position of the first. The
+     * object is optional when all of its members are.
+     *
+     * @param  list<array{list<string>, Property}>  $entries  the wire path of each property, and the property under its last key
+     * @return list<Property>
+     */
+    private static function nest(array $entries): array
+    {
+        $groups = [];
+
+        foreach ($entries as $index => $entry) {
+            $groups[count($entry[0]) > 1 ? "nested:{$entry[0][0]}" : "leaf:{$index}"][] = $entry;
+        }
+
+        $properties = [];
+
+        foreach ($groups as $group) {
+            [$segments, $property] = $group[0];
+
+            if (count($segments) <= 1) {
+                $properties[] = $property;
+
+                continue;
+            }
+
+            $members = self::nest(array_map(fn (array $entry) => [array_slice($entry[0], 1), $entry[1]], $group));
+
+            $properties[] = new Property(
+                key: $segments[0],
+                type: new Object_($members),
+                optional: array_all($members, fn (Property $member) => $member->optional),
+                nullable: false,
+            );
+        }
+
+        return $properties;
     }
 
     /**

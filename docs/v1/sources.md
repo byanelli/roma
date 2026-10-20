@@ -63,6 +63,40 @@ properties, `#[Input('a')]` beside a property named `a`, or `#[Header('X-Flag')]
 `#[Header('x-flag')]`, since header names ignore case. Several properties may read one
 accessor such as `#[Ajax]`.
 
+### Nested keys
+
+A dot in a key reads a nested value, as in Laravel's `$request->input('error.message')`:
+
+```php
+use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Http\Attributes\Query;
+
+readonly class ReportRequest {
+    #[Key('error.message')]
+    public string $message;   // from {"error": {"message": "..."}}
+
+    #[Query('filter.status')]
+    public string $status;    // from ?filter[status]=open
+
+    #[Key('created\.at')]
+    public string $createdAt; // from {"created.at": "..."}
+}
+```
+
+- Errors use the full path: `input.error.message`, `query.filter.status`.
+- An escaped dot, as in `created\.at`, is part of the key, as in a Laravel rule key. Its
+  error key is `input.created.at`.
+- Header, cookie and route parameter names are flat, so a dot in `#[Header]`, `#[Cookie]` or
+  `#[Path]` is part of the name, without escaping.
+- A key inside another property's key in the same source, such as `#[Key('error')]` beside
+  `#[Key('error.message')]`, throws when the class definition is built. Keys in different
+  sources, such as `#[Query('error')]` and `#[Body('error.message')]`, don't conflict.
+- The serializer writes a dotted key as nested objects, so the class serializes back to the
+  shape it was mapped from (see [Responses](/docs/roma/v1/responses#rename-a-key-with-key)).
+
+Default keys come from property names, which can't contain a dot, so a property without a
+key attribute is unaffected.
+
 ### The QUERY method
 
 `QUERY` ([RFC 10008](https://www.rfc-editor.org/info/rfc10008/)) is a safe, idempotent
@@ -116,8 +150,8 @@ when the request has no bound route.
 ## Cookies
 
 Bind to a cookie with `#[Cookie]`, using the property name or an explicit cookie name.
-Cookie names may contain literal dots, so pass one explicitly when the name isn't a valid
-PHP property name:
+A cookie name may contain a dot, which doesn't nest, so pass the name explicitly when it
+isn't a valid PHP property name:
 
 ```php
 use BYanelli\Roma\Http\Attributes\Cookie;
@@ -214,10 +248,12 @@ the tag to an overridden method, so the `@param` on `read()` repeats the type fo
 wherever the input is of its type, so `Tenant` works in a request, and a class that uses it
 throws under `Mapper::fromArray()`.
 
-Two methods are optional. `normalizeKey()` converts a property's key to its key in `read()`'s
-array, as the header source does with `Content-Type` and `content_type`. `isSingleValue()`
-returns true when `read()` returns one value for the property instead of an array, as for an
-accessor such as `#[Ip]`; that property's error key is the source's key.
+Three methods are optional. `normalizeKey()` converts a property's key to its key in
+`read()`'s array, as the header source does with `Content-Type` and `content_type`.
+`isSingleValue()` returns true when `read()` returns one value for the property instead of an
+array, as for an accessor such as `#[Ip]`; that property's error key is the source's key.
+`nestsKeys()` returns false when `read()`'s array is flat, as headers are, so that a dot in a
+key is part of the key instead of [separating nested keys](#nested-keys).
 
 The source's data is validated on its own, and its errors are keyed under its key, such as
 `tenant.tenant_id`. Two different sources with the same key in one class throw when the

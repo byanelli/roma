@@ -2,6 +2,8 @@
 
 namespace BYanelli\Roma\Data;
 
+use InvalidArgumentException;
+
 /**
  * A position within a source's data or a nested object, as a list of array keys:
  * `['address', 'city']`, or `['items', '*', 'code']` in a rule key. A segment is one array
@@ -13,6 +15,47 @@ final readonly class KeyPath
     public static function empty(): self
     {
         return new self([]);
+    }
+
+    /**
+     * Splits a key on dots, as Laravel does: "error.message" is `['error', 'message']`, and an
+     * escaped dot is literal, so "created\.at" is `['created.at']`.
+     *
+     * @throws InvalidArgumentException when a segment is empty, as in "a..b"
+     */
+    public static function fromDotted(string $key): self
+    {
+        $segments = array_map(
+            fn (string $segment) => str_replace('\\.', '.', $segment),
+            preg_split('/(?<!\\\\)\./', $key) ?: [$key],
+        );
+
+        if (in_array('', $segments, true)) {
+            throw new InvalidArgumentException("The key \"{$key}\" has an empty segment.");
+        }
+
+        return new self($segments);
+    }
+
+    /**
+     * The indexes of the first two paths that can't both be in one array: two paths with the
+     * same key, or one path inside the other's value. The key comparison joins the segments,
+     * so `['a.b']` and `['a', 'b']`, which would share an error key, conflict too.
+     *
+     * @param  list<self>  $paths
+     * @return ?array{int, int}
+     */
+    public static function firstConflict(array $paths): ?array
+    {
+        foreach ($paths as $j => $path) {
+            for ($i = 0; $i < $j; $i++) {
+                if ($paths[$i]->toKey() === $path->toKey() || $paths[$i]->isPrefixOf($path) || $path->isPrefixOf($paths[$i])) {
+                    return [$i, $j];
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -33,6 +76,15 @@ final readonly class KeyPath
     public function isEmpty(): bool
     {
         return $this->segments === [];
+    }
+
+    /**
+     * Whether `$path` is inside this path's value: this path is shorter and starts it.
+     */
+    public function isPrefixOf(self $path): bool
+    {
+        return count($this->segments) < count($path->segments)
+            && array_slice($path->segments, 0, count($this->segments)) === $this->segments;
     }
 
     public function hasWildcard(): bool

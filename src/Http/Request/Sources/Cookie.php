@@ -11,6 +11,11 @@ final readonly class Cookie extends RequestSource
         return 'cookie';
     }
 
+    public function nestsKeys(): bool
+    {
+        return false;
+    }
+
     /**
      * @param  Request  $request
      * @return array<array-key, mixed>

@@ -81,14 +81,17 @@ interface by name (`replies?: Comment[]`).
 
 ## Overriding a nested key with `#[Key]`
 
-A nested property can't declare a source, so to override its key — for example when the
-client field name contains a literal dot that can't be a PHP property name — use `#[Key]`:
+A nested property can't declare a source, so to override its key, use `#[Key]`. As at the
+top level, a dot reads a nested value and an escaped dot is part of the key:
 
 ```php
 use BYanelli\Roma\Attributes\Key;
 
 class Meta {
-    #[Key('created.at')] // reads the "created.at" field from the parent's slice
+    #[Key('author.name')] // reads {"author": {"name": "..."}} from the parent's slice
+    public string $authorName;
+
+    #[Key('created\.at')] // reads the "created.at" field from the parent's slice
     public string $createdAt;
 }
 

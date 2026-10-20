@@ -5,6 +5,7 @@
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Description;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Attributes\Rule;
@@ -157,6 +158,16 @@ class SchemaRules
     ) {}
 }
 
+readonly class SchemaDottedKeys
+{
+    public function __construct(
+        #[Key('error.message'), Description('What went wrong.')] public string $message,
+        #[Key('created\.at')] public string $createdAt,
+        #[Key('error.code')] public int $code = 0,
+        #[Key('meta.trace.id')] public ?string $traceId = null,
+    ) {}
+}
+
 readonly class SchemaFile
 {
     public function __construct(public UploadedFile $upload) {}
@@ -248,6 +259,32 @@ it('marks required, nullable and default values', function () {
             'ids' => ['default' => [1, 2], 'items' => ['type' => 'integer'], 'type' => 'array'],
             'counts' => ['description' => 'Values: integer', 'type' => 'object'],
             'ratio' => ['default' => 0.5, 'type' => 'number'],
+        ]);
+});
+
+it('merges dotted keys under one parent into one object', function () {
+    $object = ClassSchema::object(SchemaDottedKeys::class)->toArray();
+
+    expect($object['required'])->toBe(['error', 'created.at'])
+        ->and($object['properties'])->toBe([
+            'error' => [
+                'properties' => [
+                    'message' => ['description' => 'What went wrong.', 'type' => 'string'],
+                    'code' => ['default' => 0, 'type' => 'integer'],
+                ],
+                'type' => 'object',
+                'required' => ['message'],
+            ],
+            'created.at' => ['type' => 'string'],
+            'meta' => [
+                'properties' => [
+                    'trace' => [
+                        'properties' => ['id' => ['type' => ['string', 'null']]],
+                        'type' => 'object',
+                    ],
+                ],
+                'type' => 'object',
+            ],
         ]);
 });
 

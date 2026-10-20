@@ -37,14 +37,6 @@ readonly class ArrayPolicy implements SourcePolicy
         return $propertyName;
     }
 
-    /**
-     * A key is one segment and may contain a literal dot.
-     */
-    public function keyPath(string $key): KeyPath
-    {
-        return new KeyPath([$key]);
-    }
-
     public function sourceForType(string $typeName): ?Source
     {
         return null;

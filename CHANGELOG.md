@@ -4,6 +4,20 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: a dot in a key nests in sources with nested data (input, query, body, file
+  uploads, config and `Mapper::fromArray()`), as in Laravel: `#[Key('error.message')]` reads
+  `{"error": {"message": ...}}` and reports errors under `input.error.message`. It used to
+  be part of the key everywhere but in config. A literal dot is escaped Laravel's way,
+  `#[Key('created\.at')]`. Header, cookie, route parameter and accessor names are flat and
+  keep their dots. A source says which kind it is with `Source::nestsKeys()`, which replaces
+  `SourcePolicy::keyPath()`, and `Property::$wirePath`, a `KeyPath`, replaces `$wireKey`.
+- The serializer writes a dotted key as nested objects, and dotted keys under one parent
+  become one inline TypeScript object and one JSON Schema object. A property left out of
+  the output (`#[Optional]`, `Missing`, `#[\SensitiveParameter]`) leaves no empty parent.
+- A key inside another key of the same source, such as `#[Key('error')]` beside
+  `#[Key('error.message')]`, throws when the definition is built and when serializing, as
+  does a key with an empty segment (`a..b`). A dot in a discriminator key throws.
+
 - Breaking: each source a class maps from reads its own data and is validated by its own
   Laravel validator. Validation rule keys are relative to the source, so a rule that refers
   to another field gives its key without the prefix: `#[Rule('required_if:type,card')]`, not

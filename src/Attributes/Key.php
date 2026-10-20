@@ -8,8 +8,9 @@ use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
 
 /**
  * The key a property is read from and written to in place of its name. On a top-level
- * property it is the key within the property's source, e.g. `input.page_num`. The key is one
- * segment and may contain a literal dot.
+ * property it is the key within the property's source, e.g. `input.page_num`. A dot nests
+ * (`error.message`) unless the source is flat, as headers, cookies and route parameters are.
+ * An escaped dot (`created\.at`) is part of the key.
  */
 #[Attribute(Attribute::TARGET_PARAMETER | Attribute::TARGET_PROPERTY)]
 final readonly class Key implements ExplicitKeyAttribute, WireKeyAttribute

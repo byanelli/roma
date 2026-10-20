@@ -12,6 +12,11 @@ final readonly class Header extends RequestSource
         return 'header';
     }
 
+    public function nestsKeys(): bool
+    {
+        return false;
+    }
+
     /**
      * Header names are looked up snake-cased, e.g. "Content-Type" as "content_type".
      */

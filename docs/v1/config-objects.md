@@ -56,7 +56,9 @@ class ScrapflyClient
 
 - A property without a key attribute reads the snake_case form of its name. This applies to
   config objects only; requests and arrays use the property name as it is.
-- A dot in `#[Key]` separates keys, as in `config()`.
+- A dot in `#[Key]` separates keys, as in `config()` and as in request and array keys. An
+  escaped dot is part of the key: `#[Key('hosts.api\.example\.com')]` reads the
+  `api.example.com` key of `services.scrapfly.hosts`.
 - `#[ConfigKey]` is an absolute key. Only a top-level property may have one.
 - A nested object or an array of them reads from under its property's key, and its own keys
   follow the same rules: `public Credentials $oxylabs` reads

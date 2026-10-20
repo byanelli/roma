@@ -2,7 +2,6 @@
 
 namespace BYanelli\Roma\Config;
 
-use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Serialization\Destination;
@@ -42,14 +41,6 @@ final readonly class ConfigPolicy implements SourcePolicy
     public function defaultKey(string $propertyName): string
     {
         return Str::snake($propertyName);
-    }
-
-    /**
-     * A dot separates segments, as in config(): "residential.user".
-     */
-    public function keyPath(string $key): KeyPath
-    {
-        return new KeyPath(explode('.', $key));
     }
 
     public function attributesForType(string $typeName): array

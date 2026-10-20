@@ -131,7 +131,8 @@ value belongs:
 * `tenant.plan` — a [custom source](/docs/roma/v1/sources#custom-sources), under its key
 
 Nested fields keep their full path and array elements are indexed (`input.address.city`,
-`input.items.1.code`). The one exception is a [precognitive request](/docs/roma/v1/precognition),
+`input.items.1.code`), and so does a [dotted key](/docs/roma/v1/sources#nested-keys) such as
+`#[Key('error.message')]` (`input.error.message`). The one exception is a [precognitive request](/docs/roma/v1/precognition),
 whose errors are keyed by the bare posted field name for front-end form tooling.
 
 ## Mapping outside a request

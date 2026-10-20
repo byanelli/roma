@@ -79,6 +79,24 @@ class UserResponse extends Response {
 }
 ```
 
+A dotted key is written as nested objects, and keys under one parent share one object:
+
+```php
+class ErrorResponse extends Response {
+    #[Key('error.message')]
+    public string $message;      // {"error": {"message": "Not found", "code": 404}}
+
+    #[Key('error.code')]
+    public int $code;
+}
+```
+
+An `#[Optional]`, `Missing` or `#[\SensitiveParameter]` property that is left out leaves no
+key behind, and a parent whose values are all left out is left out too. An escaped dot, as in
+`#[Key('created\.at')]`, is part of the key, and a header name keeps its dots. A property
+written inside another property's value, such as `#[Key('error')]` beside
+`#[Key('error.message')]`, throws.
+
 `#[Key]` together with `#[Header('Name')]` throws, since the header name is already the key.
 `#[Key]` together with `#[Status]` throws too, since the status has no key.
 

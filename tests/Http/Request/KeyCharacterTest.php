@@ -31,10 +31,8 @@ it('rejects a request key containing a star', function () {
         ->toThrow(RuntimeException::class, "may not contain '*'");
 });
 
-it('does not reject a request key containing a dot', function () {
+it('does not reject a request key containing an escaped dot', function () {
     /** @var TestCase $this */
-    // A dot is now a supported literal key character, so building the class
-    // definition must not throw.
     $this->setRequest(
         headers: ['Content-Type' => 'application/json'],
         json: ['a.b' => 'hello'],
@@ -45,13 +43,13 @@ it('does not reject a request key containing a dot', function () {
 
 /*
 |--------------------------------------------------------------------------
-| A literal dotted key on a top-level property.
+| A literal dot, escaped as "\.", in a key on a top-level property.
 |--------------------------------------------------------------------------
 */
 
 readonly class TestDottedBodyKeyRequest
 {
-    #[Body('a.b')]
+    #[Body('a\.b')]
     public string $x;
 }
 
@@ -69,7 +67,7 @@ it('maps a top-level literal dotted key', function () {
 
 readonly class TestDottedBodyIntKeyRequest
 {
-    #[Body('a.b')]
+    #[Body('a\.b')]
     public int $x;
 }
 
@@ -115,13 +113,13 @@ it('validates a literal dotted key with the friendly error key when missing', fu
 
 /*
 |--------------------------------------------------------------------------
-| A literal dotted key on a property inside a nested object.
+| An escaped literal dot in a key on a property inside a nested object.
 |--------------------------------------------------------------------------
 */
 
 readonly class TestDottedNestedChild
 {
-    #[Key('c.d')]
+    #[Key('c\.d')]
     public string $val;
 }
 
@@ -238,18 +236,25 @@ it('rejects a nested property whose type implies a header as a source', function
 
 readonly class TestTopLevelKeyRequest
 {
+    #[Key('a\.b')]
+    public string $x;
+}
+
+readonly class TestTopLevelNestedKeyRequest
+{
     #[Key('a.b')]
     public string $x;
 }
 
-it('maps a top-level literal dotted #[Key] within the input source', function () {
+it('maps a top-level escaped dotted #[Key] within the input source', function () {
     /** @var TestCase $this */
     $this->setRequest(
         headers: ['Content-Type' => 'application/json'],
         json: ['a.b' => 'hello', 'a' => ['b' => 'nested']],
     );
 
-    expect($this->mapRequest(TestTopLevelKeyRequest::class)->x)->toBe('hello');
+    expect($this->mapRequest(TestTopLevelKeyRequest::class)->x)->toBe('hello')
+        ->and($this->mapRequest(TestTopLevelNestedKeyRequest::class)->x)->toBe('nested');
 });
 
 /*

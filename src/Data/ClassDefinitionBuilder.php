@@ -18,6 +18,7 @@ use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
 use DateInterval;
 use Illuminate\Http\UploadedFile;
+use InvalidArgumentException;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionNamedType;
@@ -64,7 +65,7 @@ class ClassDefinitionBuilder
         return new Property(
             name: $prop->name,
             keyPath: $this->keyPath($source, $key, $prop->name),
-            wireKey: $attributes->wireKey() ?: $key,
+            wirePath: $this->splitKey($source, $attributes->wireKey() ?: $key, $prop->name),
             type: $type,
             role: $prop->role,
             default: $optional ? $prop->optionalDefault() : $prop->default,
@@ -125,8 +126,7 @@ class ClassDefinitionBuilder
             throw new RuntimeException(
                 "Roma property \"{$prop->printableName}\" is inside a nested object and "
                 .'cannot declare its own source; source attributes and types that imply a source are only '
-                .'available on top-level classes. To override a nested property\'s key (e.g. a key containing '
-                .'a literal dot) use #[Key] instead.'
+                .'available on top-level classes. To override a nested property\'s key, use #[Key] instead.'
             );
         }
 
@@ -191,11 +191,31 @@ class ClassDefinitionBuilder
         }
 
         return match (true) {
-            $source === null => $this->policy->keyPath($key),
+            $source === null => $this->splitKey(null, $key, $name),
             // A single-value source's property is the whole value, so its key path is empty.
             $source->isSingleValue() => KeyPath::empty(),
-            default => $this->policy->keyPath($source->normalizeKey($key)),
+            default => $this->splitKey($source, $source->normalizeKey($key), $name),
         };
+    }
+
+    /**
+     * The source decides whether a dot nests, since one class can map from both kinds. A
+     * property of a nested object has no source and is always in nested data, so its dots nest.
+     */
+    private function splitKey(?Source $source, string $key, string $name): KeyPath
+    {
+        if ($source !== null && ! $source->nestsKeys()) {
+            return new KeyPath([$key]);
+        }
+
+        try {
+            return KeyPath::fromDotted($key);
+        } catch (InvalidArgumentException) {
+            throw new RuntimeException(
+                "Roma key \"$key\" (property \"$name\") has an empty segment. A dot separates nested keys; "
+                .'write a literal dot as "\\.".'
+            );
+        }
     }
 
     /**
@@ -259,37 +279,46 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * Properties of one accessor, and class-level constraints, which only add rules, may share
-     * a key.
+     * Two properties may not share a key, and one may not be inside another's value, as
+     * "error.message" is inside "error". Properties of one accessor, and class-level
+     * constraints, which only add rules, may share a key.
      *
      * @param  ReflectionClass<object>  $class
      * @param  list<Property>  $properties
      */
     private function assertDistinctKeys(ReflectionClass $class, array $properties): void
     {
-        $seen = [];
+        $checked = array_values(array_filter(
+            $properties,
+            fn (Property $property) => ! $property->isVirtual && $property->role !== Role::ValidationOnly && ! $property->source?->isSingleValue(),
+        ));
 
-        foreach ($properties as $property) {
-            if ($property->isVirtual || $property->role === Role::ValidationOnly || $property->source?->isSingleValue()) {
-                continue;
-            }
+        $conflict = KeyPath::firstConflict(array_map(fn (Property $property) => $property->fullKey(), $checked));
 
-            $key = $property->fullKey();
-            $first = $seen[serialize($key->segments)] ??= $property;
+        if ($conflict === null) {
+            return;
+        }
 
-            if ($first === $property) {
-                continue;
-            }
+        [$first, $second] = [$checked[$conflict[0]], $checked[$conflict[1]]];
+        [$firstKey, $secondKey] = [$first->fullKey(), $second->fullKey()];
 
-            $same = $first->errorKey === $property->errorKey
+        if ($firstKey->toKey() === $secondKey->toKey()) {
+            $same = $first->errorKey === $second->errorKey
                 ? "the same key \"{$first->errorKey}\""
-                : "the same key: \"{$first->errorKey}\" and \"{$property->errorKey}\" are both read as \"{$key->toKey()}\"";
+                : "the same key: \"{$first->errorKey}\" and \"{$second->errorKey}\" are both read as \"{$secondKey->toKey()}\"";
 
             throw new RuntimeException(
-                "Roma class {$class->getShortName()} maps \${$first->name} and \${$property->name} from {$same}. "
+                "Roma class {$class->getShortName()} maps \${$first->name} and \${$second->name} from {$same}. "
                 .'Give one of them another key.'
             );
         }
+
+        [$outer, $inner] = $firstKey->isPrefixOf($secondKey) ? [$first, $second] : [$second, $first];
+
+        throw new RuntimeException(
+            "Roma class {$class->getShortName()} maps \${$inner->name} from \"{$inner->errorKey}\", which is inside the value of "
+            ."\${$outer->name} at \"{$outer->errorKey}\". Give one of them another key."
+        );
     }
 
     private function assertDestinationAllowed(ReflectionParamOrProperty $prop): void
@@ -478,7 +507,7 @@ class ClassDefinitionBuilder
             // A member that contains this union is still being built.
             $this->definitions->whenBuilt($class, function (Class_ $definition) use ($class, $discriminator): void {
                 foreach ($definition->properties as $property) {
-                    if (in_array($discriminator->key, [$property->keyPath->toKey(), $property->wireKey], true)) {
+                    if (in_array($discriminator->key, [$property->keyPath->segments[0] ?? null, $property->wirePath->segments[0] ?? null], true)) {
                         throw new RuntimeException(
                             'Roma property "'.class_basename($class)."::\${$property->name}\" uses the key \"{$discriminator->key}\", "
                             .'which is the discriminator key of a union the class belongs to.'
@@ -599,7 +628,7 @@ class ClassDefinitionBuilder
             $result[] = new Property(
                 name: $attr->getKey(),
                 keyPath: $this->keyPath($attr->getSource(), $attr->getKey(), $attr->getKey()),
-                wireKey: $wireKey ?: $attr->getKey(),
+                wirePath: $this->splitKey($attr->getSource(), $wireKey ?: $attr->getKey(), $attr->getKey()),
                 type: $attr->getType(),
                 role: Role::ValidationOnly,
                 default: new NoDefault,
