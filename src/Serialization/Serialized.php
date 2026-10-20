@@ -19,5 +19,6 @@ final readonly class Serialized
         public ?int $status = null,
         public array $query = [],
         public array $path = [],
+        public ?string $url = null,
     ) {}
 }

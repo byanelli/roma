@@ -398,7 +398,7 @@ class ClassMapping
         foreach ($this->class->properties as $property) {
             [$role, $type, $path] = [$property->role, $property->type, $property->fullKey()];
 
-            if ($property->isVirtual || $role == Role::ValidationOnly) {
+            if ($property->isVirtual || $role == Role::ValidationOnly || $property->source?->isInjected()) {
                 continue;
             }
 
@@ -581,7 +581,7 @@ class ClassMapping
     {
         return $this->validationRules ??= array_values(array_map(
             fn (Source $source) => new ValidationRules($this->class, $source, $this->normalizeValue($this->data[$source->getKey()] ?? null)),
-            $this->class->sources(),
+            array_filter($this->class->sources(), fn (Source $source) => ! $source->isInjected()),
         ));
     }
 }

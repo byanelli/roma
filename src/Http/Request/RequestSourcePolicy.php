@@ -43,6 +43,11 @@ readonly class RequestSourcePolicy implements SourcePolicy
         return $propertyName;
     }
 
+    public function sourceFor(?Source $declared, ?Destination $destination): ?Source
+    {
+        return $declared;
+    }
+
     public function sourceForType(string $typeName): ?Source
     {
         return in_array($typeName, [UploadedFile::class, SymfonyUploadedFile::class], true)
@@ -51,10 +56,11 @@ readonly class RequestSourcePolicy implements SourcePolicy
     }
 
     /**
-     * A #[Header] property maps from a request header. A request has no status.
+     * #[Header], #[Query], #[Path] and #[Body] are sources when mapping a request. A request has
+     * no status or URL property.
      */
     public function allowsDestination(Destination $destination): bool
     {
-        return $destination === Destination::Header;
+        return in_array($destination, [Destination::Header, Destination::Query, Destination::Path, Destination::Body], true);
     }
 }

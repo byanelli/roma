@@ -87,7 +87,7 @@ final readonly class ClassSchema
         $entries = [];
 
         foreach ($class->properties as $property) {
-            if ($property->role === Role::ValidationOnly || $property->isVirtual) {
+            if ($property->role === Role::ValidationOnly || $property->isVirtual || $property->source?->isInjected()) {
                 continue;
             }
 

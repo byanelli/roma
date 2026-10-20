@@ -83,7 +83,7 @@ function dottedSerializationError(): DottedSerializationError
     );
 }
 
-it('writes dotted keys under one parent as one nested object in all profiles', function (Profile $profile, mixed $level) {
+it('writes dotted keys under one parent as one nested object in all profiles', function (Profile $profile, mixed $level, array $sensitive) {
     expect(Serializer::toArray(dottedSerializationError(), $profile))->toBe([
         'error' => [
             'message' => 'Not found',
@@ -94,11 +94,12 @@ it('writes dotted keys under one parent as one nested object in all profiles', f
         'meta' => ['trace' => ['id' => 'abc']],
         'created.at' => 'today',
         'tags' => [['meta' => ['label' => 'blue']]],
+        ...$sensitive,
     ]);
 })->with([
-    'response' => [Profile::response(), ['name' => 'High', 'value' => 'high']],
-    'client request' => [Profile::clientRequest(), 'high'],
-    'storage' => [Profile::storage(), 'high'],
+    'response' => [Profile::response(), ['name' => 'High', 'value' => 'high'], []],
+    'client request' => [Profile::clientRequest(), 'high', ['auth' => ['token' => 'secret']]],
+    'storage' => [Profile::storage(), 'high', []],
 ]);
 
 it('leaves no parent behind when all of its values are absent or sensitive', function () {

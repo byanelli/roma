@@ -33,7 +33,7 @@ use UnitEnum;
 /**
  * Serializes an object's public properties, recursing through nested objects
  * and arrays with the same profile. A property whose constructor parameter has
- * #[\SensitiveParameter] is left out.
+ * #[\SensitiveParameter] is left out unless the profile writes sensitive values.
  */
 class Serializer
 {
@@ -64,22 +64,23 @@ class Serializer
         $profile ??= Profile::response();
 
         $body = $headers = $query = $path = [];
-        $status = null;
+        $status = $url = null;
 
-        foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
+        foreach ($this->values($object, $profile) as [$property, $value, $dateFormat, $destination]) {
             $key = $property->path;
 
-            match ($property->destination) {
+            match ($destination) {
                 Destination::Body => $key->setIn($body, $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated)),
-                // A header's key never nests.
-                Destination::Header => $headers[$key->toKey()] = $this->headerValue($value, $dateFormat),
+                // A header's key never nests, and a null header is not sent.
+                Destination::Header => $value === null ? null : $headers[$key->toKey()] = $this->headerValue($value, $dateFormat),
                 Destination::Status => $status = $value,
                 Destination::Query => $key->setIn($query, $this->queryValue($this->normalizeValue($value, $profile, $dateFormat, $property->discriminated), $profile)),
                 Destination::Path => $key->setIn($path, $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated)),
+                Destination::Url => $url = $value === null ? null : $this->headerValue($value, $dateFormat),
             };
         }
 
-        return new Serialized($body, $headers, $status, $query, $path);
+        return new Serialized($body, $headers, $status, $query, $path, $url);
     }
 
     /**
@@ -116,7 +117,7 @@ class Serializer
         $body = [];
 
         foreach ($this->values($object, $profile) as [$property, $value, $dateFormat]) {
-            if ($property->destination === Destination::Body) {
+            if ($property->destination === Destination::Body || $property->fallsBackToBody) {
                 $property->path->setIn($body, $this->normalizeValue($value, $profile, $dateFormat, $property->discriminated));
             }
         }
@@ -127,21 +128,32 @@ class Serializer
     private function assertNestable(object $object): void
     {
         foreach ($this->plan($object::class) as $property) {
-            if ($property->destination !== Destination::Body) {
+            if ($property->destination !== Destination::Body && ! $property->fallsBackToBody) {
                 $property->attributes->assertAllowedInNestedObject();
             }
         }
     }
 
     /**
-     * @return Generator<int, array{PropertyPlan, mixed, string}>
+     * Each value with the destination it is written to under the profile.
+     *
+     * @return Generator<int, array{PropertyPlan, mixed, string, Destination}>
      */
     private function values(object $object, Profile $profile): Generator
     {
         foreach ($this->plan($object::class) as $property) {
             $reflection = $property->reflection;
+            $destination = $property->destination;
 
-            if (! $profile->allows($property->destination)) {
+            if ($property->sensitive && ! $profile->sensitive) {
+                continue;
+            }
+
+            if (! $profile->allows($destination) && $property->fallsBackToBody) {
+                $destination = Destination::Body;
+            }
+
+            if (! $profile->allows($destination)) {
                 throw new RuntimeException(sprintf(
                     'Property %s::$%s is written to the %s destination, which this serialization profile does not allow.',
                     $reflection->getDeclaringClass()->getName(),
@@ -172,7 +184,7 @@ class Serializer
                 ?? $property->dateFormat
                 ?? $profile->dateFormat;
 
-            yield [$property, $value, $dateFormat];
+            yield [$property, $value, $dateFormat, $destination];
         }
     }
 
@@ -348,10 +360,6 @@ class Serializer
 
             $prop = new ReflectionParamOrProperty($property, instantiate: self::ATTRIBUTES);
 
-            if ($prop->isSensitive) {
-                continue;
-            }
-
             $attributes = $prop->attributes;
             $attributes->assertCombinable();
             $attributes->assertStatusType();
@@ -378,6 +386,8 @@ class Serializer
                 dateFormat: $dateFormat,
                 optional: $attributes->hasInstanceOf(Optional::class) || $prop->acceptsMissing,
                 discriminated: $this->discriminatedType($prop),
+                sensitive: $prop->isSensitive,
+                fallsBackToBody: $destination instanceof FallsBackToBody,
             );
         }
 

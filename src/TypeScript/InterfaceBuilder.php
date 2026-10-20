@@ -104,7 +104,7 @@ readonly class InterfaceBuilder
                 $this->assertBucketAttribute($class->class, $property, false);
             }
 
-            if ($property->role === PhpRole::ValidationOnly || $property->type instanceof PhpFile || $omitProperty($property)) {
+            if ($property->role === PhpRole::ValidationOnly || $property->source?->isInjected() || $property->type instanceof PhpFile || $omitProperty($property)) {
                 continue;
             }
 

@@ -12,6 +12,7 @@ use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Serialization\Destination;
 use BYanelli\Roma\Serialization\DestinationAttribute;
+use BYanelli\Roma\Serialization\FallsBackToBody;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Collection;
 use ReflectionNamedType;
@@ -288,17 +289,19 @@ final class AttributesCollection extends Collection
     }
 
     /**
-     * Headers and the status belong to the top-level class. A header that the type implies, such
-     * as Authorization's, is reported as a source in a nested object instead.
+     * Destinations other than the body, such as headers and the status, belong to the top-level
+     * class. A header that the type implies, such as Authorization's, is reported as a source in a
+     * nested object instead.
      */
     public function assertAllowedInNestedObject(): void
     {
         $destination = $this->declared()->destinationAttribute();
 
-        if ($destination !== null) {
+        // A source attribute such as #[Query] is reported as a source in a nested object.
+        if ($destination !== null && ! $destination instanceof FallsBackToBody) {
             throw new RuntimeException(
                 "Roma property \"{$this->property->printableName}\" has #[".class_basename($destination).'] but is inside a nested object. '
-                .'Headers and #[Status] can only be declared on the top-level class.'
+                .'Destination attributes such as #[Header] and #[Status] can only be declared on the top-level class.'
             );
         }
     }

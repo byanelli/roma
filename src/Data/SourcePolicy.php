@@ -40,6 +40,14 @@ interface SourcePolicy
     public function sourceForType(string $typeName): ?Source;
 
     /**
+     * The source of a top-level property or class-level constraint whose attributes give
+     * `$declared` as its source and `$destination` as its destination, either of which may be
+     * null, or null for the default source. A policy that reads the same parts from another kind
+     * of input, such as an HTTP client response's headers, returns its own source.
+     */
+    public function sourceFor(?Source $declared, ?Destination $destination): ?Source;
+
+    /**
      * The key of a property with no key attribute.
      */
     public function defaultKey(string $propertyName): string;

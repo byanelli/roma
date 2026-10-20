@@ -67,6 +67,16 @@ abstract readonly class Source
     }
 
     /**
+     * Whether read() returns an object that is passed to the constructor as is, such as an HTTP
+     * client's raw response. Such a source is single-valued. Its property is not coerced or
+     * validated, and TypeScript and JSON Schema leave it out.
+     */
+    public function isInjected(): bool
+    {
+        return false;
+    }
+
+    /**
      * Whether `$other` reads the same data, so that properties of both share one read and one
      * validator.
      */

@@ -48,6 +48,11 @@ final readonly class ConfigPolicy implements SourcePolicy
         return [];
     }
 
+    public function sourceFor(?Source $declared, ?Destination $destination): ?Source
+    {
+        return $declared;
+    }
+
     public function sourceForType(string $typeName): ?Source
     {
         return null;

@@ -1,6 +1,6 @@
 <?php
 
-$http = ['BYanelli\Roma\Http', 'Illuminate\Http\Request', 'Illuminate\Routing'];
+$http = ['BYanelli\Roma\Http', 'Illuminate\Http\Request', 'Illuminate\Http\Client', 'Illuminate\Routing'];
 
 arch('the data core does not depend on HTTP')
     ->expect('BYanelli\Roma\Data')
@@ -33,3 +33,7 @@ arch('config objects do not depend on HTTP')
 arch('the generic value objects do not depend on HTTP')
     ->expect('BYanelli\Roma\Values')
     ->not->toUse($http);
+
+arch('the HTTP client does not depend on server requests or routing')
+    ->expect('BYanelli\Roma\Http\Client')
+    ->not->toUse(['Illuminate\Http\Request', 'Illuminate\Routing', 'BYanelli\Roma\Http\Request\Injection', 'BYanelli\Roma\Http\Request\Precognition']);

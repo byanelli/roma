@@ -96,7 +96,7 @@ readonly class ValidationRules
         $wildcards = [];
 
         foreach ($class->properties as $index => $property) {
-            if ($property->isVirtual || $property->source?->getKey() !== $source->getKey()) {
+            if ($property->isVirtual || $property->source?->isInjected() || $property->source?->getKey() !== $source->getKey()) {
                 continue;
             }
 

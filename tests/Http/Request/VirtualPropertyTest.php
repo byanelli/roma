@@ -10,7 +10,6 @@ use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Accessors\Ip;
 use BYanelli\Roma\Http\Attributes\Header;
-use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Http\Enums\Method;
 use BYanelli\Roma\Http\Response\Response;
 use BYanelli\Roma\Tests\TestCase;
@@ -91,16 +90,6 @@ class VirtualWithPresent
     }
 }
 
-class VirtualWithQuery
-{
-    public string $first = 'Ada';
-
-    #[Query]
-    public string $upper {
-        get => strtoupper($this->first);
-    }
-}
-
 class VirtualWithAccessor
 {
     #[Ip]
@@ -121,7 +110,6 @@ it('rejects a mapping attribute on a virtual property', function (string $class,
 })->with([
     [VirtualWithRule::class, 'Rule'],
     [VirtualWithPresent::class, 'Present'],
-    [VirtualWithQuery::class, 'Query'],
     [VirtualWithAccessor::class, 'Ip'],
 ]);
 

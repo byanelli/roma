@@ -8,6 +8,8 @@ use BYanelli\Roma\Config\ConfigValidateCommand;
 use BYanelli\Roma\Console\RomaCacheCommand;
 use BYanelli\Roma\Console\RomaClearCommand;
 use BYanelli\Roma\Discovery\RomaCache;
+use BYanelli\Roma\Http\Client\Contracts\TypedFactory as TypedFactoryContract;
+use BYanelli\Roma\Http\Client\TypedFactory;
 use BYanelli\Roma\Http\Request\Contracts;
 use BYanelli\Roma\Http\Request\Injection\Request;
 use BYanelli\Roma\Http\Request\RequestMapper;
@@ -29,6 +31,7 @@ class RomaServiceProvider extends PackageServiceProvider
         $this->app->bind(Contracts\RequestResolver::class, fn () => $this->app->make(RequestResolver::class));
         $this->app->bind(Contracts\RequestMapper::class, fn () => $this->app->make(RequestMapper::class));
         $this->app->singleton(Serializer::class);
+        $this->app->singleton(TypedFactoryContract::class, TypedFactory::class);
         $this->app->singleton(RomaCache::class);
     }
 

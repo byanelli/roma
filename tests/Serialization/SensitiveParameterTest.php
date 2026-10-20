@@ -74,7 +74,7 @@ function sensitiveAccount(): SensitiveAccount
     );
 }
 
-it('leaves #[\SensitiveParameter] properties out of nested objects and arrays in all profiles', function (Profile $profile) {
+it('leaves #[\SensitiveParameter] properties out of nested objects and arrays', function (Profile $profile) {
     expect(Serializer::toArray(sensitiveAccount(), $profile))->toBe([
         'name' => 'main',
         'primary' => ['user' => 'ox'],
@@ -82,8 +82,19 @@ it('leaves #[\SensitiveParameter] properties out of nested objects and arrays in
     ]);
 })->with([
     'response' => fn () => Profile::response(),
-    'client request' => fn () => Profile::clientRequest(),
     'storage' => fn () => Profile::storage(),
+]);
+
+it('writes #[\SensitiveParameter] properties under the HTTP client profiles', function (Profile $profile) {
+    expect(Serializer::toArray(sensitiveAccount(), $profile))->toBe([
+        'name' => 'main',
+        'apiKey' => 'key_1',
+        'primary' => ['user' => 'ox', 'password' => 'secret'],
+        'fallbacks' => [['user' => 'di', 'password' => 'hunter2']],
+    ]);
+})->with([
+    'client request' => fn () => Profile::clientRequest(),
+    'client response' => fn () => Profile::clientResponse(),
 ]);
 
 it('leaves #[\SensitiveParameter] properties out of toArray() and JSON', function () {

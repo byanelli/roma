@@ -27,6 +27,7 @@ use ReflectionProperty;
 use ReflectionUnionType;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
+use Throwable;
 
 class ClassDefinitionBuilder
 {
@@ -58,7 +59,7 @@ class ClassDefinitionBuilder
 
         $source = $this->nested ? null : $this->topLevelSource($prop);
 
-        $type = $this->propertyType($prop);
+        $type = $source?->isInjected() ? new Mixed_ : $this->propertyType($prop);
         $key = $attributes->declaredKey() ?: $this->policy->defaultKey($prop->name);
         $optional = $prop->acceptsMissing || $attributes->hasInstanceOf(Optional::class);
 
@@ -146,7 +147,10 @@ class ClassDefinitionBuilder
      */
     private function topLevelSource(ReflectionParamOrProperty $prop): Source
     {
-        $source = $prop->typeSource ?? $prop->attributes->source() ?? $this->policy->defaultSource();
+        $attributes = $prop->attributes;
+        $source = $prop->typeSource
+            ?? $this->policy->sourceFor($attributes->source(), $attributes->destinationAttribute()?->destination())
+            ?? $this->policy->defaultSource();
 
         $this->assertSourceAllowed($source, "property \"{$prop->printableName}\"");
         $this->assertDestinationAllowed($prop);
@@ -353,12 +357,19 @@ class ClassDefinitionBuilder
     }
 
     /**
+     * An exception is built through its constructor only, since its parents' public properties,
+     * such as Laravel's RequestException::$response, are set there.
+     *
      * @param  ReflectionClass<object>  $class
      * @return list<Property>
      */
     private function getPropertiesFromClassProperties(ReflectionClass $class): array
     {
         $result = [];
+
+        if ($class->implementsInterface(Throwable::class)) {
+            return [];
+        }
 
         $classProperties = $class->getProperties(ReflectionProperty::IS_PUBLIC);
 
@@ -623,16 +634,18 @@ class ClassDefinitionBuilder
                 continue;
             }
 
-            $this->assertSourceAllowed($attr->getSource(), 'attribute #['.class_basename($attr)."] on {$class->getShortName()}");
+            $source = $this->policy->sourceFor($attr->getSource(), null) ?? $attr->getSource();
+
+            $this->assertSourceAllowed($source, 'attribute #['.class_basename($attr)."] on {$class->getShortName()}");
 
             $result[] = new Property(
                 name: $attr->getKey(),
-                keyPath: $this->keyPath($attr->getSource(), $attr->getKey(), $attr->getKey()),
-                wirePath: $this->splitKey($attr->getSource(), $wireKey ?: $attr->getKey(), $attr->getKey()),
+                keyPath: $this->keyPath($source, $attr->getKey(), $attr->getKey()),
+                wirePath: $this->splitKey($source, $wireKey ?: $attr->getKey(), $attr->getKey()),
                 type: $attr->getType(),
                 role: Role::ValidationOnly,
                 default: new NoDefault,
-                source: $attr->getSource(),
+                source: $source,
                 rules: $attr->getRules(AttributeTarget::Class_),
                 errorKey: ($attr instanceof ErrorKeyAttribute) ? $attr->getErrorKey() : null,
                 rawAttributes: $attributes,

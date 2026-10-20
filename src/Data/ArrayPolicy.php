@@ -37,6 +37,11 @@ readonly class ArrayPolicy implements SourcePolicy
         return $propertyName;
     }
 
+    public function sourceFor(?Source $declared, ?Destination $destination): ?Source
+    {
+        return $declared;
+    }
+
     public function sourceForType(string $typeName): ?Source
     {
         return null;

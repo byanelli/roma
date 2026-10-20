@@ -68,7 +68,7 @@ it('throws when serializing a nested object with a header or status', function (
 })->with([
     'header' => [fn () => new TestNestedHeaderResponse(new TestNestedWithHeader), 'TestNestedWithHeader::$etag" has #[Header] but is inside a nested object'],
     'status' => [fn () => new TestNestedHeaderResponse(new TestNestedWithStatus), 'TestNestedWithStatus::$status" has #[Status] but is inside a nested object'],
-    'list element' => [fn () => new TestNestedHeaderListResponse([new TestNestedWithHeader]), 'Headers and #[Status] can only be declared on the top-level class'],
+    'list element' => [fn () => new TestNestedHeaderListResponse([new TestNestedWithHeader]), 'Destination attributes such as #[Header] and #[Status] can only be declared on the top-level class'],
     'own toArray()' => [fn () => new TestNestedHeaderResponse(new TestNestedWithHeaderAndOwnToArray), 'TestNestedWithHeaderAndOwnToArray::$etag" has #[Header]'],
 ]);
 
@@ -89,5 +89,5 @@ it('throws when the definition of a nested object with a header or status is bui
 
 it('throws when generating TypeScript for a nested object with a header', function () {
     expect(fn () => new TypeScriptGenerator(responses: [TestNestedHeaderTypedResponse::class])->generate())
-        ->toThrow(RuntimeException::class, 'Headers and #[Status] can only be declared on the top-level class');
+        ->toThrow(RuntimeException::class, 'Destination attributes such as #[Header] and #[Status] can only be declared on the top-level class');
 });
