@@ -53,8 +53,8 @@
         "test-coverage": "vendor/bin/pest --coverage",
         "format": "vendor/bin/pint",
         "quality": [
-            "@composer run test",
             "@composer run analyse",
+            "@composer run test",
             "@composer run format"
         ]
     },
