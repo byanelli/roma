@@ -27,3 +27,5 @@ assertType(Response::class, $http->sendRequest(new TypedGetVideo, [Response::cla
 assertType('object', $http->sendRequest(new TypedGetVideo));
 assertType(TypedVideo::class, RomaHttp::sendRequest(new TypedGetVideo, [TypedVideo::class]));
 assertType(TypedPendingRequest::class, RomaHttp::baseUrl('https://api.test'));
+assertType('list<'.TypedGetVideo::class.'>', RomaHttp::sent(TypedGetVideo::class));
+assertType('GuzzleHttp\Promise\PromiseInterface', RomaHttp::response(new TypedVideo));

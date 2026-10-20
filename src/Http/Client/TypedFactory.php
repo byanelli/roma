@@ -14,6 +14,8 @@ use Illuminate\Http\Client\PendingRequest;
  */
 class TypedFactory implements Contracts\TypedFactory
 {
+    use Testing\FakesTypedRequests;
+
     public function __construct(private readonly Container $container) {}
 
     public function sendRequest(object $request, array $responses = [], ?string $url = null): object
