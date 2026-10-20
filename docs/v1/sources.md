@@ -266,6 +266,35 @@ A `bool` accepts `true`, `1`, `"true"`, `"1"`, `"yes"` and `"on"` as true, and `
 `"false"`, `"0"`, `"no"` and `"off"` as false, ignoring case. Any other value, including an
 empty string such as `?flag=`, fails validation with Laravel's boolean message.
 
+Three more types cover values that usually arrive as strings: comma-separated lists,
+durations and sizes.
+
+```php
+use BYanelli\Roma\Attributes\Delimited;
+use BYanelli\Roma\Attributes\Unit;
+use BYanelli\Roma\Http\Attributes\Query;
+use BYanelli\Roma\Values\ByteSize;
+use Carbon\CarbonInterval;
+
+class ExportRequest {
+    /** @var list<string> */
+    #[Query, Delimited]
+    public array $columns;           // ?columns=id,name, email -> ["id", "name", "email"]
+
+    public CarbonInterval $window;   // "90 minutes", "PT2H"
+
+    #[Unit('seconds')]
+    public CarbonInterval $timeout;  // "30" -> 30 seconds
+
+    public ByteSize $maxSize;        // "25MB", "512KiB" or 1048576
+}
+```
+
+`#[Delimited]` splits on `,` unless you pass another delimiter, trims the items, drops empty
+ones, and passes an array value through. See
+[Lists, durations and sizes](/docs/roma/v1/config-objects#lists-durations-and-sizes) for the
+formats that intervals and sizes accept.
+
 An `array` property or constructor parameter needs its element type in PHPDoc: `@var` on a
 property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list<T>` (and
 `non-empty-array<T>` / `non-empty-list<T>`), where `T` is a scalar, `mixed`, an enum, a

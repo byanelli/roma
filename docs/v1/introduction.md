@@ -10,14 +10,22 @@ group: Getting Started
 
 # Introduction
 
-Roma is a **Request/Response Object MApper** for Laravel. It maps _all_ aspects of an
-`Illuminate\Http\Request` — headers, the query string, the body, files, cookies, route
-parameters, and convenience methods like `$request->ajax()` — into a fully type-safe,
-validated plain PHP object. The goal: when you use a Roma request, you never touch the
-underlying Laravel request directly.
+Roma is an object mapper for Laravel. It maps data into type-safe, validated plain
+PHP objects, and serializes objects back out.
+
+For requests, Roma maps _all_ aspects of an `Illuminate\Http\Request` — headers, the query
+string, the body, files, cookies, route parameters, and convenience methods like
+`$request->ajax()` — into a plain PHP object. The goal: when you use a Roma request, you
+never touch the underlying Laravel request directly.
 
 On the response side, Roma converts a plain object (recursively) into the JSON body of a
 `JsonResponse`, with properties that can instead drive the status code or headers.
+
+[Config objects](/docs/roma/v1/config-objects) get the same treatment for Laravel's config
+repository: a class marked `#[ConfigObject('services.scrapfly')]` is mapped and validated
+from that part of the config, so a missing API key is reported with its config key instead
+of surfacing later as a 401. Plain arrays, such as tool input, map onto the same classes with
+`Mapper::fromArray()`.
 
 And with one command, Roma generates TypeScript definitions for both requests and
 responses — one source of truth shared by your backend and frontend.

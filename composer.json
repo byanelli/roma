@@ -1,6 +1,6 @@
 {
     "name": "byanelli/roma",
-    "description": "Request/Response Object MApper for Laravel",
+    "description": "Object mapper for Laravel",
     "keywords": [
         "request",
         "response",

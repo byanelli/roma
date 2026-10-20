@@ -5,11 +5,18 @@
 [![Pint](https://github.com/byanelli/roma/actions/workflows/pint.yml/badge.svg)](https://github.com/byanelli/roma/actions/workflows/pint.yml)
 [![Coverage](https://raw.githubusercontent.com/byanelli/roma/badges/coverage.svg)](https://github.com/byanelli/roma/actions/workflows/coverage.yml)
 
-Roma is a **Request/Response Object MApper** for Laravel. It maps the _entire_
-`Illuminate\Http\Request` — body, query string, headers, route parameters, cookies, files,
-and convenience methods like `$request->ajax()` — into a fully type-safe, validated plain
-PHP object, and maps response objects back to JSON. It is a type-safe `FormRequest` and DTO
-in one, so your controller never has to touch the underlying Laravel request.
+Roma is an object mapper for Laravel. It maps data into type-safe, validated plain
+PHP objects, and serializes objects back out:
+
+- **Requests.** The _entire_ `Illuminate\Http\Request` — body, query string, headers, route
+  parameters, cookies, files, and convenience methods like `$request->ajax()`. A Roma
+  request is a type-safe `FormRequest` and DTO in one, so your controller never has to touch
+  the underlying Laravel request.
+- **Responses.** Typed response objects become JSON, with properties that can set the
+  status code or headers.
+- **Config.** Values from Laravel's config repository. A missing API key is reported with
+  its config key when the object is used, instead of surfacing later as a 401.
+- **Plain arrays**, such as tool input or a stored value.
 
 📚 **Full documentation: [yanelli.dev/docs/roma](https://yanelli.dev/docs/roma)**
 
@@ -49,6 +56,24 @@ class CreateContactController {
 }
 ```
 
+A config object is a class marked `#[ConfigObject]`. Inject it anywhere:
+
+```php
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Config\ConfigObject;
+
+#[ConfigObject('services.scrapfly')]
+readonly class ScrapflyConfig {
+    public function __construct(
+        #[\SensitiveParameter]
+        public string $apiKey,             // services.scrapfly.api_key, required
+
+        #[Rule('min:1')]
+        public int $timeout = 180,         // services.scrapfly.timeout
+    ) {}
+}
+```
+
 ## Highlights
 
 - **Map from anywhere in the request.** Bind properties to the body, query, headers, route
@@ -64,6 +89,15 @@ class CreateContactController {
 - **Response objects.** Return a typed `Response` object and Roma serializes it to JSON,
   with properties liftable to the status code or headers. The `Serializer` facade serializes any
   object, with profiles for responses, outgoing requests and storage.
+- **Config objects.** Mark a class `#[ConfigObject('services.scrapfly')]` and type-hint it.
+  A property's key is the snake_case of its name under the prefix, and values get the same
+  coercion and `#[Rule]` validation as a request. Injected objects are mapped when first used, and
+  `php artisan roma:config:validate` checks them all in CI or before a deploy.
+- **Lists, durations and sizes.** `#[Delimited]` splits `"a, b, c"` into an array,
+  `CarbonInterval` accepts `"90 seconds"` (or a number with `#[Unit('seconds')]`), and
+  `ByteSize` accepts `"25MB"`. They work in requests and config alike.
+- **Secrets stay out of output.** Properties marked `#[\SensitiveParameter]` are left out of
+  serialized output and validation messages.
 - **Plain arrays too.** `Mapper::fromArray(Settings::class, $array)` maps and validates an
   array, such as tool input or a stored value, onto the same classes.
 - **TypeScript generation.** `php artisan roma:typescript` emits interfaces for your
@@ -75,8 +109,8 @@ class CreateContactController {
   coding agents know when and how to reach for Roma.
 
 See the **[full documentation](https://yanelli.dev/docs/roma)** for everything: request
-objects, sources, validation & guards, headers & metadata, nested objects, responses,
-TypeScript generation, JSON Schema, and Precognition.
+objects, sources, validation & guards, headers & metadata, nested objects, responses, config
+objects, TypeScript generation, JSON Schema, and Precognition.
 
 ## Testing
 
