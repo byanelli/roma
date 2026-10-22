@@ -99,6 +99,32 @@ readonly class UpdatePostRequest {
 }
 ```
 
+## Custom messages
+
+`#[Message]` sets a property's validation messages, keyed by Laravel rule name. A message
+without a rule name applies to all of the property's rules, and messages may use Laravel's
+placeholders, such as `:attribute`:
+
+```php
+use BYanelli\Roma\Attributes\Message;
+use BYanelli\Roma\Attributes\Rule;
+
+readonly class CreateContactRequest {
+    public function __construct(
+        #[Message(required: 'Send a name.', max: ':attribute is too long.')]
+        #[Rule('max:255')]
+        public string $name,
+
+        #[Message('Send a whole number of seats.')]
+        public int $seats,
+    ) {}
+}
+```
+
+The message for `required`, `boolean` or `enum` also applies where Roma checks that rule
+itself, such as a required property of a nested object. A message on a nested class's
+property applies wherever the class is used, including the elements of a list.
+
 ## Class-level constraints
 
 Some accessor and header attributes can be applied at the class level to enforce a global

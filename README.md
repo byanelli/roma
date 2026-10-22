@@ -84,7 +84,8 @@ readonly class ScrapflyConfig {
   in the request, such as attributes set by middleware.
 - **Typed and validated.** Automatic coercion (strings → `int` / `float` / `bool` / enum /
   date / `UploadedFile`), validation via `#[Rule]`, nested objects, discriminated unions
-  (`#[Discriminated]`), and `#[Guard]` authorization methods.
+  (`#[Discriminated]`), and `#[Guard]` authorization methods. `#[Message]` sets a property's
+  messages.
 - **Header value objects.** Type a property as `Authorization` to get the scheme +
   credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
   / `Scheme` / `ContentType` metadata enums.

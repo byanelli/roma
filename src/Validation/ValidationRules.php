@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Validation;
 
+use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Property;
 use BYanelli\Roma\Data\Source;
@@ -21,7 +22,7 @@ use BYanelli\Roma\Validation\Rules\ValidInterval;
  * The rules for the data of one source, keyed relative to the source: "email",
  * "address.city", "items.*.code". Error keys are the source's prefix followed by the rule key.
  *
- * @phpstan-type Entry array{path: KeyPath, rules: list<mixed>, name: string}
+ * @phpstan-type Entry array{path: KeyPath, rules: list<mixed>, name: string, message?: ?Message}
  */
 readonly class ValidationRules
 {
@@ -45,6 +46,13 @@ readonly class ValidationRules
      * @var array<string, string>
      */
     private array $attributeNames;
+
+    /**
+     * Laravel's custom messages from #[Message], keyed by rule key and rule, e.g. "email.required".
+     *
+     * @var array<string, string>
+     */
+    private array $messages;
 
     /**
      * Whether the rules for a class's members depend on the data, keyed by class.
@@ -92,6 +100,7 @@ readonly class ValidationRules
 
         $rules = [];
         $names = [];
+        $messages = [];
         $positions = [];
         $wildcards = [];
 
@@ -107,6 +116,10 @@ readonly class ValidationRules
                 // Properties of one accessor, or a property and a class-level constraint, may validate the same key.
                 $rules[$key] = [...($rules[$key] ?? []), ...$entry['rules']];
 
+                if (isset($entry['message'])) {
+                    $messages = [...$messages, ...$entry['message']->forKey($key)];
+                }
+
                 // The attribute-name key is the unescaped join, matching what
                 // Laravel puts in the error bag and looks up for :attribute. A
                 // wildcard key gets no name, so messages show the concrete key.
@@ -121,6 +134,7 @@ readonly class ValidationRules
 
         $this->rules = $rules;
         $this->attributeNames = $names;
+        $this->messages = $messages;
         $this->positions = $positions;
         $this->wildcards = $wildcards;
     }
@@ -208,12 +222,27 @@ readonly class ValidationRules
      */
     private function entryFromProperty(Property $property, KeyPath $base): array
     {
-        return $this->valueEntries(
+        return $this->withMessage($property, $this->valueEntries(
             $property->type,
             $base->concat($property->keyPath),
             $property->errorKey,
             [...$this->leadingRules($property->nullable, $property->isRequired, null), ...$property->rules],
-        );
+        ));
+    }
+
+    /**
+     * Attaches the property's #[Message] to its own entry, the first, and not to its members'.
+     *
+     * @param  list<Entry>  $entries
+     * @return list<Entry>
+     */
+    private function withMessage(Property $property, array $entries): array
+    {
+        if ($entries !== []) {
+            $entries[0]['message'] = $property->attribute(Message::class);
+        }
+
+        return $entries;
     }
 
     /**
@@ -397,12 +426,12 @@ readonly class ValidationRules
                 continue;
             }
 
-            $entries = [...$entries, ...$this->valueEntries(
+            $entries = [...$entries, ...$this->withMessage($member, $this->valueEntries(
                 $member->type,
                 $path->concat($member->keyPath),
                 "$name.{$member->keyPath->toKey()}",
                 [...$this->leadingRules($member->nullable, $member->isRequired, $path), ...$member->rules],
-            )];
+            ))];
         }
 
         return $entries;
@@ -441,6 +470,14 @@ readonly class ValidationRules
     public function toArray(): array
     {
         return $this->rules;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->messages;
     }
 
     /**

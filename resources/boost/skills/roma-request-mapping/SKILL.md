@@ -28,7 +28,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Message`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
@@ -173,6 +173,8 @@ an explicit list unless the member list changes often.
   from different sources in a `#[Guard]`.
 - **Guards:** a `#[Guard]` method runs after validation, resolved through the container
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
+- **Custom messages:** `#[Message(required: 'Send a name.')]` sets a property's message for a
+  Laravel rule; a message without a rule name covers all of the property's rules.
 - **Class-level constraints:** apply `#[Ajax]`, `#[ContentType(...)]`, etc. at the class
   level to require them of all requests.
 

@@ -6,6 +6,7 @@ use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
@@ -36,6 +37,7 @@ final class AttributesCollection extends Collection
         DestinationAttribute::class,
         ExplicitKeyAttribute::class,
         KeyAttribute::class,
+        Message::class,
         Optional::class,
         RulesAttribute::class,
     ];
@@ -278,7 +280,7 @@ final class AttributesCollection extends Collection
     public function assertAllowedOnVirtual(): void
     {
         foreach ($this->declared() as $attribute) {
-            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute)
+            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute || $attribute instanceof Message)
                 && ! $attribute instanceof DestinationAttribute) {
                 throw new RuntimeException(
                     "Roma property \"{$this->property->printableName}\" is virtual (a hooked property with no backing value), so it is never "

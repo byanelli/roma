@@ -122,7 +122,7 @@ readonly class ObjectMapper
         $validator = $this->validatorFactory->make(
             $rules->data(),
             $this->resolveRuleClosures($rules->toArray()),
-            [],
+            $rules->messages(),
             $attributeNames,
         );
 

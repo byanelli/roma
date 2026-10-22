@@ -5,6 +5,7 @@
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Description;
 use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Facades\Serializer;
@@ -90,6 +91,16 @@ class VirtualWithPresent
     }
 }
 
+class VirtualWithMessage
+{
+    public string $first = 'Ada';
+
+    #[Message(required: 'Send a name.')]
+    public string $upper {
+        get => strtoupper($this->first);
+    }
+}
+
 class VirtualWithAccessor
 {
     #[Ip]
@@ -111,6 +122,7 @@ it('rejects a mapping attribute on a virtual property', function (string $class,
     [VirtualWithRule::class, 'Rule'],
     [VirtualWithPresent::class, 'Present'],
     [VirtualWithAccessor::class, 'Ip'],
+    [VirtualWithMessage::class, 'Message'],
 ]);
 
 class VirtualWithOutputAttributes extends Response
