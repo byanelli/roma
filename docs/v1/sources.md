@@ -328,6 +328,29 @@ A `bool` reads a value as Laravel's `Request::boolean()` does: `true`, `1`, and 
 boolean message, and a `null` is handled as for any other type (see
 [`null` and defaults](/docs/roma/v1/validation#null-and-defaults)).
 
+A `string` accepts a JSON number and maps it to its PHP string form, so `35201` becomes
+`"35201"` and `1.5` becomes `"1.5"`, as in a list or an array shape of strings. Rules such as
+`max:5` see the string. A bool still fails with Laravel's string message. Query, form and
+header values are strings already.
+
+To reject numbers, add `#[RejectNumbers]` to the property, or to a class to cover all its
+string properties and those of its subclasses. A number then fails with the `string` rule's
+message, which `#[Message(string: '...')]` can replace. On a property without a string in its
+type it throws when the class definition is built:
+
+```php
+use BYanelli\Roma\Attributes\RejectNumbers;
+
+readonly class LeadRequest {
+    public function __construct(
+        public string $zip,           // 35201 -> "35201"
+
+        #[RejectNumbers]
+        public string $code,          // 35201 -> "The input.code field must be a string."
+    ) {}
+}
+```
+
 Three more types cover values that usually arrive as strings: comma-separated lists,
 durations and sizes.
 

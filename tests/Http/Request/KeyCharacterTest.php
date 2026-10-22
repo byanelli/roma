@@ -281,7 +281,7 @@ it('still treats structural dots as nesting and validates array wildcards', func
     /** @var TestCase $this */
     $this->setRequest(
         headers: ['Content-Type' => 'application/json'],
-        json: ['address' => ['city' => 5], 'items' => ['a', 'b']],
+        json: ['address' => ['city' => true], 'items' => ['a', 'b']],
     );
 
     try {

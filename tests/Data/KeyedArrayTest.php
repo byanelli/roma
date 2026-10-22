@@ -122,7 +122,7 @@ it('maps an array shape to a plain array, coercing each key', function () {
 it('requires the non-optional keys of a present shape', function () {
     expect(keyedErrors(KeyedShapes::class, [
         'price' => ['input' => 'cheap'],
-        'partial' => ['b' => 4.5],
+        'partial' => ['b' => true],
         'profile' => [],
     ]))->toEqual([
         'data.price.input' => ['The data.price.input field must be a number.'],

@@ -456,7 +456,8 @@ class ClassMapping
             $type instanceof Types\Float_ => $this->toFloat($rawValue),
             $type instanceof Types\Date => $type->format !== null ? $rawValue : $this->toDate($type, $rawValue),
             $type instanceof Types\Interval => $this->toInterval($type, $rawValue),
-            $type instanceof Types\String_ => $rawValue,
+            // A JSON number for a string maps to its string form, e.g. 35201 to "35201".
+            $type instanceof Types\String_ => $type->acceptsNumbers && (is_int($rawValue) || is_float($rawValue)) ? (string) $rawValue : $rawValue,
             $type instanceof Types\Enum => $this->toEnum($type, $rawValue),
             $type instanceof Types\Array_ => $this->toArrayOfType($type, $rawValue),
             $type instanceof Types\Shape => $this->toShape($type, $rawValue),

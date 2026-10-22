@@ -28,7 +28,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -73,6 +73,8 @@ class CreateContactController {
   but Laravel's `ConvertEmptyStringsToNull` usually makes it one.
 - A `bool` reads input as `$request->boolean()` does: "1"/"true"/"on"/"yes" are true, any
   other scalar ("0", "no", "Y", "") is false; arrays fail validation.
+- A `string` accepts a JSON number as its string form (35201 → "35201"); bools still fail.
+  `#[RejectNumbers]` (property or class) makes numbers fail instead.
 - `#[Present]` on a nullable property requires the key to appear but allows `null`. With a
   default value it throws, since the default is never used.
 - `#[Optional]` is never required. Type a property `T|Missing` to tell an absent key

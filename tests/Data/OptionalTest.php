@@ -99,7 +99,7 @@ it('maps present #[Optional] properties as their type without Missing', function
 });
 
 it('validates a present #[Optional] value against its type', function () {
-    expect(optionalErrors(['name' => 'Bill', 'bio' => null, 'age' => 'old', 'card' => ['saved' => true], 'website' => 5]))->toEqual([
+    expect(optionalErrors(['name' => 'Bill', 'bio' => null, 'age' => 'old', 'card' => ['saved' => true], 'website' => true]))->toEqual([
         'data.website' => ['The data.website field must be a string.'],
         'data.bio' => ['The data.bio field must be a string.'],
         'data.age' => ['The data.age field must be an integer.'],
@@ -194,7 +194,7 @@ it('treats a type with Missing as optional without #[Optional]', function () {
 });
 
 it('validates a present value of a type with Missing', function () {
-    $map = fn () => Mapper::fromArray(TestMissingTyped::class, ['name' => 'Bill', 'bio' => 5, 'age' => 'old']);
+    $map = fn () => Mapper::fromArray(TestMissingTyped::class, ['name' => 'Bill', 'bio' => true, 'age' => 'old']);
 
     expect($map)->toThrow(fn (MappingValidationException $e) => expect($e->errors())->toEqual([
         'data.bio' => ['The data.bio field must be a string.'],

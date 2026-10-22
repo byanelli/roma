@@ -7,6 +7,7 @@ use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\RejectNull;
+use BYanelli\Roma\Attributes\RejectNumbers;
 use BYanelli\Roma\Attributes\Unit;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
@@ -212,7 +213,48 @@ class ClassDefinitionBuilder
             $type = new Types\Interval($type->class, $unit->unit);
         }
 
-        return $this->withDateFormat($type, $dateFormat);
+        return $this->withoutNumbers($prop, $this->withDateFormat($type, $dateFormat));
+    }
+
+    /**
+     * Under #[RejectNumbers], the type's strings reject numbers. The attribute on a property
+     * without a string in its type throws.
+     */
+    private function withoutNumbers(ReflectionParamOrProperty $prop, Type $type): Type
+    {
+        if ($prop->attributes->hasInstanceOf(RejectNumbers::class)) {
+            $this->hasString($type) || throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[RejectNumbers], which applies only to a string, or an array or shape "
+                .'of strings. Remove the attribute.'
+            );
+
+            return $this->rejectingNumbers($type);
+        }
+
+        return $prop->declaringClassHas(RejectNumbers::class) ? $this->rejectingNumbers($type) : $type;
+    }
+
+    private function hasString(Type $type): bool
+    {
+        return match (true) {
+            $type instanceof Types\String_ => true,
+            $type instanceof Types\Array_ => $this->hasString($type->memberType),
+            $type instanceof Types\Shape => array_any($type->items, fn (Types\ShapeItem $item) => $this->hasString($item->type)),
+            default => false,
+        };
+    }
+
+    private function rejectingNumbers(Type $type): Type
+    {
+        return match (true) {
+            $type instanceof Types\String_ => new Types\String_(acceptsNumbers: false),
+            $type instanceof Types\Array_ => new Types\Array_($this->rejectingNumbers($type->memberType), $type->isList, $type->keyType),
+            $type instanceof Types\Shape => new Types\Shape(
+                array_map(fn (Types\ShapeItem $item) => new Types\ShapeItem($item->key, $this->rejectingNumbers($item->type), $item->optional, $item->nullable), $type->items),
+                $type->sealed,
+            ),
+            default => $type,
+        };
     }
 
     /**

@@ -196,7 +196,7 @@ it('matches Validate-Only patterns against expanded array rules', function () {
 
     $response = $this->withPrecognition()
         ->withHeader('Precognition-Validate-Only', 'codes.1')
-        ->postJson('/codes', ['codes' => ['abc', 123]]);
+        ->postJson('/codes', ['codes' => ['abc', true]]);
 
     $response->assertUnprocessable();
 
@@ -204,7 +204,7 @@ it('matches Validate-Only patterns against expanded array rules', function () {
 
     $this->withPrecognition()
         ->withHeader('Precognition-Validate-Only', 'codes.0')
-        ->postJson('/codes', ['codes' => ['abc', 123]])
+        ->postJson('/codes', ['codes' => ['abc', true]])
         ->assertNoContent()
         ->assertHeader('Precognition-Success', 'true');
 });
@@ -217,7 +217,7 @@ it('names an array element by its source-prefixed key when configured', function
         ->middleware(HandlePrecognitiveRequests::class);
 
     $this->withPrecognition()
-        ->postJson('/codes', ['codes' => ['abc', 123]])
+        ->postJson('/codes', ['codes' => ['abc', true]])
         ->assertUnprocessable()
         ->assertJsonPath('errors', ['input.codes.1' => ['The input.codes.1 field must be a string.']]);
 });

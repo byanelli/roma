@@ -105,7 +105,7 @@ it('does not read a nested key from a literal dotted key, or the reverse', funct
 it('reports errors under the full dotted path', function () {
     expect(dottedErrors(DottedError::class, [
         'error' => ['message' => 'Not found', 'code' => 'x'],
-        'created.at' => 5,
+        'created.at' => true,
         'meta' => ['trace' => ['id' => []]],
     ]))->toBe([
         'data.error.code' => ['The data.error.code field must be an integer.'],

@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- A `string` property accepts an int or float input and maps it to its string form, such as
+  `35201` to `"35201"`, in the body, nested objects, lists, shapes and `Mapper::fromArray()`.
+  It only accepts more input; a number used to fail validation. `#[RejectNumbers]` on a
+  property or class restores the old behavior, and throws on a property without a string.
 - Breaking: a `bool` property reads its input as Laravel's `Request::boolean()` does
   (`filter_var(..., FILTER_VALIDATE_BOOLEAN)`). `"1"`, `"true"`, `"on"`, `"yes"` (in any
   case), `true` and `1` are true, and any other scalar is false: `"Y"`, `"maybe"`, `2` and a
