@@ -8,11 +8,14 @@ use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Http\Request\Precognition\ClientDataKeys;
 use BYanelli\Roma\Http\Request\Precognition\PrecognitiveRuleFilter;
 use BYanelli\Roma\Validation\ValidationErrors;
+use Illuminate\Contracts\Support\Responsable;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Throwable;
 
 readonly class RequestMapper implements Contracts\RequestMapper
 {
@@ -30,6 +33,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
      * @return T
      *
      * @throws \ReflectionException|ValidationException
+     * @throws HttpResponseException the class implements HandlesFailedValidation and validation failed
      * @throws HttpException a passing precognitive request short-circuits with a 204
      */
     public function mapRequest(string $className)
@@ -38,13 +42,31 @@ readonly class RequestMapper implements Contracts\RequestMapper
 
         $mapping = $this->objectMapper->mapping($className, $request, new RequestSourcePolicy);
 
-        if ($request->isPrecognitive()) {
-            $this->validatePrecognitiveRequest($mapping, $request);
+        try {
+            if ($request->isPrecognitive()) {
+                $this->validatePrecognitiveRequest($mapping, $request);
+            }
+
+            $this->asHttpValidation(fn () => $this->objectMapper->validateMapping($mapping));
+
+            return $this->objectMapper->build($mapping);
+        } catch (ValidationException $e) {
+            throw $this->failedValidation($className, $e, $request);
+        }
+    }
+
+    /**
+     * @param  class-string  $className
+     */
+    private function failedValidation(string $className, ValidationException $exception, Request $request): Throwable
+    {
+        if (! is_a($className, HandlesFailedValidation::class, true)) {
+            return $exception;
         }
 
-        $this->asHttpValidation(fn () => $this->objectMapper->validateMapping($mapping));
+        $response = $className::failedValidation($exception);
 
-        return $this->objectMapper->build($mapping);
+        return new HttpResponseException($response instanceof Responsable ? $response->toResponse($request) : $response);
     }
 
     /**

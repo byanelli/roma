@@ -7,6 +7,9 @@ All notable changes to `roma` will be documented in this file.
 - `#[Message(required: '...')]` sets a property's validation messages by Laravel rule name,
   or for all of its rules without a name. A message for `required`, `boolean` or `enum` also
   applies to the rule objects Roma checks those rules with.
+- A request class that implements `Http\Request\HandlesFailedValidation` returns the
+  response for a failed validation from `failedValidation()`, including a guard's
+  `ValidationException` and a precognitive request's errors.
 - A typed HTTP client. `BYanelli\Roma\Http\Client\Contracts\TypedFactory` (and the `RomaHttp`
   facade) wraps the container's `Illuminate\Http\Client\Factory`, so `Http::fake()`,
   `preventStrayRequests()`, global middleware and events apply; its configuring methods return

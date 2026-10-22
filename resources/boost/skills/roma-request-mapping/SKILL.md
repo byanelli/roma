@@ -31,6 +31,7 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Message`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
+| `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
 | `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
@@ -175,6 +176,9 @@ an explicit list unless the member list changes often.
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
 - **Custom messages:** `#[Message(required: 'Send a name.')]` sets a property's message for a
   Laravel rule; a message without a rule name covers all of the property's rules.
+- **Custom error responses:** implement `HandlesFailedValidation` and return a response (or a
+  Roma `Response`) from `static failedValidation(ValidationException $e)`, as with
+  `FormRequest::failedValidation()`. It also receives a guard's `ValidationException`.
 - **Class-level constraints:** apply `#[Ajax]`, `#[ContentType(...)]`, etc. at the class
   level to require them of all requests.
 

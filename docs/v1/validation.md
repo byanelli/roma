@@ -125,6 +125,33 @@ The message for `required`, `boolean` or `enum` also applies where Roma checks t
 itself, such as a required property of a nested object. A message on a nested class's
 property applies wherever the class is used, including the elements of a list.
 
+## Custom error responses
+
+A request class that implements `HandlesFailedValidation` chooses the response for a failed
+validation, as `FormRequest::failedValidation()` does. Return a response, or a Roma
+[response object](/docs/roma/v1/responses), and Roma sends it in place of Laravel's 422:
+
+```php
+use BYanelli\Roma\Http\Request\HandlesFailedValidation;
+use BYanelli\Roma\Http\Request\Injection\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
+
+#[Request]
+readonly class NewLeadRequest implements HandlesFailedValidation {
+    // ...
+
+    public static function failedValidation(ValidationException $exception): JsonResponse {
+        return response()->json(['error' => collect($exception->errors())->flatten()->first()], 422);
+    }
+}
+```
+
+The method receives the `ValidationException` Roma would throw, with the errors described
+under [Error keys](#error-keys). It also receives a `ValidationException` thrown by a
+[guard](#guards) and the errors of a [precognitive request](/docs/roma/v1/precognition). It
+may throw an exception of its own instead of returning a response.
+
 ## Class-level constraints
 
 Some accessor and header attributes can be applied at the class level to enforce a global
