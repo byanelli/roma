@@ -84,8 +84,8 @@ readonly class ScrapflyConfig {
   from `first_name`. A custom source can read anything else
   in the request, such as attributes set by middleware.
 - **Typed and validated.** Automatic coercion (strings → `int` / `float` / `bool` / enum /
-  date / `UploadedFile`, with `bool` read as `$request->boolean()` reads it), validation via
-  `#[Rule]`, nested objects, discriminated unions
+  date / `UploadedFile`, with `bool` read as `$request->boolean()` reads it, and `null` taking
+  a property's default), validation via `#[Rule]`, nested objects, discriminated unions
   (`#[Discriminated]`), and `#[Guard]` authorization methods. `#[Message]` sets a property's
   messages, and `HandlesFailedValidation` replaces the 422 with a response of your own.
 - **Transforms.** `#[MapUsing(strtolower(...))]` changes a value after validation, and a

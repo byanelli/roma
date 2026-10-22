@@ -28,7 +28,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Limit`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -68,6 +68,9 @@ class CreateContactController {
 - Type coercion and enum/nested validation are automatic — a `public int $page` validates
   as an integer without an `integer` rule.
 - Required = non-nullable with no default. Optional = has a default OR is nullable (`?T`).
+- A `null` for a non-nullable property with a default takes the default; `#[RejectNull]`
+  (property or class) makes it fail instead. Nullable properties keep null. `""` isn't null,
+  but Laravel's `ConvertEmptyStringsToNull` usually makes it one.
 - A `bool` reads input as `$request->boolean()` does: "1"/"true"/"on"/"yes" are true, any
   other scalar ("0", "no", "Y", "") is false; arrays fail validation.
 - `#[Present]` on a nullable property requires the key to appear but allows `null`. With a

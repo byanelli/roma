@@ -33,6 +33,7 @@ readonly class Property
         public array $rawAttributes = [],
         public bool $isVirtual = false,
         public bool $optional = false,
+        public bool $nullTakesDefault = false,
     ) {
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).

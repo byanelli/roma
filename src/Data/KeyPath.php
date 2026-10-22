@@ -145,6 +145,31 @@ final readonly class KeyPath
     }
 
     /**
+     * Removes the value at the path, if there is one.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    public function removeFrom(array &$data): void
+    {
+        $ref = &$data;
+        $last = count($this->segments) - 1;
+
+        foreach ($this->segments as $i => $segment) {
+            if (! is_array($ref) || ! array_key_exists($segment, $ref)) {
+                return;
+            }
+
+            if ($i === $last) {
+                unset($ref[$segment]);
+
+                return;
+            }
+
+            $ref = &$ref[$segment];
+        }
+    }
+
+    /**
      * Replaces whatever is along the path but not an array with an array.
      *
      * @param  array<array-key, mixed>  $data

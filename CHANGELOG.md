@@ -9,6 +9,11 @@ All notable changes to `roma` will be documented in this file.
   case), `true` and `1` are true, and any other scalar is false: `"Y"`, `"maybe"`, `2` and a
   blank string such as `?flag=` used to fail validation and are now false. Arrays and objects
   still fail with Laravel's boolean message.
+- Breaking: an input value of exactly null for a property that isn't nullable but has a
+  default takes the default, as if absent, instead of failing validation. With Laravel's
+  `ConvertEmptyStringsToNull`, `?page=` for `int $page = 1` now gives 1 instead of a 422.
+  `#[RejectNull]` on a property or class restores the old behavior; on a nullable property,
+  or one without a default, it throws when the definition is built.
 - `#[MapUsing(callable)]` passes a property's value through a callable after validation, and
   `Data\Attributes\MapTransform` lets an attribute of your own do the same. A callable whose
   parameter is typed as the mapping's input, such as Laravel's `Request`, receives the input

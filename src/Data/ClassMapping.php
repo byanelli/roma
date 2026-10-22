@@ -45,6 +45,7 @@ class ClassMapping
     ) {
         $this->data = $data;
 
+        $this->removeDefaultedNulls();
         $this->castData();
     }
 
@@ -385,6 +386,21 @@ class ClassMapping
             return collect($class::cases())->firstOrFail(fn (UnitEnum $enum) => $enum->name == $val);
         } catch (\ValueError|ItemNotFoundException $e) {
             throw new CoercionException("Invalid enum value for $class: $val", previous: $e);
+        }
+    }
+
+    /**
+     * Removes the nulls of properties that take their default for null, so they validate and
+     * map as absent.
+     */
+    private function removeDefaultedNulls(): void
+    {
+        foreach ($this->class->properties as $property) {
+            $path = $property->fullKey();
+
+            if ($property->nullTakesDefault && $path->existsIn($this->data) && $path->getFrom($this->data) === null) {
+                $path->removeFrom($this->data);
+            }
         }
     }
 

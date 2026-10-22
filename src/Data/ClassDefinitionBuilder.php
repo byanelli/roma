@@ -6,6 +6,7 @@ use BYanelli\Roma\Attributes\Delimited;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\Unit;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
@@ -83,7 +84,27 @@ class ClassDefinitionBuilder
             // The mapper, validator and request TypeScript skip a virtual property.
             isVirtual: $prop->isVirtual,
             optional: $optional,
+            nullTakesDefault: $this->nullTakesDefault($prop),
         );
+    }
+
+    /**
+     * Whether an input value of exactly null takes the default: for a property that isn't
+     * nullable but declares a default, unless #[RejectNull] applies.
+     */
+    private function nullTakesDefault(ReflectionParamOrProperty $prop): bool
+    {
+        $applies = ! $prop->nullable && $prop->hasDefault;
+
+        if ($prop->attributes->hasInstanceOf(RejectNull::class)) {
+            return $applies ? false : throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[RejectNull], which applies only to a property that isn't nullable but "
+                .'has a default. '.($prop->nullable ? 'Its type allows null.' : 'It has no default, so null already fails validation.')
+                .' Remove the attribute.'
+            );
+        }
+
+        return $applies && ! $prop->declaringClassHas(RejectNull::class);
     }
 
     /**

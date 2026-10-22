@@ -325,7 +325,8 @@ with the format.
 A `bool` reads a value as Laravel's `Request::boolean()` does: `true`, `1`, and the strings
 `"1"`, `"true"`, `"on"` and `"yes"` in any case are true, and any other scalar, including
 `"0"`, `"no"`, `"Y"` and `""`, is false. An array or an object fails validation with Laravel's
-boolean message.
+boolean message, and a `null` is handled as for any other type (see
+[`null` and defaults](/docs/roma/v1/validation#null-and-defaults)).
 
 Three more types cover values that usually arrive as strings: comma-separated lists,
 durations and sizes.

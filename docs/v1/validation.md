@@ -270,6 +270,44 @@ input it was mapped from. An `#[Optional]` constructor parameter must be nullabl
 `#[Present]` on a type with `Missing` throws too, and so does a type with nothing but
 `Missing` and `null`, such as `?Missing`: add the type of the value, e.g. `string|Missing`.
 
+### `null` and defaults
+
+An input value of exactly `null` for a property that isn't nullable but has a default takes
+the default, as if the key were absent. A nullable property keeps the `null`, and a property
+without a default still fails validation as required:
+
+```php
+readonly class SearchRequest {
+    public function __construct(
+        public string $query,             // null -> "The input.query field is required."
+        public int $page = 1,             // null or absent -> 1
+        public ?string $sort = 'name',    // absent -> "name", null -> null
+    ) {}
+}
+```
+
+An empty string is not `null`. Laravel's `ConvertEmptyStringsToNull` middleware, which a
+Laravel app runs by default, turns `""` in the request input into `null` before Roma sees it,
+so `?page=` takes the default too.
+
+To keep the old strict behavior, add `#[RejectNull]` to the property, or to a class to cover
+all its properties and those of its subclasses. A `null` then fails with the message of the
+property's type rule, such as "The input.page field must be an integer.", which `#[Message]`
+can replace. On a nullable property, or one without a default, `#[RejectNull]` throws when
+the class definition is built, since it would have no effect:
+
+```php
+use BYanelli\Roma\Attributes\Message;
+use BYanelli\Roma\Attributes\RejectNull;
+
+readonly class SearchRequest {
+    public function __construct(
+        #[RejectNull, Message(integer: 'Leave out the page, or send a number.')]
+        public int $page = 1,
+    ) {}
+}
+```
+
 Use `#[Present]` on a nullable property when the key _must_ appear but may be `null`:
 
 ```php
