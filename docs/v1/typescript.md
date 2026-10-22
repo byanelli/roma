@@ -33,8 +33,10 @@ properties get a `?`.
 readonly class SearchRequest {
     public function __construct(
         public string $note,                          // default (input) -> Body
-        #[Query] public int $page = 1,                // -> Query (optional)
-        #[Header('X-Api-Key')] public string $apiKey, // -> Headers
+        #[Query]
+        public int $page = 1,                         // -> Query (optional)
+        #[Header('X-Api-Key')]
+        public string $apiKey,                        // -> Headers
     ) {}
 }
 ```

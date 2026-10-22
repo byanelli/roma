@@ -91,7 +91,10 @@ readonly class UpdatePostRequest {
     ) {}
 
     #[Guard]
-    public function authorize(#[CurrentUser] User $user): void {
+    public function authorize(
+        #[CurrentUser]
+        User $user,
+    ): void {
         if ($user->cannot('update', Post::findOrFail($this->postId))) {
             throw new AuthorizationException;
         }
@@ -253,7 +256,8 @@ use BYanelli\Roma\Missing;
 readonly class UpdateProfileRequest {
     public function __construct(
         public string|Missing $bio,                    // Missing when absent
-        #[Optional] public ?string $nickname,          // null when absent
+        #[Optional]
+        public ?string $nickname,                      // null when absent
         public Address|Missing|null $home,             // Missing when absent, null when null
     ) {}
 
@@ -302,7 +306,8 @@ use BYanelli\Roma\Attributes\RejectNull;
 
 readonly class SearchRequest {
     public function __construct(
-        #[RejectNull, Message(integer: 'Leave out the page, or send a number.')]
+        #[RejectNull]
+        #[Message(integer: 'Leave out the page, or send a number.')]
         public int $page = 1,
     ) {}
 }

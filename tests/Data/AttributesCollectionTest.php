@@ -8,7 +8,8 @@ use BYanelli\Roma\Http\Attributes\Query;
 
 class TestAttributesWithTwoKeys
 {
-    #[Query('a'), Key('b')]
+    #[Query('a')]
+    #[Key('b')]
     public string $name;
 }
 

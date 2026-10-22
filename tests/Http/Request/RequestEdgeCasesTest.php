@@ -35,7 +35,10 @@ it('throws when the #[Request] parameter is not type-hinted with a class', funct
     /** @var TestCase $this */
     $this->setRequest();
 
-    $func = fn (#[RequestAttribute] EdgeBoundRequest|string $request) => null;
+    $func = fn (
+        #[RequestAttribute]
+        EdgeBoundRequest|string $request,
+    ) => null;
 
     expect(fn () => $this->app->call($func))
         ->toThrow(ContextualBindingException::class, 'must be type-hinted with a class');
@@ -45,7 +48,10 @@ it('throws when the #[Request] parameter type-hints a non-existent class', funct
     /** @var TestCase $this */
     $this->setRequest();
 
-    $func = fn (#[RequestAttribute] Exist $request) => null;
+    $func = fn (
+        #[RequestAttribute]
+        Exist $request,
+    ) => null;
 
     expect(fn () => $this->app->call($func))
         ->toThrow(ContextualBindingException::class, 'does not exist');
@@ -55,7 +61,10 @@ it('throws when the #[Request] parameter has no type hint', function () {
     /** @var TestCase $this */
     $this->setRequest();
 
-    $func = fn (#[RequestAttribute] $request) => null;
+    $func = fn (
+        #[RequestAttribute]
+        $request,
+    ) => null;
 
     expect(fn () => $this->app->call($func))
         ->toThrow(ContextualBindingException::class, 'must be type-hinted with a class');

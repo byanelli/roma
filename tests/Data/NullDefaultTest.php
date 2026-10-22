@@ -85,9 +85,12 @@ it('still requires a property without a default', function () {
 readonly class NullDefaultSources
 {
     public function __construct(
-        #[Query] public int $page = 1,
-        #[Body] public bool $notify = true,
-        #[Header('X-Mode')] public string $mode = 'fast',
+        #[Query]
+        public int $page = 1,
+        #[Body]
+        public bool $notify = true,
+        #[Header('X-Mode')]
+        public string $mode = 'fast',
     ) {}
 }
 
@@ -103,7 +106,8 @@ readonly class NullRejected
     public function __construct(
         #[RejectNull]
         public bool $active = false,
-        #[RejectNull, Message(string: 'Send a label or leave it out.')]
+        #[RejectNull]
+        #[Message(string: 'Send a label or leave it out.')]
         public string $label = 'none',
         public int $page = 1,
     ) {}
@@ -143,12 +147,18 @@ it('rejects a null in a request with #[RejectNull]', function () {
 
 readonly class RejectNullOnNullable
 {
-    public function __construct(#[RejectNull] public ?string $note = 'x') {}
+    public function __construct(
+        #[RejectNull]
+        public ?string $note = 'x',
+    ) {}
 }
 
 readonly class RejectNullWithoutDefault
 {
-    public function __construct(#[RejectNull] public string $note) {}
+    public function __construct(
+        #[RejectNull]
+        public string $note,
+    ) {}
 }
 
 it('rejects #[RejectNull] where it has no effect', function (string $class, string $message) {

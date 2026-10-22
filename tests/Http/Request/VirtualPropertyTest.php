@@ -129,7 +129,8 @@ class VirtualWithOutputAttributes extends Response
 {
     public function __construct(public string $first, public DateTimeImmutable $at) {}
 
-    #[Key('display_name'), Description('The name to show.')]
+    #[Key('display_name')]
+    #[Description('The name to show.')]
     public string $displayName {
         get => strtoupper($this->first);
     }

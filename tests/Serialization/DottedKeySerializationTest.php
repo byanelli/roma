@@ -20,7 +20,10 @@ enum DottedSerializationLevel: string
 
 class DottedSerializationTag
 {
-    public function __construct(#[Key('meta.label')] public string $label) {}
+    public function __construct(
+        #[Key('meta.label')]
+        public string $label,
+    ) {}
 }
 
 class DottedSerializationError
@@ -29,33 +32,49 @@ class DottedSerializationError
      * @param  list<DottedSerializationTag>  $tags
      */
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Key('error.code')] public int $code,
-        #[Key('error.level')] public DottedSerializationLevel $level,
-        #[Key('error.detail')] public string|Missing $detail,
-        #[Key('meta.trace.id')] public string|Missing $traceId,
-        #[Key('created\.at')] public string $createdAt,
-        #[Key('error.tag')] public DottedSerializationTag $tag,
+        #[Key('error.message')]
+        public string $message,
+        #[Key('error.code')]
+        public int $code,
+        #[Key('error.level')]
+        public DottedSerializationLevel $level,
+        #[Key('error.detail')]
+        public string|Missing $detail,
+        #[Key('meta.trace.id')]
+        public string|Missing $traceId,
+        #[Key('created\.at')]
+        public string $createdAt,
+        #[Key('error.tag')]
+        public DottedSerializationTag $tag,
         public array $tags = [],
-        #[Key('auth.token'), SensitiveParameter] public string $token = 'secret',
+        #[Key('auth.token')]
+        #[SensitiveParameter]
+        public string $token = 'secret',
     ) {}
 }
 
 class DottedSerializationResponse
 {
-    #[Key('error.hint'), Optional]
+    #[Key('error.hint')]
+    #[Optional]
     public string $hint;
 
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Header('X-Request.id')] public string $requestId,
-        #[Status] public int $status = 422,
+        #[Key('error.message')]
+        public string $message,
+        #[Header('X-Request.id')]
+        public string $requestId,
+        #[Status]
+        public int $status = 422,
     ) {}
 }
 
 class DottedSerializationCookie
 {
-    public function __construct(#[Cookie('my.pref')] public string $pref) {}
+    public function __construct(
+        #[Cookie('my.pref')]
+        public string $pref,
+    ) {}
 }
 
 class DottedSerializationConflict
@@ -65,7 +84,8 @@ class DottedSerializationConflict
      */
     public function __construct(
         public array $error,
-        #[Key('error.message')] public string $message,
+        #[Key('error.message')]
+        public string $message,
     ) {}
 }
 

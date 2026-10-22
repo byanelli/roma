@@ -22,7 +22,10 @@ it('binds the request contextually', function () {
         ],
     );
 
-    $func = function (#[Request] TestBoundRequest $request) {
+    $func = function (
+        #[Request]
+        TestBoundRequest $request,
+    ) {
         $this->assertEquals('foo', $request->a);
         $this->assertEquals('bar', $request->b);
     };

@@ -18,7 +18,8 @@ class TsAuthBodyRequest
 {
     public function __construct(
         public string $name,
-        #[Body] public Authorization $auth,
+        #[Body]
+        public Authorization $auth,
     ) {}
 }
 

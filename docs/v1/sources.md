@@ -363,7 +363,8 @@ use Carbon\CarbonInterval;
 
 class ExportRequest {
     /** @var list<string> */
-    #[Query, Delimited]
+    #[Query]
+    #[Delimited]
     public array $columns;           // ?columns=id,name, email -> ["id", "name", "email"]
 
     public CarbonInterval $window;   // "90 minutes", "PT2H"
@@ -427,7 +428,8 @@ use BYanelli\Roma\Attributes\MapUsing;
 
 readonly class SignupRequest {
     public function __construct(
-        #[MapUsing(trim(...)), MapUsing(strtolower(...))]
+        #[MapUsing(trim(...))]
+        #[MapUsing(strtolower(...))]
         public string $email,
     ) {}
 }

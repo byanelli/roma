@@ -141,7 +141,10 @@ it('throws when a contract has no members', function () {
 });
 
 it('throws for a contract with both attributes', function () {
-    $contract = new #[Discriminated([Circle::class]), AutoDiscriminated] class {};
+    $contract = new
+        #[Discriminated([Circle::class])]
+        #[AutoDiscriminated]
+        class {};
 
     expect(fn () => Discriminator::ofContract($contract::class))
         ->toThrow(RuntimeException::class, 'has both #[Discriminated] and #[AutoDiscriminated]');
@@ -216,7 +219,8 @@ it('runs with optimize and optimize:clear', function () {
 class AutoOnProperty
 {
     public function __construct(
-        #[AutoDiscriminated] public ?Shape $shape = null,
+        #[AutoDiscriminated]
+        public ?Shape $shape = null,
     ) {}
 }
 

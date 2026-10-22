@@ -87,11 +87,14 @@ use BYanelli\Roma\Http\Attributes\Accessors\Segments;
 use BYanelli\Roma\Http\Attributes\Accessors\UserAgent;
 
 readonly class RequestInfo {
-    #[Ip]        public string $ip;
-    #[UserAgent] public string $userAgent;
+    #[Ip]
+    public string $ip;
+    #[UserAgent]
+    public string $userAgent;
 
     /** @var array<string> */
-    #[Segments]  public array $segments;
+    #[Segments]
+    public array $segments;
 }
 ```
 

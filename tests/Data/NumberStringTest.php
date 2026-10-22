@@ -87,7 +87,8 @@ readonly class NumbersRejected
      * @param  list<string>  $codes
      */
     public function __construct(
-        #[RejectNumbers, Message(string: 'Send the zip as a string.')]
+        #[RejectNumbers]
+        #[Message(string: 'Send the zip as a string.')]
         public string $zip,
         #[RejectNumbers]
         public array $codes = [],
@@ -124,7 +125,10 @@ it('rejects a number in a request with #[RejectNumbers]', function () {
 
 readonly class RejectNumbersOnInt
 {
-    public function __construct(#[RejectNumbers] public int $count = 0) {}
+    public function __construct(
+        #[RejectNumbers]
+        public int $count = 0,
+    ) {}
 }
 
 it('rejects #[RejectNumbers] on a property without a string', function () {

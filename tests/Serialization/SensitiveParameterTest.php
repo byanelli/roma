@@ -14,7 +14,8 @@ readonly class SensitiveCredentials
 {
     public function __construct(
         public string $user,
-        #[SensitiveParameter] public string $password,
+        #[SensitiveParameter]
+        public string $password,
     ) {}
 }
 
@@ -25,7 +26,8 @@ readonly class SensitiveAccount
      */
     public function __construct(
         public string $name,
-        #[SensitiveParameter] public string $apiKey,
+        #[SensitiveParameter]
+        public string $apiKey,
         public SensitiveCredentials $primary,
         public array $fallbacks,
     ) {}
@@ -37,7 +39,8 @@ class SensitiveArrayable implements Arrayable, JsonSerializable
 
     public function __construct(
         public string $name,
-        #[SensitiveParameter] public string $token,
+        #[SensitiveParameter]
+        public string $token,
     ) {}
 }
 
@@ -45,9 +48,13 @@ class SensitiveResponse extends Response
 {
     public function __construct(
         public string $name,
-        #[SensitiveParameter] public string $token,
-        #[Header('X-Token'), SensitiveParameter] public string $headerToken,
-        #[Header('X-Request-Id')] public string $requestId = 'r1',
+        #[SensitiveParameter]
+        public string $token,
+        #[Header('X-Token')]
+        #[SensitiveParameter]
+        public string $headerToken,
+        #[Header('X-Request-Id')]
+        public string $requestId = 'r1',
     ) {}
 }
 
@@ -57,8 +64,11 @@ class SensitiveAssigned
 
     public string $token;
 
-    public function __construct(string $name, #[SensitiveParameter] string $token)
-    {
+    public function __construct(
+        string $name,
+        #[SensitiveParameter]
+        string $token,
+    ) {
         $this->name = $name;
         $this->token = trim($token);
     }

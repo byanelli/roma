@@ -45,7 +45,8 @@ readonly class PrecognitiveHeaderRequest
 {
     public function __construct(
         public string $name,
-        #[Header('X-Api-Key'), Rule('size:8')]
+        #[Header('X-Api-Key')]
+        #[Rule('size:8')]
         public string $apiKey,
     ) {}
 }
@@ -54,8 +55,11 @@ readonly class PrecognitiveHeaderRequest
 readonly class PrecognitiveDottedRequest
 {
     public function __construct(
-        #[Key('contact.email'), Rule('email')] public string $email,
-        #[Key('contact.name')] public string $name,
+        #[Key('contact.email')]
+        #[Rule('email')]
+        public string $email,
+        #[Key('contact.name')]
+        public string $name,
     ) {}
 }
 

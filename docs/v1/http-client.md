@@ -28,16 +28,20 @@ use Illuminate\Http\Client\ConnectionException;
 final readonly class ScrapeRequest
 {
     public function __construct(
-        #[Query] public string $url,
-        #[Query('render_js')] public bool $renderJs = false,   // render_js=true / false
+        #[Query]
+        public string $url,
+        #[Query('render_js')]
+        public bool $renderJs = false,   // render_js=true / false
     ) {}
 }
 
 final readonly class ScrapeResponse
 {
     public function __construct(
-        #[Key('result.content')] public string $content,
-        #[Key('result.success')] public bool $success,
+        #[Key('result.content')]
+        public string $content,
+        #[Key('result.success')]
+        public bool $success,
     ) {}
 
     #[Guard]
@@ -192,7 +196,10 @@ use BYanelli\Roma\Http\Client\Attributes\Responses;
 #[Status(404)]
 final readonly class NotFound
 {
-    public function __construct(#[Status] public int $status) {}
+    public function __construct(
+        #[Status]
+        public int $status,
+    ) {}
 }
 
 #[Get('/videos/{id}')]
@@ -278,7 +285,8 @@ class YouTubeException extends RequestException
 {
     public function __construct(
         Response $response,
-        #[Key('error.message')] public readonly ?string $reason = null,
+        #[Key('error.message')]
+        public readonly ?string $reason = null,
     ) {
         parent::__construct($response);
     }

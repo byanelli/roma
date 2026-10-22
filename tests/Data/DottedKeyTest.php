@@ -18,17 +18,25 @@ use Illuminate\Validation\ValidationException;
 readonly class DottedError
 {
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Key('error.code')] public int $code,
-        #[Key('error.detail')] public string|Missing $detail,
-        #[Key('created\.at')] public string $createdAt,
-        #[Key('meta.trace.id')] public ?string $traceId = null,
+        #[Key('error.message')]
+        public string $message,
+        #[Key('error.code')]
+        public int $code,
+        #[Key('error.detail')]
+        public string|Missing $detail,
+        #[Key('created\.at')]
+        public string $createdAt,
+        #[Key('meta.trace.id')]
+        public ?string $traceId = null,
     ) {}
 }
 
 readonly class DottedChild
 {
-    public function __construct(#[Key('meta.id')] public int $id) {}
+    public function __construct(
+        #[Key('meta.id')]
+        public int $id,
+    ) {}
 }
 
 readonly class DottedParent
@@ -45,19 +53,26 @@ readonly class DottedParent
 readonly class DottedMixedRequest
 {
     public function __construct(
-        #[Body('error.message')] public string $message,
-        #[Query('filter.status')] public string $status,
-        #[Header('X-Client.version')] public string $clientVersion,
-        #[Cookie('my.pref')] public string $pref,
-        #[Path('user.id')] public string $userId,
+        #[Body('error.message')]
+        public string $message,
+        #[Query('filter.status')]
+        public string $status,
+        #[Header('X-Client.version')]
+        public string $clientVersion,
+        #[Cookie('my.pref')]
+        public string $pref,
+        #[Path('user.id')]
+        public string $userId,
     ) {}
 }
 
 readonly class DottedAcrossSourcesRequest
 {
     public function __construct(
-        #[Query('error')] public string $error,
-        #[Body('error.message')] public string $message,
+        #[Query('error')]
+        public string $error,
+        #[Body('error.message')]
+        public string $message,
     ) {}
 }
 
@@ -199,7 +214,8 @@ readonly class DottedParentConflict
      * @param  array<string, string>  $error
      */
     public function __construct(
-        #[Key('error.message')] public string $message,
+        #[Key('error.message')]
+        public string $message,
         public array $error,
     ) {}
 }
@@ -207,24 +223,30 @@ readonly class DottedParentConflict
 readonly class DottedSamePathConflict
 {
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Key('error.message')] public string $text,
+        #[Key('error.message')]
+        public string $message,
+        #[Key('error.message')]
+        public string $text,
     ) {}
 }
 
 readonly class DottedEscapedConflict
 {
     public function __construct(
-        #[Key('created\.at')] public string $literal,
-        #[Key('created.at')] public string $nested,
+        #[Key('created\.at')]
+        public string $literal,
+        #[Key('created.at')]
+        public string $nested,
     ) {}
 }
 
 readonly class DottedNestedConflictChild
 {
     public function __construct(
-        #[Key('meta')] public string $meta,
-        #[Key('meta.id')] public int $id,
+        #[Key('meta')]
+        public string $meta,
+        #[Key('meta.id')]
+        public int $id,
     ) {}
 }
 
@@ -235,7 +257,10 @@ readonly class DottedNestedConflict
 
 readonly class DottedEmptySegment
 {
-    public function __construct(#[Key('error..message')] public string $message) {}
+    public function __construct(
+        #[Key('error..message')]
+        public string $message,
+    ) {}
 }
 
 it('rejects conflicting dotted keys when the definition is built', function (string $class, string $message) {
@@ -270,20 +295,25 @@ final readonly class DottedCard
 
 final readonly class DottedVoucher
 {
-    public function __construct(#[Key('type.code')] public string $code) {}
+    public function __construct(
+        #[Key('type.code')]
+        public string $code,
+    ) {}
 }
 
 readonly class DottedDiscriminatorKey
 {
     public function __construct(
-        #[Discriminated([DottedCard::class, DottedVoucher::class], key: 'meta.type')] public DottedCard|DottedVoucher $payment,
+        #[Discriminated([DottedCard::class, DottedVoucher::class], key: 'meta.type')]
+        public DottedCard|DottedVoucher $payment,
     ) {}
 }
 
 readonly class DottedUnderDiscriminatorKey
 {
     public function __construct(
-        #[Discriminated([DottedCard::class, DottedVoucher::class])] public DottedCard|DottedVoucher $payment,
+        #[Discriminated([DottedCard::class, DottedVoucher::class])]
+        public DottedCard|DottedVoucher $payment,
     ) {}
 }
 

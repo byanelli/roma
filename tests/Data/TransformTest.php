@@ -41,7 +41,8 @@ readonly class TransformPoint
 readonly class TransformContact
 {
     public function __construct(
-        #[MapUsing(trim(...)), MapUsing(strtolower(...))]
+        #[MapUsing(trim(...))]
+        #[MapUsing(strtolower(...))]
         public string $email,
 
         #[MapUsing(strrev(...))]
@@ -111,7 +112,8 @@ readonly class TransformLead
         #[SerializeUsing(self::fullName(...))]
         public ?string $fullName = null,
 
-        #[SerializeUsing(strtoupper(...)), SerializeUsing(self::exclaim(...))]
+        #[SerializeUsing(strtoupper(...))]
+        #[SerializeUsing(self::exclaim(...))]
         public string $status = 'new',
 
         #[SerializeUsing(intval(...))]
@@ -170,7 +172,8 @@ readonly class TransformRequestLead
 
     #[MapUsing(static function (Request $request): string {
         return $request->input('full_name') ?: "{$request->input('first_name')} {$request->input('last_name')}";
-    }), MapUsing(strtoupper(...))]
+    })]
+    #[MapUsing(strtoupper(...))]
     public string $full_name;
 
     #[MapUsing(static function (Request $request): bool {
@@ -237,7 +240,8 @@ it('rejects a callable that takes the request outside a request', function () {
 
 readonly class TransformLateRequest
 {
-    #[MapUsing(trim(...)), MapUsing(static function (Request $request): string {
+    #[MapUsing(trim(...))]
+    #[MapUsing(static function (Request $request): string {
         return 'x';
     })]
     public string $name;
@@ -245,7 +249,8 @@ readonly class TransformLateRequest
 
 readonly class TransformSourcedRequest
 {
-    #[Query, MapUsing(static function (Request $request): string {
+    #[Query]
+    #[MapUsing(static function (Request $request): string {
         return 'x';
     })]
     public string $name;

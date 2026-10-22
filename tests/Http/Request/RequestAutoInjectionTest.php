@@ -41,7 +41,10 @@ it('still honours the parameter-level #[Request] hint on a class-marked request'
     /** @var TestCase $this */
     $this->setRequest(query: ['a' => 'foo', 'b' => 'bar']);
 
-    $func = function (#[Request] ClassMarkedRequest $request) {
+    $func = function (
+        #[Request]
+        ClassMarkedRequest $request,
+    ) {
         expect($request->a)->toBe('foo');
     };
 

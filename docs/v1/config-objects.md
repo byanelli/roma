@@ -26,9 +26,12 @@ use BYanelli\Roma\Config\ConfigObject;
 readonly class ScrapflyConfig
 {
     public function __construct(
-        #[Key('key'), \SensitiveParameter] public string $apiKey,  // services.scrapfly.key
+        #[Key('key')]
+        #[\SensitiveParameter]
+        public string $apiKey,                                     // services.scrapfly.key
         public bool $renderJs = false,                             // services.scrapfly.render_js
-        #[ConfigKey('articles.scrapfly_timeout'), Rule('min:1')]
+        #[ConfigKey('articles.scrapfly_timeout')]
+        #[Rule('min:1')]
         public int $timeout = 180,                                 // articles.scrapfly_timeout
     ) {}
 }
@@ -119,9 +122,11 @@ readonly class UploadsConfig
      * @param  list<string>  $mimeTypes
      */
     public function __construct(
-        #[Delimited] public array $mimeTypes = ['image/png'],      // "image/png, image/webp"
+        #[Delimited]
+        public array $mimeTypes = ['image/png'],                   // "image/png, image/webp"
         public CarbonInterval $retention = new CarbonInterval(days: 30), // "90 days", "PT12H"
-        #[Unit('seconds')] public CarbonInterval $timeout = new CarbonInterval(seconds: 30), // "90" or "2 minutes"
+        #[Unit('seconds')]
+        public CarbonInterval $timeout = new CarbonInterval(seconds: 30), // "90" or "2 minutes"
         public ByteSize $maxSize = new ByteSize(10_000_000),       // "25MB", "512KiB" or 1048576
     ) {}
 }
@@ -175,7 +180,8 @@ Laravel's `#[Singleton]` (or `#[Scoped]`) to share it:
 ```php
 use Illuminate\Container\Attributes\Singleton;
 
-#[ConfigObject('services.scrapfly'), Singleton]
+#[ConfigObject('services.scrapfly')]
+#[Singleton]
 readonly class ScrapflyConfig { /* ... */ }
 ```
 
@@ -193,14 +199,16 @@ readonly class ProxyCredentials
 {
     public function __construct(
         public string $user,
-        #[\SensitiveParameter] public string $password,
+        #[\SensitiveParameter]
+        public string $password,
     ) {}
 }
 
 class OxylabsProxy
 {
     public function __construct(
-        #[ConfigObject('services.oxylabs.residential')] private ProxyCredentials $credentials,
+        #[ConfigObject('services.oxylabs.residential')]
+        private ProxyCredentials $credentials,
     ) {}
 }
 ```

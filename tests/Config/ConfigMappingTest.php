@@ -18,9 +18,14 @@ use Illuminate\Contracts\Validation\ValidationRule;
 final readonly class CfgScrapfly
 {
     public function __construct(
-        #[Key('key')] public string $apiKey,
-        #[ConfigKey('articles.scrapfly_timeout'), Rule('min:1')] public int $timeout = 180,
-        #[ConfigKey('articles.scrapfly_country'), Rule('size:2')] public string $country = 'us',
+        #[Key('key')]
+        public string $apiKey,
+        #[ConfigKey('articles.scrapfly_timeout')]
+        #[Rule('min:1')]
+        public int $timeout = 180,
+        #[ConfigKey('articles.scrapfly_country')]
+        #[Rule('size:2')]
+        public string $country = 'us',
         public bool $renderJs = false,
         public ?string $session = null,
     ) {}
@@ -122,7 +127,8 @@ final readonly class CfgProxies
     public function __construct(
         public Credentials $oxylabs,
         public ?Credentials $dataImpulse = null,
-        #[Key('limits.per_minute')] public int $perMinute = 60,
+        #[Key('limits.per_minute')]
+        public int $perMinute = 60,
         public array $countries = [],
         public array $servers = [],
     ) {}
@@ -156,7 +162,10 @@ it('reads nested objects, lists and dotted keys relative to the prefix', functio
 
 final readonly class CfgEscapedDot
 {
-    public function __construct(#[Key('hosts.api\.example\.com')] public string $token) {}
+    public function __construct(
+        #[Key('hosts.api\.example\.com')]
+        public string $token,
+    ) {}
 }
 
 it('reads an escaped dot in a config key as part of the key', function () {
@@ -227,8 +236,11 @@ final class CfgEchoesValue implements ValidationRule
 final readonly class CfgVault
 {
     public function __construct(
-        #[SensitiveParameter, Rule(new CfgEchoesValue)] public string $token,
-        #[Rule(new CfgEchoesValue)] public string $region,
+        #[SensitiveParameter]
+        #[Rule(new CfgEchoesValue)]
+        public string $token,
+        #[Rule(new CfgEchoesValue)]
+        public string $region,
         public ?Credentials $admin = null,
     ) {}
 }
@@ -262,7 +274,10 @@ it('rejects #[ConfigKey] without a key within a file', function () {
 
 final readonly class CfgNestedWithConfigKey
 {
-    public function __construct(#[ConfigKey('app.name')] public string $name) {}
+    public function __construct(
+        #[ConfigKey('app.name')]
+        public string $name,
+    ) {}
 }
 
 #[ConfigObject('services.nested')]
@@ -278,7 +293,10 @@ it('rejects #[ConfigKey] in a nested object', function () {
 
 final readonly class CfgArrayWithConfigKey
 {
-    public function __construct(#[ConfigKey('app.name')] public string $name) {}
+    public function __construct(
+        #[ConfigKey('app.name')]
+        public string $name,
+    ) {}
 }
 
 it('rejects #[ConfigKey] outside a config object', function () {

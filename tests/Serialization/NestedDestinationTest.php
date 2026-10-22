@@ -15,7 +15,8 @@ class TestNestedWithHeader
 {
     public function __construct(
         public string $name = 'a',
-        #[Header('ETag')] public string $etag = 'x',
+        #[Header('ETag')]
+        public string $etag = 'x',
     ) {}
 }
 
@@ -23,7 +24,8 @@ class TestNestedWithStatus
 {
     public function __construct(
         public string $name = 'a',
-        #[Status] public int $status = 201,
+        #[Status]
+        public int $status = 201,
     ) {}
 }
 

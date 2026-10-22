@@ -41,10 +41,14 @@ class TsCreateUserRequest
      */
     public function __construct(
         public string $name,
-        #[Body] public bool $active,
-        #[Query] public int $page,
-        #[Header('X-Api-Key')] public string $apiKey,
-        #[InputMapsToTypeScriptQuery] public string $search,
+        #[Body]
+        public bool $active,
+        #[Query]
+        public int $page,
+        #[Header('X-Api-Key')]
+        public string $apiKey,
+        #[InputMapsToTypeScriptQuery]
+        public string $search,
         public TsRole $role,
         public array $tags,
         public array $roles,
@@ -57,7 +61,8 @@ class TsCreateUserRequest
 class TsAddressResponse extends Response
 {
     public function __construct(
-        #[Key('street_name')] public string $street,
+        #[Key('street_name')]
+        public string $street,
         public string $zip,
     ) {}
 }
@@ -66,11 +71,15 @@ class TsUserResponse extends Response
 {
     public function __construct(
         public string $name,
-        #[Key('user_id')] public int $id,
+        #[Key('user_id')]
+        public int $id,
         public TsAddressResponse $address,
-        #[Optional] public ?string $nickname = null,
-        #[Status] public int $status = 200,
-        #[Header('X-Rate-Limit')] public int $rateLimit = 60,
+        #[Optional]
+        public ?string $nickname = null,
+        #[Status]
+        public int $status = 200,
+        #[Header('X-Rate-Limit')]
+        public int $rateLimit = 60,
     ) {}
 }
 
@@ -82,7 +91,8 @@ class TsDefaultedResponse extends Response
         // always present: only #[Optional] makes a response field optional.
         public string $role = 'user',
         public ?string $bio = null,
-        #[Optional] public ?string $note = null,
+        #[Optional]
+        public ?string $note = null,
     ) {}
 }
 
@@ -248,7 +258,8 @@ class TsSecretCredentials
 {
     public function __construct(
         public string $user,
-        #[SensitiveParameter] public string $password,
+        #[SensitiveParameter]
+        public string $password,
     ) {}
 }
 
@@ -259,8 +270,11 @@ class TsAccountResponse extends Response
      */
     public function __construct(
         public string $name,
-        #[SensitiveParameter] public string $apiKey,
-        #[Header('X-Token'), SensitiveParameter] public string $token,
+        #[SensitiveParameter]
+        public string $apiKey,
+        #[Header('X-Token')]
+        #[SensitiveParameter]
+        public string $token,
         public TsSecretCredentials $primary,
         public array $fallbacks,
     ) {}
@@ -270,7 +284,8 @@ class TsLoginRequest
 {
     public function __construct(
         public string $user,
-        #[SensitiveParameter] public string $password,
+        #[SensitiveParameter]
+        public string $password,
     ) {}
 }
 

@@ -10,13 +10,15 @@ class TestKeyRemapResponse extends Response
 {
     public function __construct(
         public string $name,
-        #[Key('user_id')] public int $id,
+        #[Key('user_id')]
+        public int $id,
     ) {}
 }
 
 class TestOptionalKeyResponse extends Response
 {
-    #[Key('avatar_url'), Optional]
+    #[Key('avatar_url')]
+    #[Optional]
     public string $avatar;
 
     public function __construct(public string $name) {}

@@ -157,8 +157,10 @@ class SerializedSearch
      * @param  list<bool>  $flags
      */
     public function __construct(
-        #[SerializedToQuery] public bool $exact,
-        #[SerializedToQuery] public array $flags,
+        #[SerializedToQuery]
+        public bool $exact,
+        #[SerializedToQuery]
+        public array $flags,
         public bool $inBody,
     ) {}
 }
@@ -174,7 +176,8 @@ class SerializedRuntimeDates extends Response implements CustomizesSerialization
 {
     public function __construct(
         public DateTimeImmutable $runtime,
-        #[DateFormat('Y')] public DateTimeImmutable $attribute,
+        #[DateFormat('Y')]
+        public DateTimeImmutable $attribute,
         public DateTimeImmutable $profileDefault,
         public bool $short = true,
     ) {}

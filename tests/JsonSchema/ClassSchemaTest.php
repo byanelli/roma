@@ -59,8 +59,11 @@ readonly class SchemaScalars
         public float $ratio,
         public bool $active,
         public DateTimeImmutable $at,
-        #[DateFormat('Y-m-d')] public DateTimeImmutable $day,
-        #[DateFormat('d/m/Y'), Description('The day it starts.')] public DateTimeImmutable $starts,
+        #[DateFormat('Y-m-d')]
+        public DateTimeImmutable $day,
+        #[DateFormat('d/m/Y')]
+        #[Description('The day it starts.')]
+        public DateTimeImmutable $starts,
         public SchemaColor $color,
         public SchemaPriority $priority,
         public SchemaSize $size,
@@ -88,7 +91,8 @@ readonly class SchemaCollections
         public array $addresses,
         public array $extra,
         public SchemaAddress $home,
-        #[Description('Where to send mail.')] public ?SchemaAddress $mailing,
+        #[Description('Where to send mail.')]
+        public ?SchemaAddress $mailing,
     ) {}
 }
 
@@ -101,11 +105,15 @@ readonly class SchemaPresence
     public function __construct(
         public string $required,
         public ?string $nullable,
-        #[Present] public ?string $present,
+        #[Present]
+        public ?string $present,
         public string $defaulted = 'x',
-        #[Optional] public string|Missing $optional = 'y',
-        #[Optional] public int|Missing $missing = 0,
-        #[Optional] public ?SchemaColor $color = null,
+        #[Optional]
+        public string|Missing $optional = 'y',
+        #[Optional]
+        public int|Missing $missing = 0,
+        #[Optional]
+        public ?SchemaColor $color = null,
         public SchemaColor $tint = SchemaColor::Green,
         public SchemaSize $size = SchemaSize::Large,
         public array $ids = [1, 2],
@@ -121,7 +129,8 @@ readonly class SchemaUnions
      */
     public function __construct(
         public PaymentMethod $payment,
-        #[Discriminated([Card::class, Voucher::class], key: 'kind')] public Card|Voucher|null $refund,
+        #[Discriminated([Card::class, Voucher::class], key: 'kind')]
+        public Card|Voucher|null $refund,
         public array $fallbacks = [],
     ) {}
 }
@@ -137,34 +146,57 @@ class SchemaRules
      * @param  list<string>  $tags
      */
     public function __construct(
-        #[Rule('min:2', 'max:10')] public string $name,
-        #[Rule('between:1,5')] public int $rating,
-        #[Rule('min:0.5', 'max:99.5')] public float $weight,
-        #[Rule('min:1', 'max:3')] public array $tags,
-        #[Rule('size:8')] public string $code,
-        #[Rule('in:draft,published')] public string $status,
-        #[Rule(['in:1,2,3'])] public int $level,
-        #[Rule('email')] public string $email,
-        #[Rule('url')] public string $site,
-        #[Rule('uuid')] public string $id,
-        #[Rule('date')] public string $date,
-        #[Rule('date_format:Y-m-d')] public string $day,
-        #[Rule('regex:/^[a-z]+\/\d+$/')] public string $slug,
-        #[Rule('regex:#^\#\w+$#u')] public string $hashtag,
-        #[Rule('regex:/^abc$/i')] public string $caseless,
-        #[Rule(self::dynamic(...), 'alpha_dash', 'unique:users')] public string $handle,
-        #[Rule(new In(['a', 'b']))] public string $letter,
-        #[Rule('required')] public string $nickname = '',
+        #[Rule('min:2', 'max:10')]
+        public string $name,
+        #[Rule('between:1,5')]
+        public int $rating,
+        #[Rule('min:0.5', 'max:99.5')]
+        public float $weight,
+        #[Rule('min:1', 'max:3')]
+        public array $tags,
+        #[Rule('size:8')]
+        public string $code,
+        #[Rule('in:draft,published')]
+        public string $status,
+        #[Rule(['in:1,2,3'])]
+        public int $level,
+        #[Rule('email')]
+        public string $email,
+        #[Rule('url')]
+        public string $site,
+        #[Rule('uuid')]
+        public string $id,
+        #[Rule('date')]
+        public string $date,
+        #[Rule('date_format:Y-m-d')]
+        public string $day,
+        #[Rule('regex:/^[a-z]+\/\d+$/')]
+        public string $slug,
+        #[Rule('regex:#^\#\w+$#u')]
+        public string $hashtag,
+        #[Rule('regex:/^abc$/i')]
+        public string $caseless,
+        #[Rule(self::dynamic(...), 'alpha_dash', 'unique:users')]
+        public string $handle,
+        #[Rule(new In(['a', 'b']))]
+        public string $letter,
+        #[Rule('required')]
+        public string $nickname = '',
     ) {}
 }
 
 readonly class SchemaDottedKeys
 {
     public function __construct(
-        #[Key('error.message'), Description('What went wrong.')] public string $message,
-        #[Key('created\.at')] public string $createdAt,
-        #[Key('error.code')] public int $code = 0,
-        #[Key('meta.trace.id')] public ?string $traceId = null,
+        #[Key('error.message')]
+        #[Description('What went wrong.')]
+        public string $message,
+        #[Key('created\.at')]
+        public string $createdAt,
+        #[Key('error.code')]
+        public int $code = 0,
+        #[Key('meta.trace.id')]
+        public ?string $traceId = null,
     ) {}
 }
 
@@ -175,7 +207,10 @@ readonly class SchemaFile
 
 readonly class SchemaFromQuery
 {
-    public function __construct(#[Query] public string $term) {}
+    public function __construct(
+        #[Query]
+        public string $term,
+    ) {}
 }
 
 /**
@@ -384,14 +419,16 @@ readonly class SchemaMaps
      */
     public function __construct(
         public array $addresses,
-        #[Description('Prices by date.')] public array $prices,
+        #[Description('Prices by date.')]
+        public array $prices,
         public array $series,
         public array $flags,
         public array $colors,
         public array $dates,
         public array $shapes,
         public array $methods,
-        #[Discriminated([Card::class, Voucher::class])] public array $refunds,
+        #[Discriminated([Card::class, Voucher::class])]
+        public array $refunds,
         public array $extra,
     ) {}
 }
@@ -471,8 +508,10 @@ readonly class SchemaDateFormatScope
      * @param  array{day: DateTimeImmutable, event: SchemaDatedEvent}  $slot
      */
     public function __construct(
-        #[DateFormat('Y-m-d')] public array $days,
-        #[DateFormat('Y-m-d')] public array $slot,
+        #[DateFormat('Y-m-d')]
+        public array $days,
+        #[DateFormat('Y-m-d')]
+        public array $slot,
     ) {}
 }
 

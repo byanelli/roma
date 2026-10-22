@@ -297,7 +297,10 @@ it('rejects a member with a property under the discriminator key', function () {
 
 readonly class RenamedTypeMember implements PaymentMethod
 {
-    public function __construct(#[Key('type')] public string $kind) {}
+    public function __construct(
+        #[Key('type')]
+        public string $kind,
+    ) {}
 }
 
 readonly class RenamedMemberRequest

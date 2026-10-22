@@ -50,14 +50,23 @@ final readonly class ClientCreateVideo
      */
     public function __construct(
         public string $team,
-        #[Path('videoId')] public int $id,
-        #[Body] public string $title,
-        #[Body('meta.color')] public ClientColor $color,
-        #[Body] public array $tags,
-        #[Query] public bool $notify,
-        #[Query('filter')] public ClientFilter $filter,
-        #[Header('X-Request-Id')] public string $requestId,
-        #[Body, DateFormat('Y-m-d')] public DateTimeImmutable $publishAt,
+        #[Path('videoId')]
+        public int $id,
+        #[Body]
+        public string $title,
+        #[Body('meta.color')]
+        public ClientColor $color,
+        #[Body]
+        public array $tags,
+        #[Query]
+        public bool $notify,
+        #[Query('filter')]
+        public ClientFilter $filter,
+        #[Header('X-Request-Id')]
+        public string $requestId,
+        #[Body]
+        #[DateFormat('Y-m-d')]
+        public DateTimeImmutable $publishAt,
     ) {}
 }
 
@@ -65,11 +74,16 @@ final readonly class ClientCreateVideo
 final readonly class ClientSearch
 {
     public function __construct(
-        #[Query] public string $q,
-        #[Query('per_page')] public int $perPage = 10,
-        #[Query] public string|Missing|null $cursor = null,
-        #[Query] public bool $exact = false,
-        #[Header('X-Trace')] public ?string $trace = null,
+        #[Query]
+        public string $q,
+        #[Query('per_page')]
+        public int $perPage = 10,
+        #[Query]
+        public string|Missing|null $cursor = null,
+        #[Query]
+        public bool $exact = false,
+        #[Header('X-Trace')]
+        public ?string $trace = null,
     ) {}
 }
 
@@ -82,23 +96,37 @@ final readonly class ClientGetFile
 #[Get('/videos')]
 final readonly class ClientListVideos
 {
-    public function __construct(#[Url] public ?string $next = null) {}
+    public function __construct(
+        #[Url]
+        public ?string $next = null,
+    ) {}
 }
 
 #[Post('/login')]
 final readonly class ClientLogin
 {
     public function __construct(
-        #[Body] public string $user,
-        #[Body, SensitiveParameter] public string $password,
-        #[Header('X-Api-Key'), SensitiveParameter] public string $apiKey,
+        #[Body]
+        public string $user,
+        #[Body]
+        #[SensitiveParameter]
+        public string $password,
+        #[Header('X-Api-Key')]
+        #[SensitiveParameter]
+        public string $apiKey,
     ) {}
 }
 
-#[Post('/subscribe'), AsForm]
+#[Post('/subscribe')]
+#[AsForm]
 final readonly class ClientSubscribe
 {
-    public function __construct(#[Body] public string $email, #[Body] public bool $daily) {}
+    public function __construct(
+        #[Body]
+        public string $email,
+        #[Body]
+        public bool $daily,
+    ) {}
 }
 
 #[Post('/upload')]
@@ -108,16 +136,23 @@ final readonly class ClientUpload
      * @param  list<string>  $tags
      */
     public function __construct(
-        #[Body] public UploadedFile $file,
-        #[Body] public string $caption,
-        #[Body] public array $tags = [],
+        #[Body]
+        public UploadedFile $file,
+        #[Body]
+        public string $caption,
+        #[Body]
+        public array $tags = [],
     ) {}
 }
 
-#[Put('/notes'), AsMultipart]
+#[Put('/notes')]
+#[AsMultipart]
 final readonly class ClientMultipartNote
 {
-    public function __construct(#[Body] public string $text) {}
+    public function __construct(
+        #[Body]
+        public string $text,
+    ) {}
 }
 
 #[Delete('/notes/{id}')]
@@ -134,7 +169,11 @@ final class ClientRenameNote
         get => strtoupper($this->title);
     }
 
-    public function __construct(public int $id, #[Body] public string $title) {}
+    public function __construct(
+        public int $id,
+        #[Body]
+        public string $title,
+    ) {}
 }
 
 #[Head('/ping')]
@@ -142,15 +181,21 @@ final readonly class ClientPing {}
 
 final readonly class ClientVideo
 {
-    public function __construct(public int $id, #[Key('snippet.title')] public string $title) {}
+    public function __construct(
+        public int $id,
+        #[Key('snippet.title')]
+        public string $title,
+    ) {}
 }
 
 final readonly class ClientVideoWithMeta
 {
     public function __construct(
         public int $id,
-        #[Header('X-RateLimit-Remaining')] public int $remaining,
-        #[Status] public int $status,
+        #[Header('X-RateLimit-Remaining')]
+        public int $remaining,
+        #[Status]
+        public int $status,
         public ?string $missing = null,
     ) {}
 }
@@ -412,40 +457,61 @@ final readonly class ClientNoDestination
 #[Get('/x')]
 final readonly class ClientGetWithBody
 {
-    public function __construct(#[Body] public string $name) {}
+    public function __construct(
+        #[Body]
+        public string $name,
+    ) {}
 }
 
 #[Get('/x/{id}')]
 final readonly class ClientUnboundPath
 {
-    public function __construct(#[Query] public string $id) {}
+    public function __construct(
+        #[Query]
+        public string $id,
+    ) {}
 }
 
 #[Get('/x')]
 final readonly class ClientExtraPath
 {
-    public function __construct(#[Path] public string $slug) {}
+    public function __construct(
+        #[Path]
+        public string $slug,
+    ) {}
 }
 
 #[Get('/x')]
 final readonly class ClientRequestWithStatus
 {
-    public function __construct(#[Status] public int $status) {}
+    public function __construct(
+        #[Status]
+        public int $status,
+    ) {}
 }
 
-#[Post('/x'), AsForm, AsMultipart]
+#[Post('/x')]
+#[AsForm]
+#[AsMultipart]
 final readonly class ClientFormAndMultipart {}
 
-#[Post('/x'), AsForm]
+#[Post('/x')]
+#[AsForm]
 final readonly class ClientFormWithFile
 {
-    public function __construct(#[Body] public UploadedFile $file) {}
+    public function __construct(
+        #[Body]
+        public UploadedFile $file,
+    ) {}
 }
 
 #[Post('/x')]
 final readonly class ClientFileInQuery
 {
-    public function __construct(#[Query] public UploadedFile $file) {}
+    public function __construct(
+        #[Query]
+        public UploadedFile $file,
+    ) {}
 }
 
 #[Get('/x/{id}')]
@@ -458,5 +524,8 @@ final class ClientOptionalPath
 #[Get]
 final readonly class ClientNoUrl
 {
-    public function __construct(#[Url] public ?string $next = null) {}
+    public function __construct(
+        #[Url]
+        public ?string $next = null,
+    ) {}
 }

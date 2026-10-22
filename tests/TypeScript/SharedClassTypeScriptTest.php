@@ -20,7 +20,8 @@ class TsSharedCredentials
 {
     public function __construct(
         public string $user,
-        #[SensitiveParameter] public string $password,
+        #[SensitiveParameter]
+        public string $password,
     ) {}
 }
 
@@ -55,7 +56,8 @@ class TsSharedLogin
 {
     public function __construct(
         public string $user,
-        #[SensitiveParameter] public string $password,
+        #[SensitiveParameter]
+        public string $password,
     ) {}
 }
 

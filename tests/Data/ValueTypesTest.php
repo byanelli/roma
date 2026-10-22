@@ -33,8 +33,10 @@ final readonly class DelimitedHolder
      * @param  list<int>  $ports
      */
     public function __construct(
-        #[Delimited] public array $hosts = [],
-        #[Delimited('|')] public array $ports = [],
+        #[Delimited]
+        public array $hosts = [],
+        #[Delimited('|')]
+        public array $ports = [],
     ) {}
 }
 
@@ -58,7 +60,11 @@ final readonly class DelimitedQuery
     /**
      * @param  list<string>  $tags
      */
-    public function __construct(#[Query, Delimited] public array $tags) {}
+    public function __construct(
+        #[Query]
+        #[Delimited]
+        public array $tags,
+    ) {}
 }
 
 it('splits a delimited query parameter', function () {
@@ -70,7 +76,10 @@ it('splits a delimited query parameter', function () {
 
 final readonly class DelimitedOnString
 {
-    public function __construct(#[Delimited] public string $hosts) {}
+    public function __construct(
+        #[Delimited]
+        public string $hosts,
+    ) {}
 }
 
 it('rejects #[Delimited] on a property that is not an array', function () {
@@ -82,8 +91,10 @@ final readonly class IntervalHolder
 {
     public function __construct(
         public CarbonInterval $timeout,
-        #[Unit('seconds')] public ?CarbonInterval $retryAfter = null,
-        #[Unit('minutes')] public ?DateInterval $ttl = null,
+        #[Unit('seconds')]
+        public ?CarbonInterval $retryAfter = null,
+        #[Unit('minutes')]
+        public ?DateInterval $ttl = null,
     ) {}
 }
 
@@ -122,7 +133,10 @@ it('requires a required interval', function () {
 
 final readonly class UnitOnInt
 {
-    public function __construct(#[Unit('seconds')] public int $timeout) {}
+    public function __construct(
+        #[Unit('seconds')]
+        public int $timeout,
+    ) {}
 }
 
 it('rejects #[Unit] on a property that is not an interval', function () {
@@ -204,8 +218,10 @@ final readonly class UploadsConfig
      * @param  list<string>  $mimeTypes
      */
     public function __construct(
-        #[Delimited] public array $mimeTypes = ['image/png'],
-        #[Unit('seconds')] public CarbonInterval $timeout = new CarbonInterval(seconds: 30),
+        #[Delimited]
+        public array $mimeTypes = ['image/png'],
+        #[Unit('seconds')]
+        public CarbonInterval $timeout = new CarbonInterval(seconds: 30),
         public ByteSize $maxSize = new ByteSize(10_000_000),
     ) {}
 }

@@ -67,7 +67,10 @@ one-off request you'd rather not mark at the class level:
 use BYanelli\Roma\Http\Request\Injection\Request;
 
 class CreateContactController {
-    public function __invoke(#[Request] CreateContactRequest $request) {
+    public function __invoke(
+        #[Request]
+        CreateContactRequest $request,
+    ) {
         // ...
     }
 }

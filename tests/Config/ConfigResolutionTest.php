@@ -11,7 +11,8 @@ use BYanelli\Roma\Tests\Fixtures\Config\MailerConfig;
 use Illuminate\Container\Attributes\Singleton;
 use Illuminate\Contracts\Container\BindingResolutionException;
 
-#[ConfigObject('services.shared'), Singleton]
+#[ConfigObject('services.shared')]
+#[Singleton]
 final readonly class CfgSingleton
 {
     public function __construct(public string $name) {}
@@ -26,9 +27,12 @@ final readonly class CfgClassLevelCredentials
 final readonly class CfgProxyClient
 {
     public function __construct(
-        #[ConfigObject('services.oxylabs.residential')] public Credentials $oxylabs,
-        #[ConfigObject('services.data_impulse.residential')] public Credentials $dataImpulse,
-        #[ConfigObject('services.override_creds')] public CfgClassLevelCredentials $override,
+        #[ConfigObject('services.oxylabs.residential')]
+        public Credentials $oxylabs,
+        #[ConfigObject('services.data_impulse.residential')]
+        public Credentials $dataImpulse,
+        #[ConfigObject('services.override_creds')]
+        public CfgClassLevelCredentials $override,
         public CfgClassLevelCredentials $classLevel,
     ) {}
 }
@@ -166,7 +170,10 @@ it('leaves an explicit binding alone', function () {
 
 final class CfgUntypedParameter
 {
-    public function __construct(#[ConfigObject('services.x')] public $creds) {}
+    public function __construct(
+        #[ConfigObject('services.x')]
+        public $creds,
+    ) {}
 }
 
 it('rejects a parameter-level #[ConfigObject] on a parameter without a class type', function () {

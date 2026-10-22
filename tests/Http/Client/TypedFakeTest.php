@@ -29,17 +29,23 @@ final readonly class FakeResult
 {
     public function __construct(
         public string $content,
-        #[Key('final.url')] public string $url,
+        #[Key('final.url')]
+        public string $url,
         public FakeLevel $level,
-        #[SensitiveParameter] public string $token,
-        #[Header('X-Cost')] public int $cost,
+        #[SensitiveParameter]
+        public string $token,
+        #[Header('X-Cost')]
+        public int $cost,
     ) {}
 }
 
 #[Status(404)]
 final readonly class FakeNotFound
 {
-    public function __construct(#[Status] public int $status = 404) {}
+    public function __construct(
+        #[Status]
+        public int $status = 404,
+    ) {}
 }
 
 #[Status('4xx')]
@@ -51,8 +57,11 @@ final readonly class FakeClientError
 #[Status(403)]
 class FakeForbiddenException extends RequestException
 {
-    public function __construct(Response $response, #[Key('error.message')] public readonly string $reason)
-    {
+    public function __construct(
+        Response $response,
+        #[Key('error.message')]
+        public readonly string $reason,
+    ) {
         parent::__construct($response);
     }
 }
@@ -64,13 +73,23 @@ final readonly class FakeFallback {}
 #[Responses(FakeResult::class, FakeNotFound::class, FakeForbiddenException::class)]
 final readonly class FakeScrape
 {
-    public function __construct(#[Query] public string $url, #[Query] public bool $renderJs = false, #[Query] public string $country = 'us') {}
+    public function __construct(
+        #[Query]
+        public string $url,
+        #[Query]
+        public bool $renderJs = false,
+        #[Query]
+        public string $country = 'us',
+    ) {}
 }
 
 #[Post('/notes')]
 final readonly class FakeCreateNote
 {
-    public function __construct(#[Body] public string $text) {}
+    public function __construct(
+        #[Body]
+        public string $text,
+    ) {}
 }
 
 function fakeResult(): FakeResult

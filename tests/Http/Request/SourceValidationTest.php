@@ -49,7 +49,8 @@ readonly class CrossSourceRequest
     public function __construct(
         #[Header('X-Type')]
         public string $type,
-        #[Query, Rule('required_if:type,card')]
+        #[Query]
+        #[Rule('required_if:type,card')]
         public ?string $cardNumber = null,
     ) {}
 }

@@ -20,32 +20,46 @@ use Illuminate\Support\Facades\Http;
 
 final readonly class MatchVideo
 {
-    public function __construct(public string $id, #[Key('snippet.title')] public string $title) {}
+    public function __construct(
+        public string $id,
+        #[Key('snippet.title')]
+        public string $title,
+    ) {}
 }
 
 #[Status(404)]
 final readonly class MatchNotFound
 {
-    public function __construct(#[Status] public int $status) {}
+    public function __construct(
+        #[Status]
+        public int $status,
+    ) {}
 }
 
 #[Status(404)]
 final readonly class MatchMissing {}
 
-#[Status(404), Status(410)]
+#[Status(404)]
+#[Status(410)]
 final readonly class MatchGone {}
 
 #[Status('4xx')]
 final readonly class MatchClientError
 {
-    public function __construct(#[Key('error.message')] public string $message) {}
+    public function __construct(
+        #[Key('error.message')]
+        public string $message,
+    ) {}
 }
 
 #[Status(403)]
 class MatchSubscriberOnlyException extends RequestException
 {
-    public function __construct(Response $response, #[Key('error.message')] public readonly string $reason)
-    {
+    public function __construct(
+        Response $response,
+        #[Key('error.message')]
+        public readonly string $reason,
+    ) {
         parent::__construct($response);
     }
 }
@@ -55,7 +69,8 @@ class MatchApiException extends RuntimeException
 {
     public function __construct(
         Throwable $previous,
-        #[Key('error.message')] public readonly ?string $reason = null,
+        #[Key('error.message')]
+        public readonly ?string $reason = null,
     ) {
         parent::__construct('The API failed: '.($reason ?? 'unknown'), previous: $previous);
     }
@@ -64,8 +79,10 @@ class MatchApiException extends RuntimeException
 #[Status('default')]
 class MatchStrictApiException extends RuntimeException
 {
-    public function __construct(#[Key('error.message')] public readonly string $reason)
-    {
+    public function __construct(
+        #[Key('error.message')]
+        public readonly string $reason,
+    ) {
         parent::__construct($reason);
     }
 }
@@ -89,14 +106,23 @@ final readonly class MatchInjected
 
 final readonly class MatchToken
 {
-    public function __construct(#[SensitiveParameter, Rule('max:3')] public string $token) {}
+    public function __construct(
+        #[SensitiveParameter]
+        #[Rule('max:3')]
+        public string $token,
+    ) {}
 }
 
 #[Get('/videos/{id}')]
 #[Responses(MatchVideo::class, MatchNotFound::class, MatchSubscriberOnlyException::class)]
 final readonly class MatchGetVideo
 {
-    public function __construct(public string $id = 'v1', #[Query, SensitiveParameter] public string $key = 'sk-secret') {}
+    public function __construct(
+        public string $id = 'v1',
+        #[Query]
+        #[SensitiveParameter]
+        public string $key = 'sk-secret',
+    ) {}
 }
 
 #[Get('/videos')]
@@ -105,7 +131,11 @@ final readonly class MatchListVideos {}
 #[Get('/search')]
 final readonly class MatchSearch
 {
-    public function __construct(#[Query, SensitiveParameter] public string $key = 'sk-secret') {}
+    public function __construct(
+        #[Query]
+        #[SensitiveParameter]
+        public string $key = 'sk-secret',
+    ) {}
 }
 
 #[Responses(MatchMissing::class, MatchServerError::class)]
@@ -115,7 +145,10 @@ abstract class MatchBaseRequest {}
 #[Responses(MatchNotFound::class)]
 class MatchChildRequest extends MatchBaseRequest
 {
-    public function __construct(#[Path] public string $id = 'i1') {}
+    public function __construct(
+        #[Path]
+        public string $id = 'i1',
+    ) {}
 }
 
 function matchApi(): TypedPendingRequest

@@ -9,7 +9,8 @@ use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 readonly class TsDescribedAddress
 {
     public function __construct(
-        #[Description('The street, without the unit.')] public string $street,
+        #[Description('The street, without the unit.')]
+        public string $street,
     ) {}
 }
 
@@ -17,7 +18,8 @@ readonly class TsDescribedAddress
 readonly class TsDescribedRequest
 {
     public function __construct(
-        #[Description("Line one.\n\nUses */ safely.")] public string $note,
+        #[Description("Line one.\n\nUses */ safely.")]
+        public string $note,
         public TsDescribedAddress $address,
     ) {}
 }

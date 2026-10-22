@@ -53,8 +53,10 @@ use BYanelli\Roma\Http\Request\Injection\Request;
 #[Request] // class-level: enables type-hint-only injection + TypeScript auto-detection
 readonly class CreateContactRequest {
     public function __construct(
-        #[Rule('max:255')] public string $name,
-        #[Rule(['email', 'unique:contacts'])] public string $email,
+        #[Rule('max:255')]
+        public string $name,
+        #[Rule(['email', 'unique:contacts'])]
+        public string $email,
     ) {}
 }
 
@@ -256,9 +258,13 @@ repository (never `env()`), coerced and validated like a request. Inject it by t
 #[ConfigObject('services.scrapfly')]
 readonly class ScrapflyConfig {
     public function __construct(
-        #[Key('key'), \SensitiveParameter] public string $apiKey,   // services.scrapfly.key
+        #[Key('key')]
+        #[\SensitiveParameter]
+        public string $apiKey,                                      // services.scrapfly.key
         public bool $renderJs = false,                              // services.scrapfly.render_js
-        #[ConfigKey('articles.scrapfly_timeout'), Rule('min:1')] public int $timeout = 180,
+        #[ConfigKey('articles.scrapfly_timeout')]
+        #[Rule('min:1')]
+        public int $timeout = 180,
     ) {}
 }
 ```
@@ -301,8 +307,10 @@ fallback exception, for all calls on that pending request.
 final readonly class GetVideo {
     public function __construct(
         public string $id,                                 // fills {id} by name
-        #[Query] public bool $full = false,                // ?full=false
-        #[Header('X-Request-Id')] public ?string $requestId = null,
+        #[Query]
+        public bool $full = false,                         // ?full=false
+        #[Header('X-Request-Id')]
+        public ?string $requestId = null,
     ) {}
 }
 
@@ -311,7 +319,11 @@ final readonly class NotFound {}                           // returned
 
 #[Status(403)]
 class SubscriberOnlyException extends RequestException {   // thrown
-    public function __construct(Response $response, #[Key('error.message')] public readonly string $reason) {
+    public function __construct(
+        Response $response,
+        #[Key('error.message')]
+        public readonly string $reason,
+    ) {
         parent::__construct($response);
     }
 }

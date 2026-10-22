@@ -92,7 +92,8 @@ readonly class FromQueryLookalike implements SourceAttribute
 readonly class TenantRequest
 {
     public function __construct(
-        #[FromTenant('tenant_id'), Rule('min:1')]
+        #[FromTenant('tenant_id')]
+        #[Rule('min:1')]
         public int $tenantId,
         #[FromTenant]
         public string $plan,

@@ -19,11 +19,16 @@ class TestDateFormatted
      * @param  list<DateTimeImmutable>  $holidays
      */
     public function __construct(
-        #[DateFormat('Y-m-d')] public CarbonImmutable $day,
-        #[DateFormat('d/m/Y H:i')] public Carbon $meeting,
-        #[DateFormat('Y-m-d')] public DateTimeInterface $since,
-        #[DateFormat('Y-m-d')] public array $holidays = [],
-        #[DateFormat('Y-m-d')] public ?DateTimeImmutable $until = null,
+        #[DateFormat('Y-m-d')]
+        public CarbonImmutable $day,
+        #[DateFormat('d/m/Y H:i')]
+        public Carbon $meeting,
+        #[DateFormat('Y-m-d')]
+        public DateTimeInterface $since,
+        #[DateFormat('Y-m-d')]
+        public array $holidays = [],
+        #[DateFormat('Y-m-d')]
+        public ?DateTimeImmutable $until = null,
     ) {}
 }
 
@@ -126,7 +131,8 @@ class TestDatedEvent
     public function __construct(
         public string $name,
         public CarbonImmutable $at,
-        #[DateFormat('H:i')] public ?CarbonImmutable $ends = null,
+        #[DateFormat('H:i')]
+        public ?CarbonImmutable $ends = null,
     ) {}
 }
 
@@ -150,9 +156,12 @@ class TestDateCollections
      * @param  array{day: CarbonImmutable, event: TestDatedEvent}  $slot
      */
     public function __construct(
-        #[DateFormat('Y-m-d')] public array $days,
-        #[DateFormat('Y-m-d')] public array $deadlines,
-        #[DateFormat('Y-m-d')] public array $slot,
+        #[DateFormat('Y-m-d')]
+        public array $days,
+        #[DateFormat('Y-m-d')]
+        public array $deadlines,
+        #[DateFormat('Y-m-d')]
+        public array $slot,
     ) {}
 }
 
@@ -189,7 +198,8 @@ class TestDateFormatOverNested
      * @param  array{day: DateTimeImmutable, event: object}  $slot
      */
     public function __construct(
-        #[DateFormat('Y-m-d')] public array $slot,
+        #[DateFormat('Y-m-d')]
+        public array $slot,
         public ?object $event = null,
     ) {}
 }
@@ -219,12 +229,18 @@ it('does not apply #[DateFormat] to dates inside a nested object when serializin
 
 class TestDateFormatOnString
 {
-    public function __construct(#[DateFormat('Y-m-d')] public string $day = '') {}
+    public function __construct(
+        #[DateFormat('Y-m-d')]
+        public string $day = '',
+    ) {}
 }
 
 class TestDateFormatOnObject
 {
-    public function __construct(#[DateFormat('Y-m-d')] public ?TestDatedEvent $event = null) {}
+    public function __construct(
+        #[DateFormat('Y-m-d')]
+        public ?TestDatedEvent $event = null,
+    ) {}
 }
 
 class TestDateFormatOnObjectList
@@ -232,12 +248,18 @@ class TestDateFormatOnObjectList
     /**
      * @param  list<TestDatedEvent>  $events
      */
-    public function __construct(#[DateFormat('Y-m-d')] public array $events = []) {}
+    public function __construct(
+        #[DateFormat('Y-m-d')]
+        public array $events = [],
+    ) {}
 }
 
 class TestDateFormatOnMixed
 {
-    public function __construct(#[DateFormat('Y-m-d')] public mixed $at = null) {}
+    public function __construct(
+        #[DateFormat('Y-m-d')]
+        public mixed $at = null,
+    ) {}
 }
 
 class TestDateFormatOnUntyped
@@ -284,7 +306,10 @@ it('rejects #[DateFormat] on an array without a PHPDoc type when serializing', f
 
 class TestDateFormatOnDateUnion
 {
-    public function __construct(#[DateFormat('Y-m-d')] public DateTimeImmutable|string $at) {}
+    public function __construct(
+        #[DateFormat('Y-m-d')]
+        public DateTimeImmutable|string $at,
+    ) {}
 }
 
 it('applies #[DateFormat] to a union with a date', function () {

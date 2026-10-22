@@ -27,14 +27,23 @@ class TestOptionalProfile
 
     public function __construct(
         public string $name,
-        #[Optional] public ?string $nickname,
-        #[Optional] public string|Missing $bio,
-        #[Optional] public int|Missing $age,
-        #[Optional] public Card|Missing $card,
-        #[Optional] public Card|Missing|null $backupCard,
-        #[Optional, Discriminated([Card::class, Voucher::class])] public Card|Voucher|Missing $refund,
-        #[Optional] public PaymentMethod|Missing $payment,
-        #[Optional] public string $title = 'none',
+        #[Optional]
+        public ?string $nickname,
+        #[Optional]
+        public string|Missing $bio,
+        #[Optional]
+        public int|Missing $age,
+        #[Optional]
+        public Card|Missing $card,
+        #[Optional]
+        public Card|Missing|null $backupCard,
+        #[Optional]
+        #[Discriminated([Card::class, Voucher::class])]
+        public Card|Voucher|Missing $refund,
+        #[Optional]
+        public PaymentMethod|Missing $payment,
+        #[Optional]
+        public string $title = 'none',
     ) {}
 }
 
@@ -109,7 +118,10 @@ it('validates a present #[Optional] value against its type', function () {
 
 class TestOptionalWithoutAbsentValue
 {
-    public function __construct(#[Optional] public string $bio) {}
+    public function __construct(
+        #[Optional]
+        public string $bio,
+    ) {}
 }
 
 it('rejects an #[Optional] parameter with no value for when it is absent', function () {
@@ -174,13 +186,17 @@ class TestMissingTyped
         public string $name,
         public string|Missing $bio,
         public Card|Missing|null $card,
-        #[Optional] public string|Missing $title,
+        #[Optional]
+        public string|Missing $title,
     ) {}
 }
 
 class TestMissingTypedWithPresent
 {
-    public function __construct(#[Present] public string|Missing|null $bio) {}
+    public function __construct(
+        #[Present]
+        public string|Missing|null $bio,
+    ) {}
 }
 
 it('treats a type with Missing as optional without #[Optional]', function () {

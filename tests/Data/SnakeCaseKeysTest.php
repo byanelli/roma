@@ -53,13 +53,22 @@ final readonly class SnakeEmpty {}
 #[SnakeCaseKeys]
 class SnakeResponse extends Response
 {
-    public function __construct(public int $leadId, #[Key('Kind')] public string $leadKind) {}
+    public function __construct(
+        public int $leadId,
+        #[Key('Kind')]
+        public string $leadKind,
+    ) {}
 }
 
-#[SnakeCaseKeys, Post('/clients/{client_id}/leads')]
+#[SnakeCaseKeys]
+#[Post('/clients/{client_id}/leads')]
 final readonly class SnakeClientRequest
 {
-    public function __construct(public string $clientId, #[Body] public string $firstName) {}
+    public function __construct(
+        public string $clientId,
+        #[Body]
+        public string $firstName,
+    ) {}
 }
 
 function snakeLeadRequest(TestCase $test, string $class = SnakeLeadRequest::class): SnakeLeadRequest

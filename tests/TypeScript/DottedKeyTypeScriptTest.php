@@ -14,35 +14,52 @@ use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 class TsDottedShared
 {
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Key('error.code')] public int $code = 0,
+        #[Key('error.message')]
+        public string $message,
+        #[Key('error.code')]
+        public int $code = 0,
     ) {}
 }
 
 class TsDottedRequest
 {
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Key('created\.at')] public string $createdAt,
-        #[Header('X-Client.version')] public string $clientVersion,
-        #[Query('filter.status')] public string $status,
-        #[Query('filter.tags')] public string $tags,
+        #[Key('error.message')]
+        public string $message,
+        #[Key('created\.at')]
+        public string $createdAt,
+        #[Header('X-Client.version')]
+        public string $clientVersion,
+        #[Query('filter.status')]
+        public string $status,
+        #[Query('filter.tags')]
+        public string $tags,
         public TsDottedShared $shared,
-        #[Key('error.code')] public int $code = 0,
-        #[Key('meta.trace.id')] public ?string $traceId = null,
+        #[Key('error.code')]
+        public int $code = 0,
+        #[Key('meta.trace.id')]
+        public ?string $traceId = null,
     ) {}
 }
 
 class TsDottedResponse extends Response
 {
     public function __construct(
-        #[Key('error.message')] public string $message,
-        #[Key('error.detail')] public string|Missing $detail,
-        #[Key('meta.trace.id'), Optional] public ?string $traceId,
-        #[Header('X-Request.id')] public string $requestId,
+        #[Key('error.message')]
+        public string $message,
+        #[Key('error.detail')]
+        public string|Missing $detail,
+        #[Key('meta.trace.id')]
+        #[Optional]
+        public ?string $traceId,
+        #[Header('X-Request.id')]
+        public string $requestId,
         public TsDottedShared $shared,
-        #[Key('auth.token'), SensitiveParameter] public string $token = '',
-        #[Status] public int $status = 200,
+        #[Key('auth.token')]
+        #[SensitiveParameter]
+        public string $token = '',
+        #[Status]
+        public int $status = 200,
     ) {}
 }
 

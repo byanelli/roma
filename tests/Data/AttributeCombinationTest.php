@@ -20,17 +20,29 @@ use Illuminate\Http\UploadedFile;
 
 class TestStatusWithKey
 {
-    public function __construct(#[Status, Key('code')] public int $status = 200) {}
+    public function __construct(
+        #[Status]
+        #[Key('code')]
+        public int $status = 200,
+    ) {}
 }
 
 class TestHeaderWithStatus
 {
-    public function __construct(#[Header('X-Code'), Status] public int $status = 200) {}
+    public function __construct(
+        #[Header('X-Code')]
+        #[Status]
+        public int $status = 200,
+    ) {}
 }
 
 class TestOptionalAndPresent
 {
-    public function __construct(#[Optional, Present] public ?string $bio = null) {}
+    public function __construct(
+        #[Optional]
+        #[Present]
+        public ?string $bio = null,
+    ) {}
 }
 
 it('rejects attribute combinations with no meaning when the definition is built', function (string $class, string $message) {
@@ -52,12 +64,19 @@ it('rejects attribute combinations with no meaning when serializing', function (
 
 class TestTwoSourcesRequest
 {
-    public function __construct(#[Query, Body] public string $name) {}
+    public function __construct(
+        #[Query]
+        #[Body]
+        public string $name,
+    ) {}
 }
 
 class TestUploadInQueryRequest
 {
-    public function __construct(#[Query] public UploadedFile $avatar) {}
+    public function __construct(
+        #[Query]
+        public UploadedFile $avatar,
+    ) {}
 }
 
 it('rejects a source attribute that the property type or another source attribute overrides', function (string $class, string $message) {
@@ -72,17 +91,28 @@ it('rejects a source attribute that the property type or another source attribut
 
 class TestTsBucketOnQueryRequest
 {
-    public function __construct(#[Query, InputMapsToTypeScriptQuery] public string $search) {}
+    public function __construct(
+        #[Query]
+        #[InputMapsToTypeScriptQuery]
+        public string $search,
+    ) {}
 }
 
 class TestTsBothBucketsRequest
 {
-    public function __construct(#[InputMapsToTypeScriptBody, InputMapsToTypeScriptQuery] public string $search) {}
+    public function __construct(
+        #[InputMapsToTypeScriptBody]
+        #[InputMapsToTypeScriptQuery]
+        public string $search,
+    ) {}
 }
 
 class TestTsBucketItem
 {
-    public function __construct(#[InputMapsToTypeScriptQuery] public string $name) {}
+    public function __construct(
+        #[InputMapsToTypeScriptQuery]
+        public string $name,
+    ) {}
 }
 
 class TestTsBucketNestedRequest
@@ -92,7 +122,10 @@ class TestTsBucketNestedRequest
 
 class TestTsBucketResponse
 {
-    public function __construct(#[InputMapsToTypeScriptBody] public string $name) {}
+    public function __construct(
+        #[InputMapsToTypeScriptBody]
+        public string $name,
+    ) {}
 }
 
 it('rejects a TypeScript bucket attribute outside a top-level #[Input] request property', function (array $requests, array $responses, string $message) {
@@ -107,7 +140,11 @@ it('rejects a TypeScript bucket attribute outside a top-level #[Input] request p
 
 class TestStatusRequest
 {
-    public function __construct(public string $name, #[Status] public int $status = 200) {}
+    public function __construct(
+        public string $name,
+        #[Status]
+        public int $status = 200,
+    ) {}
 }
 
 it('rejects #[Status] on a class mapped from a request or an array', function () {
@@ -166,7 +203,10 @@ it('rejects #[Status] on a property not typed int', function (string $class, str
 
 class TestPresentWithDefaultParameter
 {
-    public function __construct(#[Present] public ?string $bio = null) {}
+    public function __construct(
+        #[Present]
+        public ?string $bio = null,
+    ) {}
 }
 
 class TestPresentWithDefaultProperty

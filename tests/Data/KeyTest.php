@@ -15,8 +15,11 @@ use Illuminate\Validation\ValidationException;
 readonly class TestTopLevelKeyPageRequest
 {
     public function __construct(
-        #[Key('page_num')] public int $page,
-        #[Query, Key('per_page')] public int $perPage,
+        #[Key('page_num')]
+        public int $page,
+        #[Query]
+        #[Key('per_page')]
+        public int $perPage,
     ) {}
 }
 
@@ -47,19 +50,22 @@ it('reports a top-level #[Key] under its key', function () {
 
 class TestQueryAndKeyRequest
 {
-    #[Query('page_num'), Key('x')]
+    #[Query('page_num')]
+    #[Key('x')]
     public int $page;
 }
 
 class TestHeaderAndKeyRequest
 {
-    #[Header('X-Foo'), Key('y')]
+    #[Header('X-Foo')]
+    #[Key('y')]
     public string $foo;
 }
 
 class TestInputAndKeyRequest
 {
-    #[Input('a'), Key('b')]
+    #[Input('a')]
+    #[Key('b')]
     public string $value;
 }
 
@@ -76,13 +82,15 @@ it('rejects a property that gets a key from two attributes', function (string $c
 
 class TestResponseHeaderAndKey
 {
-    #[Header('X-Foo'), Key('foo')]
+    #[Header('X-Foo')]
+    #[Key('foo')]
     public string $foo = 'bar';
 }
 
 class TestBodyAndKey
 {
-    #[Body('a'), Key('b')]
+    #[Body('a')]
+    #[Key('b')]
     public string $value = 'v';
 }
 
@@ -94,10 +102,14 @@ it('rejects a source key with #[Key] when serializing', function () {
 readonly class TestSourceKeyRoundTrip
 {
     public function __construct(
-        #[Query('page_num')] public int $page,
-        #[Body('display\.name')] public string $name,
-        #[Input('sort_by')] public string $sort,
-        #[Query] public bool $draft,
+        #[Query('page_num')]
+        public int $page,
+        #[Body('display\.name')]
+        public string $name,
+        #[Input('sort_by')]
+        public string $sort,
+        #[Query]
+        public bool $draft,
     ) {}
 }
 
@@ -124,8 +136,10 @@ class TestKeyRoundTripAddress
 class TestKeyRoundTrip
 {
     public function __construct(
-        #[Key('user_id')] public int $id,
-        #[Key('home\.address')] public TestKeyRoundTripAddress $address,
+        #[Key('user_id')]
+        public int $id,
+        #[Key('home\.address')]
+        public TestKeyRoundTripAddress $address,
     ) {}
 }
 
@@ -142,7 +156,8 @@ it('maps and serializes a renamed property under the same key', function () {
 class TestHeaderRoundTrip
 {
     public function __construct(
-        #[Header('X-Request-Id')] public string $requestId,
+        #[Header('X-Request-Id')]
+        public string $requestId,
         public string $name,
     ) {}
 }

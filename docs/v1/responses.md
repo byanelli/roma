@@ -139,7 +139,8 @@ use BYanelli\Roma\Facades\Serializer;
 readonly class ProxyCredentials {
     public function __construct(
         public string $user,
-        #[\SensitiveParameter] public string $password,
+        #[\SensitiveParameter]
+        public string $password,
     ) {}
 }
 

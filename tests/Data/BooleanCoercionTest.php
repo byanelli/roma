@@ -65,8 +65,10 @@ it('reads a blank string as false, even for a required boolean', function () {
 readonly class BoolQueryRequest
 {
     public function __construct(
-        #[Query] public bool $flag = false,
-        #[Query] public ?bool $maybe = null,
+        #[Query]
+        public bool $flag = false,
+        #[Query]
+        public ?bool $maybe = null,
     ) {}
 }
 
