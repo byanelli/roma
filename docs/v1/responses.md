@@ -210,6 +210,40 @@ source attribute that is only a source, such as `#[Input]` or `#[Cookie]`, on on
 `#[Key]`, `#[Header]`, `#[Query]`, `#[Body]`, `#[Path]`, `#[DateFormat]` and `#[Description]`
 apply to it as usual, since they also say where the value is written.
 
+### Transforming a value on the way out
+
+`#[SerializeUsing]` passes a property's value through a callable before it is serialized,
+including `null` but not `Missing`. The object keeps its value; only the output changes.
+Several apply in declaration order. A callable of your own that declares a second parameter
+also receives the object, so it can use other properties. A PHP function such as
+`strtoupper(...)` receives the value alone:
+
+```php
+use BYanelli\Roma\Attributes\SerializeUsing;
+
+class LeadResponse extends Response {
+    public function __construct(
+        public string $first,
+        public string $last,
+
+        #[SerializeUsing(self::fullName(...))]
+        public ?string $fullName = null,
+
+        #[SerializeUsing(strtoupper(...))]
+        public string $status = 'new',
+    ) {}
+
+    public static function fullName(?string $fullName, self $lead): string {
+        return $fullName ?? "{$lead->first} {$lead->last}";
+    }
+}
+```
+
+An attribute that implements `BYanelli\Roma\Serialization\SerializeTransform` is applied the
+same way, through `serializeValue($value, $object)`. TypeScript and JSON Schema still describe
+the property's declared type. To change the value the object itself holds, use
+[`#[MapUsing]`](/docs/roma/v1/sources#transforming-values) instead.
+
 Overriding `toArray()` is the escape hatch for output the properties can't describe. Keys it
 adds are not in the generated TypeScript. When the object is nested in another, the
 serializer calls the override with its profile and normalizes the result with that profile,

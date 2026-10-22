@@ -40,7 +40,7 @@ class Serializer
     /**
      * Other attributes are left uninstantiated, since their classes may not be loadable.
      */
-    private const array ATTRIBUTES = [...AttributesCollection::CHECKED, DateFormat::class, Discriminated::class];
+    private const array ATTRIBUTES = [...AttributesCollection::CHECKED, DateFormat::class, Discriminated::class, SerializeTransform::class];
 
     public function __construct(private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser) {}
 
@@ -178,6 +178,12 @@ class Serializer
 
             if ($value instanceof Missing) {
                 continue;
+            }
+
+            foreach ($property->attributes as $attribute) {
+                if ($attribute instanceof SerializeTransform) {
+                    $value = $attribute->serializeValue($value, $object);
+                }
             }
 
             $dateFormat = ($object instanceof CustomizesSerialization ? $object->dateFormat($reflection, $profile) : null)

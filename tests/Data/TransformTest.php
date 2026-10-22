@@ -3,23 +3,32 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\MapUsing;
+use BYanelli\Roma\Attributes\SerializeUsing;
 use BYanelli\Roma\Data\Attributes\MapTransform;
 use BYanelli\Roma\Facades\Mapper;
+use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\Missing;
+use BYanelli\Roma\Serialization\Profile;
+use BYanelli\Roma\Serialization\SerializeTransform;
 use BYanelli\Roma\Tests\TestCase;
 use BYanelli\Roma\TypeScript\TypeScriptGenerator;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
-final readonly class Shorten implements MapTransform
+final readonly class Shorten implements MapTransform, SerializeTransform
 {
     public function __construct(public int $length) {}
 
     public function mapValue(mixed $value): mixed
     {
         return is_string($value) ? substr($value, 0, $this->length) : $value;
+    }
+
+    public function serializeValue(mixed $value, object $object): mixed
+    {
+        return $this->mapValue($value);
     }
 }
 
@@ -90,6 +99,48 @@ it('transforms after validation', function () {
 
     expect($request->name)->toBe('Ada')
         ->and($request->tag)->toBe('X');
+});
+
+readonly class TransformLead
+{
+    public function __construct(
+        public string $firstName,
+        public string $lastName,
+
+        #[SerializeUsing(self::fullName(...))]
+        public ?string $fullName = null,
+
+        #[SerializeUsing(strtoupper(...)), SerializeUsing(self::exclaim(...))]
+        public string $status = 'new',
+
+        #[SerializeUsing(intval(...))]
+        public ?bool $active = null,
+
+        #[Shorten(2)]
+        public string $state = 'Alabama',
+    ) {}
+
+    public static function fullName(?string $fullName, self $lead): string
+    {
+        return $fullName ?? "{$lead->firstName} {$lead->lastName}";
+    }
+
+    public static function exclaim(string $status): string
+    {
+        return "{$status}!";
+    }
+}
+
+it('passes serialized values through the callables in order', function () {
+    expect(Serializer::toArray(new TransformLead('Pat', 'Lee'), Profile::storage()))->toBe([
+        'firstName' => 'Pat',
+        'lastName' => 'Lee',
+        'fullName' => 'Pat Lee',
+        'status' => 'NEW!',
+        'active' => 0,
+        'state' => 'Al',
+    ])
+        ->and(Serializer::toArray(new TransformLead('Pat', 'Lee', 'Patricia Lee', active: true))['fullName'])->toBe('Patricia Lee');
 });
 
 it('rejects #[MapUsing] on a virtual property', function () {

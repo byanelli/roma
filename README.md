@@ -89,6 +89,8 @@ readonly class ScrapflyConfig {
   messages, and `HandlesFailedValidation` replaces the 422 with a response of your own.
 - **Transforms.** `#[MapUsing(strtolower(...))]` changes a value after validation, and a
   callable typed `Request` computes a property from the request.
+  `#[SerializeUsing]` changes a
+  value on the way out, optionally with the object.
 - **Header value objects.** Type a property as `Authorization` to get the scheme +
   credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
   / `Scheme` / `ContentType` metadata enums.
