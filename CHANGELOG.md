@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[SnakeCaseKeys]` on a class gives its properties, and those of its subclasses, the
+  snake_case of their names as their default keys, in mapping, serialization, TypeScript and
+  the HTTP client.
 - `#[Message(required: '...')]` sets a property's validation messages by Laravel rule name,
   or for all of its rules without a name. A message for `required`, `boolean` or `enum` also
   applies to the rule objects Roma checks those rules with.

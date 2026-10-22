@@ -52,6 +52,30 @@ readonly class SearchRequest {
 }
 ```
 
+### Snake case keys
+
+`#[SnakeCaseKeys]` on a class gives its properties, and those of its subclasses, the
+snake_case of their names as their keys, for mapping, serialization, TypeScript and the HTTP
+client. A key attribute still sets a property's key, and a nested class uses its own
+attribute:
+
+```php
+use BYanelli\Roma\Attributes\Key;
+use BYanelli\Roma\Attributes\SnakeCaseKeys;
+use BYanelli\Roma\Http\Attributes\Path;
+
+#[SnakeCaseKeys]
+readonly class NewLeadRequest {
+    public string $firstName;   // from input.first_name
+
+    #[Path]
+    public string $clientId;    // from the {client_id} route parameter
+
+    #[Key('surname')]
+    public string $lastName;    // from input.surname
+}
+```
+
 An empty key, as in `#[Key('')]` or `#[Query('')]`, throws. A property may get its key from
 only one attribute: `#[Query('page_num')]` together with `#[Key('page')]`, or
 `#[Header('X-Foo')]` with `#[Key('foo')]`, throws when the class definition is built. So does a property with two source attributes, such as `#[Query]` with

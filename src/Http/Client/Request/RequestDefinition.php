@@ -127,11 +127,11 @@ final class RequestDefinition
             $prop = new ReflectionParamOrProperty($property, instantiate: [DestinationAttribute::class, ExplicitKeyAttribute::class, KeyAttribute::class]);
             $attributes = $prop->attributes;
             $destination = $attributes->destinationAttribute()?->destination();
-            $key = $attributes->explicitKey() ?? $prop->name;
+            $key = $attributes->explicitKey() ?? $prop->defaultKey;
 
-            if ($destination === null && in_array($prop->name, $template, true) && $attributes->declaredKey() === null) {
-                $boundByName[] = $prop->name;
-                $pathKeys[] = $prop->name;
+            if ($destination === null && in_array($key, $template, true) && $attributes->declaredKey() === null) {
+                $boundByName[] = $key;
+                $pathKeys[] = $key;
 
                 continue;
             }

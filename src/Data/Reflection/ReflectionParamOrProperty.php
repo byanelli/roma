@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data\Reflection;
 
+use BYanelli\Roma\Attributes\SnakeCaseKeys;
 use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\NoDefault;
 use BYanelli\Roma\Data\Role;
@@ -9,6 +10,7 @@ use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Missing;
 use DateTimeInterface;
+use Illuminate\Support\Str;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -174,6 +176,30 @@ final class ReflectionParamOrProperty
 
     public bool $acceptsMissing {
         get => Missing::isInType($this->type);
+    }
+
+    /**
+     * The key of a property without a key attribute: the snake_case of its name under
+     * #[SnakeCaseKeys], else its name.
+     */
+    public string $defaultKey {
+        get => $this->declaringClassHas(SnakeCaseKeys::class) ? Str::snake($this->name) : $this->name;
+    }
+
+    /**
+     * Whether the class that declares the property, or one of its parents, has the attribute.
+     *
+     * @param  class-string  $attribute
+     */
+    public function declaringClassHas(string $attribute): bool
+    {
+        for ($class = $this->reflection->getDeclaringClass(); $class !== null && $class !== false; $class = $class->getParentClass()) {
+            if ($class->getAttributes($attribute) !== []) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public bool $hasDefault {

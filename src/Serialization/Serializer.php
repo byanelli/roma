@@ -381,7 +381,7 @@ class Serializer
             $plan[] = new PropertyPlan(
                 reflection: $property,
                 attributes: $attributes,
-                path: $this->path($attributes, $destination?->destinationKey() ?? $attributes->explicitKey() ?? $prop->name, $prop->printableName),
+                path: $this->path($attributes, $destination?->destinationKey() ?? $attributes->explicitKey() ?? $prop->defaultKey, $prop->printableName),
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $dateFormat,
                 optional: $attributes->hasInstanceOf(Optional::class) || $prop->acceptsMissing,

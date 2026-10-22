@@ -28,7 +28,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `Rule`, `Message`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -97,6 +97,9 @@ Default source is the merged input bag (query + body). Bind explicitly:
 | `#[Path]` | a route parameter (name = property unless given) |
 | `#[Cookie]` | a cookie (pass a name for cookie names with dots) |
 | `Illuminate\Http\UploadedFile` type | a file upload (top-level only) |
+
+`#[SnakeCaseKeys]` on a class keys its properties by the snake_case of their names
+(`$firstName` ↔ `first_name`) everywhere; prefer it to a `#[Key]` on each property.
 
 A dot in a key nests in input, query, body, plain arrays and config:
 `#[Key('error.message')]` reads `{"error": {"message": ...}}`, its errors are under

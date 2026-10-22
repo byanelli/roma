@@ -60,7 +60,7 @@ class ClassDefinitionBuilder
         $source = $this->nested ? null : $this->topLevelSource($prop);
 
         $type = $source?->isInjected() ? new Mixed_ : $this->propertyType($prop);
-        $key = $attributes->declaredKey() ?: $this->policy->defaultKey($prop->name);
+        $key = $attributes->declaredKey() ?: $this->policy->defaultKey($prop->defaultKey);
         $optional = $prop->acceptsMissing || $attributes->hasInstanceOf(Optional::class);
 
         return new Property(
