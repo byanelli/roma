@@ -47,12 +47,44 @@ readonly class RequestMapper implements Contracts\RequestMapper
                 $this->validatePrecognitiveRequest($mapping, $request);
             }
 
-            $this->asHttpValidation(fn () => $this->objectMapper->validateMapping($mapping));
+            $this->asHttpValidation(fn () => $this->validate($mapping));
 
             return $this->objectMapper->build($mapping);
         } catch (ValidationException $e) {
             throw $this->failedValidation($className, $e, $request);
         }
+    }
+
+    /**
+     * With `roma.source_prefixed_errors` off, input, query, body and file errors are keyed and
+     * worded as Laravel's validator words them: "file_name", "The file name field is required."
+     *
+     * @throws MappingValidationException
+     */
+    private function validate(ClassMapping $mapping): void
+    {
+        if (config('roma.source_prefixed_errors', true)) {
+            $this->objectMapper->validateMapping($mapping);
+
+            return;
+        }
+
+        $errors = new ValidationErrors;
+
+        foreach ($mapping->validationRules() as $rules) {
+            if ($this->clientDataKeys->isClientData($rules->source)) {
+                $errors->add($rules, $this->objectMapper->makeValidator($rules, [], null), [], fn (string $key) => $key);
+
+                continue;
+            }
+
+            $attributeNames = $rules->attributeNames();
+            $unnamedKey = $rules->prefixedKey(...);
+
+            $errors->add($rules, $this->objectMapper->makeValidator($rules, $attributeNames, $unnamedKey), $attributeNames, $unnamedKey);
+        }
+
+        $errors->throwIfAny($mapping->getClassName());
     }
 
     /**

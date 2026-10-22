@@ -115,9 +115,10 @@ readonly class ObjectMapper
 
     /**
      * @param  array<string, string>  $attributeNames  keyed by rule key
-     * @param  Closure(string): string  $unnamedKey  the name of a key with no attribute name, such as an array element's
+     * @param  ?Closure(string): string  $unnamedKey  the name of a key with no attribute name, such as an array element's,
+     *                                                or null for Laravel's own
      */
-    public function makeValidator(ValidationRules $rules, array $attributeNames, Closure $unnamedKey): ValidatorContract
+    public function makeValidator(ValidationRules $rules, array $attributeNames, ?Closure $unnamedKey): ValidatorContract
     {
         $validator = $this->validatorFactory->make(
             $rules->data(),
@@ -126,7 +127,7 @@ readonly class ObjectMapper
             $attributeNames,
         );
 
-        if ($validator instanceof Validator) {
+        if ($validator instanceof Validator && $unnamedKey !== null) {
             $validator->setImplicitAttributesFormatter($unnamedKey);
         }
 

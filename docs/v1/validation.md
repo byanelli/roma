@@ -188,6 +188,15 @@ Nested fields keep their full path and array elements are indexed (`input.addres
 `#[Key('error.message')]` (`input.error.message`). The one exception is a [precognitive request](/docs/roma/v1/precognition),
 whose errors are keyed by the bare posted field name for front-end form tooling.
 
+### Laravel's error keys
+
+To keep the errors of the `FormRequest`s or `$request->validate()` calls that Roma requests
+replace, set `source_prefixed_errors` to `false` in `config/roma.php`. Input, query, body and
+file errors are then keyed and worded as Laravel's validator does: a `#[Key('file_name')]`
+property fails as `file_name` with "The file name field is required." Other sources keep
+their prefixes, such as `path.id` and `header.X-Flag`, and precognitive responses are
+unaffected.
+
 ## Mapping outside a request
 
 `Mapper::fromArray()` maps a plain array, such as a tool's arguments, a config array or a

@@ -186,8 +186,10 @@ an explicit list unless the member list changes often.
 
 Validation errors are keyed by **source-prefixed, request-relative** names:
 `input.price`, `query.page`, `header.X-Flag`, `path.id`, `cookie.session`, `request.ajax`.
-Never emit or expect bare field keys — the **only** exception is a precognitive request,
-where form-data errors are keyed by the bare posted name for front-end helpers.
+Never emit or expect bare field keys, with two exceptions: a precognitive request, where
+form-data errors are keyed by the bare posted name for front-end helpers, and an app that
+sets `roma.source_prefixed_errors` to `false`, where input, query, body and file errors are
+keyed and worded as Laravel's validator does (`file_name`, "The file name field is required.").
 
 ## Responses
 
@@ -342,4 +344,5 @@ keys (front-end helper shape); passing → empty `204`.
   a source attribute on an `UploadedFile`. Each throws when the definition is built.
 - Don't type a property as an interface, abstract class or union of classes without
   `#[Discriminated]`; it throws.
-- Don't emit bare (non-source-prefixed) error keys outside precognitive responses.
+- Don't emit bare (non-source-prefixed) error keys outside precognitive responses, unless
+  `roma.source_prefixed_errors` is `false`.

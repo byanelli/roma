@@ -17,6 +17,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Error Keys
+    |--------------------------------------------------------------------------
+    |
+    | Validation errors are keyed by source-prefixed names, such as
+    | "input.email" and "header.X-Flag". Disable source_prefixed_errors to key
+    | and word input, query, body and file errors as Laravel's validator does
+    | ("email", "The email field is required."), e.g. to keep the error
+    | format of FormRequests that a Roma request replaces. Other sources keep
+    | their prefixes.
+    |
+    */
+
+    'source_prefixed_errors' => true,
+
+    /*
+    |--------------------------------------------------------------------------
     | Precognition
     |--------------------------------------------------------------------------
     |

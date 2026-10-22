@@ -10,6 +10,9 @@ All notable changes to `roma` will be documented in this file.
 - A request class that implements `Http\Request\HandlesFailedValidation` returns the
   response for a failed validation from `failedValidation()`, including a guard's
   `ValidationException` and a precognitive request's errors.
+- The `source_prefixed_errors` config option. Set to `false`, input, query, body and file
+  errors are keyed and worded as Laravel's validator does (`file_name`, "The file name field
+  is required.").
 - A typed HTTP client. `BYanelli\Roma\Http\Client\Contracts\TypedFactory` (and the `RomaHttp`
   facade) wraps the container's `Illuminate\Http\Client\Factory`, so `Http::fake()`,
   `preventStrayRequests()`, global middleware and events apply; its configuring methods return

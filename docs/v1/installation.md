@@ -36,6 +36,10 @@ return [
     // #[Request] attribute. See "Request objects".
     'auto_inject' => true,
 
+    // Key validation errors by source ("input.email"); false keys input, query,
+    // body and file errors as Laravel does ("email"). See "Validation".
+    'source_prefixed_errors' => true,
+
     // Directories scanned for request and response classes, for the members
     // of #[AutoDiscriminated] unions, and for config objects.
     'discover' => [app_path()],
