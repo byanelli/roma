@@ -126,7 +126,7 @@ it('fails to map invalid requests', function () {
             'price' => '9.99.9',
             'quantity' => '8',
             'date' => 'jijiji',
-            'flag' => 'truee',
+            'flag' => ['truee'],
             'color' => 'Orange',
             'intensity' => '40',
         ],
@@ -160,9 +160,6 @@ it('fails to map invalid requests', function () {
             ],
             'input.flag' => [
                 'The input.flag field must be true or false.',
-            ],
-            'header.X-Flag' => [
-                'The header.X-Flag field must be true or false.',
             ],
             'input.color' => [
                 'The input.color field must be one of: Red, Green, Blue.',

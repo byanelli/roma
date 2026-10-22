@@ -81,7 +81,7 @@ it('reports a missing prefix as required keys', function () {
 
 it('reports rule and type errors by their full config keys', function () {
     config([
-        'services.scrapfly' => ['key' => 'sk_123', 'render_js' => 'maybe'],
+        'services.scrapfly' => ['key' => 'sk_123', 'render_js' => ['maybe']],
         'articles' => ['scrapfly_timeout' => '0', 'scrapfly_country' => 'usa'],
     ]);
 
@@ -95,7 +95,7 @@ it('reports rule and type errors by their full config keys', function () {
 // The base class lists only the first three errors.
 it('throws a ConfigValidationException that lists the class and all the errors', function () {
     config([
-        'services.scrapfly' => ['render_js' => 'maybe'],
+        'services.scrapfly' => ['render_js' => ['maybe']],
         'articles' => ['scrapfly_timeout' => 'soon', 'scrapfly_country' => 'usa'],
     ]);
 

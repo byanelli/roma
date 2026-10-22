@@ -114,25 +114,17 @@ class ClassMapping
         return Arr::mapWithKeys($present, fn (Property $p) => [$p->name => $this->getMappedValue($p)]);
     }
 
+    /**
+     * As Laravel's Request::boolean(): "1", "true", "on" and "yes", in any case, and 1 are true,
+     * and any other scalar is false.
+     */
     private function toBoolean(mixed $val): bool
     {
-        if (is_bool($val)) {
-            return $val;
-        }
-
-        if ($val === 0 || $val === 1) {
-            return $val === 1;
-        }
-
-        if (! is_string($val)) {
+        if (! is_scalar($val)) {
             throw new CoercionException('Expected boolean, got '.get_debug_type($val));
         }
 
-        return match (strtolower($val)) {
-            'true', '1', 'yes', 'on' => true,
-            'false', '0', 'no', 'off' => false,
-            default => throw new CoercionException("Invalid boolean: $val"),
-        };
+        return filter_var($val, FILTER_VALIDATE_BOOLEAN);
     }
 
     private function toInteger(mixed $val): int

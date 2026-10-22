@@ -291,7 +291,7 @@ string-backed, integer-backed, and unit enums automatically:
 ```php
 class OrderRequest {
     public float $price;                   // "9.99" -> 9.99
-    public bool $isGift;                   // "yes" -> true
+    public bool $isGift;                   // "yes" -> true, "Y" -> false
     public \DateTimeInterface $deliverBy;  // "2024-01-01" -> DateTime
     public Status $status;                 // "complete" -> Status::Complete (string enum)
 
@@ -322,9 +322,10 @@ class, `mixed`, no type, or an array without a PHPDoc type of dates, it throws. 
 date, such as `DateTimeImmutable|string`, is allowed; it is mapped as given and serialized
 with the format.
 
-A `bool` accepts `true`, `1`, `"true"`, `"1"`, `"yes"` and `"on"` as true, and `false`, `0`,
-`"false"`, `"0"`, `"no"` and `"off"` as false, ignoring case. Any other value, including an
-empty string such as `?flag=`, fails validation with Laravel's boolean message.
+A `bool` reads a value as Laravel's `Request::boolean()` does: `true`, `1`, and the strings
+`"1"`, `"true"`, `"on"` and `"yes"` in any case are true, and any other scalar, including
+`"0"`, `"no"`, `"Y"` and `""`, is false. An array or an object fails validation with Laravel's
+boolean message.
 
 Three more types cover values that usually arrive as strings: comma-separated lists,
 durations and sizes.

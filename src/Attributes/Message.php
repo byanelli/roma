@@ -4,8 +4,8 @@ namespace BYanelli\Roma\Attributes;
 
 use Attribute;
 use BYanelli\Roma\Validation\Rules\EnumCase;
-use BYanelli\Roma\Validation\Rules\RejectBlankString;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
+use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -23,7 +23,7 @@ final readonly class Message
      */
     private const array RULE_OBJECTS = [
         'required' => RequiredWithinObject::class,
-        'boolean' => RejectBlankString::class,
+        'boolean' => ScalarBoolean::class,
         'enum' => EnumCase::class,
     ];
 

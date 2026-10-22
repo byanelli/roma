@@ -4,6 +4,11 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: a `bool` property reads its input as Laravel's `Request::boolean()` does
+  (`filter_var(..., FILTER_VALIDATE_BOOLEAN)`). `"1"`, `"true"`, `"on"`, `"yes"` (in any
+  case), `true` and `1` are true, and any other scalar is false: `"Y"`, `"maybe"`, `2` and a
+  blank string such as `?flag=` used to fail validation and are now false. Arrays and objects
+  still fail with Laravel's boolean message.
 - `#[MapUsing(callable)]` passes a property's value through a callable after validation, and
   `Data\Attributes\MapTransform` lets an attribute of your own do the same. A callable whose
   parameter is typed as the mapping's input, such as Laravel's `Request`, receives the input

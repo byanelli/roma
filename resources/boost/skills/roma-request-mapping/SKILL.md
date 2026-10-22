@@ -68,6 +68,8 @@ class CreateContactController {
 - Type coercion and enum/nested validation are automatic — a `public int $page` validates
   as an integer without an `integer` rule.
 - Required = non-nullable with no default. Optional = has a default OR is nullable (`?T`).
+- A `bool` reads input as `$request->boolean()` does: "1"/"true"/"on"/"yes" are true, any
+  other scalar ("0", "no", "Y", "") is false; arrays fail validation.
 - `#[Present]` on a nullable property requires the key to appear but allows `null`. With a
   default value it throws, since the default is never used.
 - `#[Optional]` is never required. Type a property `T|Missing` to tell an absent key

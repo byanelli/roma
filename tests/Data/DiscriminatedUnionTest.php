@@ -129,7 +129,7 @@ it('reports a missing discriminator under the data prefix', function () {
 it('reports errors per element of a list of members', function () {
     $errors = discriminatedErrors(fn () => mapDiscriminated(Checkout::class, checkoutData([
         'fallbacks' => [
-            ['type' => 'Card', 'saved' => 'maybe'],
+            ['type' => 'Card', 'saved' => ['maybe']],
             ['type' => 'bank'],
             ['type' => 'Paypal'],
             // Coerced even though other elements are invalid.

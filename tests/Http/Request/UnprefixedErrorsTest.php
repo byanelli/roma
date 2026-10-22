@@ -24,8 +24,8 @@ readonly class UnprefixedImportRequest
         public string $notes,
         #[Path]
         public int $id,
-        #[Header('X-Flag')]
-        public bool $flag,
+        #[Header('X-Count')]
+        public int $count,
         public array $tags = [],
     ) {}
 }
@@ -34,7 +34,7 @@ function unprefixedErrors(TestCase $test): array
 {
     $test->setRequest(
         query: ['page' => 'first', 'tags' => ['a', ['b']]],
-        headers: ['X-Flag' => 'maybe'],
+        headers: ['X-Count' => 'many'],
         routeParams: ['id' => 'x'],
     );
 
@@ -56,7 +56,7 @@ it('keys and words input errors as Laravel does when source prefixes are off', f
         'page' => ['The page field must be an integer.'],
         'notes' => ['The notes field is required.'],
         'path.id' => ['The path.id field must be an integer.'],
-        'header.X-Flag' => ['The header.X-Flag field must be true or false.'],
+        'header.X-Count' => ['The header.X-Count field must be an integer.'],
         'tags.1' => ['The tags.1 field must be a string.'],
     ]);
 });
@@ -64,6 +64,6 @@ it('keys and words input errors as Laravel does when source prefixes are off', f
 it('prefixes errors with their source by default', function () {
     /** @var TestCase $this */
     expect(array_keys(unprefixedErrors($this)))->toBe([
-        'input.file_name', 'query.page', 'body.notes', 'path.id', 'header.X-Flag', 'input.tags.1',
+        'input.file_name', 'query.page', 'body.notes', 'path.id', 'header.X-Count', 'input.tags.1',
     ]);
 });

@@ -14,8 +14,8 @@ use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\DiscriminatorIn;
 use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
-use BYanelli\Roma\Validation\Rules\RejectBlankString;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
+use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use BYanelli\Roma\Validation\Rules\ValidInterval;
 
 /**
@@ -173,7 +173,7 @@ readonly class ValidationRules
     private function getTypeValidationRules(Type $type): array
     {
         return match (true) {
-            $type instanceof Types\Boolean => ['boolean'],
+            $type instanceof Types\Boolean => [new ScalarBoolean],
             $type instanceof Types\Integer => ['integer'],
             $type instanceof Types\Float_ => ['numeric'],
             $type instanceof Types\Date => [$type->format !== null ? "date_format:{$type->format}" : 'date'],
@@ -267,10 +267,6 @@ readonly class ValidationRules
         }
 
         $typeRules = $this->getTypeValidationRules($type);
-
-        if ($type instanceof Types\Boolean && ! $this->hasPresenceRule($rules)) {
-            $typeRules[] = new RejectBlankString('validation.boolean');
-        }
 
         $entry = [
             'path' => $path,
@@ -396,20 +392,6 @@ readonly class ValidationRules
         }
 
         return $any;
-    }
-
-    /**
-     * @param  list<mixed>  $rules
-     */
-    private function hasPresenceRule(array $rules): bool
-    {
-        foreach ($rules as $rule) {
-            if ($rule === 'required' || $rule instanceof RequiredWithinObject) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**

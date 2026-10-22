@@ -74,7 +74,7 @@ it('uses a message without a rule name for any of the property\'s rules', functi
 });
 
 it('applies a Laravel rule name to the rule object Roma validates it with', function () {
-    expect(messageErrors(['name' => 'Ada', 'count' => 1, 'active' => '']))->toBe(['data.active' => ['Send yes or no.']])
+    expect(messageErrors(['name' => 'Ada', 'count' => 1, 'active' => ['x']]))->toBe(['data.active' => ['Send yes or no.']])
         ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'size' => 'm']))->toBe(['data.size' => ['Pick a size.']])
         ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'address' => []]))->toBe(['data.address.city' => ['Send the city.']]);
 });
