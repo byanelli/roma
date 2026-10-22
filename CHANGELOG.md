@@ -9,6 +9,8 @@ All notable changes to `roma` will be documented in this file.
   parameter is typed as the mapping's input, such as Laravel's `Request`, receives the input
   and sets the property, which is then not read from the input or validated. A transform
   result the property's type doesn't accept throws.
+- `#[Limit($limit, end: '...')]` cuts a string property with `Str::limit()` after validation.
+  Null passes through and any other non-string value throws.
 - `#[SerializeUsing(callable)]` passes a property's value through a callable before it is
   serialized; a callable that declares a second parameter receives the object.
   `Serialization\SerializeTransform` lets an attribute of your own do the same.

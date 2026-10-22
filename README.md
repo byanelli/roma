@@ -88,7 +88,8 @@ readonly class ScrapflyConfig {
   (`#[Discriminated]`), and `#[Guard]` authorization methods. `#[Message]` sets a property's
   messages, and `HandlesFailedValidation` replaces the 422 with a response of your own.
 - **Transforms.** `#[MapUsing(strtolower(...))]` changes a value after validation, and a
-  callable typed `Request` computes a property from the request.
+  callable typed `Request` computes a property from the request, and `#[Limit(200)]` cuts a
+  string.
   `#[SerializeUsing]` changes a
   value on the way out, optionally with the object.
 - **Header value objects.** Type a property as `Authorization` to get the scheme +

@@ -2,6 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Attributes\Limit;
 use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\SerializeUsing;
 use BYanelli\Roma\Data\Attributes\MapTransform;
@@ -273,3 +274,28 @@ it('rejects a misplaced callable that takes the request', function (string $clas
     [TransformSourcedRequest::class, 'so it cannot map from a source or be inside a nested object'],
     [TransformNestedRequest::class, 'so it cannot map from a source or be inside a nested object'],
 ]);
+
+readonly class LimitedNote
+{
+    public function __construct(
+        #[Limit(5)]
+        public string $title,
+        #[Limit(3, end: '')]
+        public ?string $code = null,
+        #[Limit(3)]
+        public ?string $tag = null,
+    ) {}
+}
+
+it('cuts a string with #[Limit] and appends the end marker', function () {
+    $note = Mapper::fromArray(LimitedNote::class, ['title' => 'Hello world', 'code' => 'ABCDEF', 'tag' => 'abc']);
+
+    expect($note->title)->toBe('Hello...')
+        ->and($note->code)->toBe('ABC')
+        ->and($note->tag)->toBe('abc')
+        ->and(Mapper::fromArray(LimitedNote::class, ['title' => 'Hi'])->code)->toBeNull();
+});
+
+it('rejects a value #[Limit] cannot cut', function () {
+    expect(fn () => new Limit(3)->mapValue(12345))->toThrow(InvalidArgumentException::class, '#[Limit] applies to strings, but the value is int');
+});

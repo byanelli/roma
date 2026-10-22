@@ -28,7 +28,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Limit`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -184,7 +184,8 @@ an explicit list unless the member list changes often.
   instead (not read from input, not validated; must be the first transform; top-level only).
   `#[SerializeUsing(...)]` changes the serialized value; a user callable with a second
   parameter receives the object. Attributes can be static closures or first-class callables,
-  not arrow functions. Implement `MapTransform` / `SerializeTransform` for reusable ones.
+  not arrow functions. `#[Limit(200)]` cuts a string with `Str::limit()` (appends `...`
+  unless `end: ''`). Implement `MapTransform` / `SerializeTransform` for reusable ones.
 - **Custom error responses:** implement `HandlesFailedValidation` and return a response (or a
   Roma `Response`) from `static failedValidation(ValidationException $e)`, as with
   `FormRequest::failedValidation()`. It also receives a guard's `ValidationException`.

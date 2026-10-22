@@ -451,6 +451,27 @@ A non-promoted property works too, and Roma sets it after the constructor runs. 
 reports a non-promoted `readonly` property that isn't assigned in the constructor, so prefer a
 promoted parameter in a readonly class.
 
+### Cutting strings with `#[Limit]`
+
+`#[Limit(200)]` cuts a string property to 200 characters with Laravel's `Str::limit()`, which
+appends `...` to a cut string, so a cut value is 203 characters long. Pass `end: ''` to cut
+without a marker. A string that fits and `null` pass through, and any other value throws an
+`InvalidArgumentException`:
+
+```php
+use BYanelli\Roma\Attributes\Limit;
+
+readonly class NewLeadRequest {
+    public function __construct(
+        #[Limit(200)]
+        public ?string $site = null,          // 250 characters -> 200 + "..."
+
+        #[Limit(50, end: '')]
+        public ?string $source = null,        // at most 50 characters
+    ) {}
+}
+```
+
 ### Your own transforms
 
 An attribute that implements `BYanelli\Roma\Data\Attributes\MapTransform` is applied the same
