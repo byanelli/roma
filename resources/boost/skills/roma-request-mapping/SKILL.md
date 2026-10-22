@@ -28,7 +28,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -179,6 +179,11 @@ an explicit list unless the member list changes often.
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
 - **Custom messages:** `#[Message(required: 'Send a name.')]` sets a property's message for a
   Laravel rule; a message without a rule name covers all of the property's rules.
+- **Transforms:** `#[MapUsing(strtolower(...))]` changes a value after validation; a
+  `static function (Request $request)` callable computes the property from the request
+  instead (not read from input, not validated; must be the first transform; top-level only).
+  Attributes can be static closures or first-class callables,
+  not arrow functions. Implement `MapTransform` for reusable ones.
 - **Custom error responses:** implement `HandlesFailedValidation` and return a response (or a
   Roma `Response`) from `static failedValidation(ValidationException $e)`, as with
   `FormRequest::failedValidation()`. It also receives a guard's `ValidationException`.

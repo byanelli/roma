@@ -155,12 +155,12 @@ readonly class ObjectMapper
     private function construct(ClassMapping $mapping): mixed
     {
         $className = $mapping->getClassName();
-        $constructorValues = $this->constructNestedClasses(
+        $constructorValues = $mapping->transformConstructorValues(array_values($this->constructNestedClasses(
             $mapping->getConstructorMappedValuesOrNestedClassesAsList()
-        );
-        $classPropertyValues = $this->constructNestedClasses(
+        )));
+        $classPropertyValues = $mapping->transformClassPropertyValues($this->constructNestedClasses(
             $mapping->getClassPropertiesMappedValuesOrNestedClassesAsMap()
-        );
+        ));
 
         $instance = new $className(...$constructorValues);
 

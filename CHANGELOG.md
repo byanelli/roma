@@ -4,6 +4,11 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[MapUsing(callable)]` passes a property's value through a callable after validation, and
+  `Data\Attributes\MapTransform` lets an attribute of your own do the same. A callable whose
+  parameter is typed as the mapping's input, such as Laravel's `Request`, receives the input
+  and sets the property, which is then not read from the input or validated. A transform
+  result the property's type doesn't accept throws.
 - `#[SnakeCaseKeys]` on a class gives its properties, and those of its subclasses, the
   snake_case of their names as their default keys, in mapping, serialization, TypeScript and
   the HTTP client.

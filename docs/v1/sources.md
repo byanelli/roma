@@ -389,3 +389,81 @@ A map's key type is `string` or `int`; `array<int, T>` rejects input with non-in
 Each value is coerced and validated, and errors are keyed by the full path, e.g.
 `input.prices.gemini.flash.input`. A shape's keys are required unless marked `?`, but only
 when the shape itself is present, the same as a nested object's properties.
+
+## Transforming values
+
+`#[MapUsing]` passes a property's value through a callable after validation, before the
+object is constructed. In an attribute the callable is a first-class callable, such as
+`strtolower(...)` or `self::normalize(...)`, or a `static function` closure; PHP doesn't allow
+arrow functions there. Several apply in declaration order:
+
+```php
+use BYanelli\Roma\Attributes\MapUsing;
+
+readonly class SignupRequest {
+    public function __construct(
+        #[MapUsing(trim(...)), MapUsing(strtolower(...))]
+        public string $email,
+    ) {}
+}
+```
+
+The callable receives the value the property would get, including its default or `null`, but
+not `Missing`, and a nested object arrives constructed. A result the property's type doesn't
+accept throws a `RuntimeException` naming the property.
+
+### Values computed from the request
+
+A callable whose parameter is typed as the input being mapped, Laravel's `Request` for a
+request object, receives the request instead, and its result is the property's value. The
+property isn't read from the input or validated, so the callable decides how lenient to be.
+It can call the class's private static methods:
+
+```php
+use BYanelli\Roma\Attributes\MapUsing;
+use Illuminate\Http\Request;
+
+readonly class NewLeadRequest {
+    public function __construct(
+        public string $first_name,
+        public string $last_name,
+
+        #[MapUsing(static function (Request $request): string {
+            return $request->input('full_name') ?: "{$request->input('first_name')} {$request->input('last_name')}";
+        })]
+        public string $full_name,
+
+        #[MapUsing(static function (Request $request): bool {
+            return $request->boolean('is_test') || str_contains($request->input('email', ''), 'test');
+        })]
+        public bool $is_test,
+    ) {}
+}
+```
+
+Such a callable must be the property's first transform; later ones receive its result. A
+property with one can't have a source attribute, can't be inside a nested object, and is left
+out of TypeScript and JSON Schema. Mapped with `Mapper::fromArray()`, where there is no
+request, the class throws when its definition is built, since the callable's parameter is
+neither the property's type nor the mapping's input.
+
+A non-promoted property works too, and Roma sets it after the constructor runs. PHPStan
+reports a non-promoted `readonly` property that isn't assigned in the constructor, so prefer a
+promoted parameter in a readonly class.
+
+### Your own transforms
+
+An attribute that implements `BYanelli\Roma\Data\Attributes\MapTransform` is applied the same
+way, through its `mapValue()` method:
+
+```php
+use Attribute;
+use BYanelli\Roma\Data\Attributes\MapTransform;
+
+#[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
+final readonly class Slug implements MapTransform {
+    public function mapValue(mixed $value): mixed {
+        return is_string($value) ? str($value)->slug()->toString() : $value;
+    }
+}
+```

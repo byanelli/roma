@@ -37,6 +37,7 @@ final class AttributesCollection extends Collection
         DestinationAttribute::class,
         ExplicitKeyAttribute::class,
         KeyAttribute::class,
+        MapTransform::class,
         Message::class,
         Optional::class,
         RulesAttribute::class,
@@ -280,7 +281,7 @@ final class AttributesCollection extends Collection
     public function assertAllowedOnVirtual(): void
     {
         foreach ($this->declared() as $attribute) {
-            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute || $attribute instanceof Message)
+            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute || $attribute instanceof Message || $attribute instanceof MapTransform)
                 && ! $attribute instanceof DestinationAttribute) {
                 throw new RuntimeException(
                     "Roma property \"{$this->property->printableName}\" is virtual (a hooked property with no backing value), so it is never "

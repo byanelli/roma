@@ -87,6 +87,8 @@ readonly class ScrapflyConfig {
   date / `UploadedFile`), validation via `#[Rule]`, nested objects, discriminated unions
   (`#[Discriminated]`), and `#[Guard]` authorization methods. `#[Message]` sets a property's
   messages, and `HandlesFailedValidation` replaces the 422 with a response of your own.
+- **Transforms.** `#[MapUsing(strtolower(...))]` changes a value after validation, and a
+  callable typed `Request` computes a property from the request.
 - **Header value objects.** Type a property as `Authorization` to get the scheme +
   credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
   / `Scheme` / `ContentType` metadata enums.

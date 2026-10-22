@@ -4,15 +4,18 @@ namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Attributes\Delimited;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Unit;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
 use BYanelli\Roma\Data\Attributes\KeyAttribute;
+use BYanelli\Roma\Data\Attributes\MapTransform;
 use BYanelli\Roma\Data\Attributes\RulesAttribute;
 use BYanelli\Roma\Data\Attributes\SourceAttribute;
 use BYanelli\Roma\Data\Attributes\WireKeyAttribute;
 use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
+use BYanelli\Roma\Data\Sources\InputObject;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
@@ -21,9 +24,11 @@ use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
 use ReflectionAttribute;
 use ReflectionClass;
+use ReflectionIntersectionType;
 use ReflectionNamedType;
 use ReflectionParameter;
 use ReflectionProperty;
+use ReflectionType;
 use ReflectionUnionType;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\File\UploadedFile as SymfonyUploadedFile;
@@ -96,6 +101,7 @@ class ClassDefinitionBuilder
         if ($this->nested) {
             $attributes->assertAllowedInNestedObject();
             $this->assertNoSourceInNestedObject($prop);
+            $this->inputObjectSource($prop);
         }
 
         $sourceAttribute = $attributes->sourceAttribute();
@@ -148,7 +154,8 @@ class ClassDefinitionBuilder
     private function topLevelSource(ReflectionParamOrProperty $prop): Source
     {
         $attributes = $prop->attributes;
-        $source = $prop->typeSource
+        $source = $this->inputObjectSource($prop)
+            ?? $prop->typeSource
             ?? $this->policy->sourceFor($attributes->source(), $attributes->destinationAttribute()?->destination())
             ?? $this->policy->defaultSource();
 
@@ -185,6 +192,64 @@ class ClassDefinitionBuilder
         }
 
         return $this->withDateFormat($type, $dateFormat);
+    }
+
+    /**
+     * The source of a property whose first #[MapUsing] callable takes the input instead of the
+     * value. A callable typed as some other class must accept the property's value.
+     */
+    private function inputObjectSource(ReflectionParamOrProperty $prop): ?Source
+    {
+        $transforms = array_values($prop->attributes->filter(fn (object $attribute) => $attribute instanceof MapTransform)->all());
+        $inputType = $this->policy->inputType();
+
+        foreach ($transforms as $index => $transform) {
+            if (! $transform instanceof MapUsing || $transform->parameterClass === null) {
+                continue;
+            }
+
+            if ($transform->takesInput($inputType)) {
+                if ($index > 0) {
+                    throw new RuntimeException(
+                        "Roma property \"{$prop->printableName}\" has a #[MapUsing] callable that takes the input after another map "
+                        .'transform. Put it first, since its result is the property\'s value.'
+                    );
+                }
+
+                if ($this->nested || $prop->attributes->sourceAttribute() !== null || $prop->typeSource !== null) {
+                    throw new RuntimeException(
+                        "Roma property \"{$prop->printableName}\" has a #[MapUsing] callable that takes the input, which sets its value, "
+                        .'so it cannot map from a source or be inside a nested object.'
+                    );
+                }
+
+                return new InputObject($transform->parameterClass);
+            }
+
+            if ($index === 0 && ! $this->typeAccepts($prop, $transform->parameterClass)) {
+                throw new RuntimeException(
+                    "Roma property \"{$prop->printableName}\" has a #[MapUsing] callable that takes "
+                    .class_basename($transform->parameterClass).', which is neither the property\'s type nor the input this mapping reads ('
+                    .class_basename($inputType).').'
+                );
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Whether a value of the property's declared type can be passed as `$class`.
+     *
+     * @param  class-string  $class
+     */
+    private function typeAccepts(ReflectionParamOrProperty $prop, string $class): bool
+    {
+        $type = $prop->reflection->getType();
+        $members = $type instanceof ReflectionUnionType || $type instanceof ReflectionIntersectionType ? $type->getTypes() : [$type];
+
+        return array_any($members, fn (?ReflectionType $member) => $member instanceof ReflectionNamedType
+            && ($member->getName() === 'mixed' || $member->getName() === 'object' || is_a($member->getName(), $class, true)));
     }
 
     private function keyPath(?Source $source, string $key, string $name): KeyPath

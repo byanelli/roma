@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Data;
 
 use BackedEnum;
 use BYanelli\Roma\Attributes\Delimited;
+use BYanelli\Roma\Data\Attributes\MapTransform;
 use BYanelli\Roma\Data\Enums\NormalizesRawValue;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Missing;
@@ -15,6 +16,8 @@ use DateTimeInterface;
 use Illuminate\Support\Arr;
 use Illuminate\Support\DateFactory;
 use Illuminate\Support\ItemNotFoundException;
+use ReflectionMethod;
+use ReflectionProperty;
 use RuntimeException;
 use UnitEnum;
 
@@ -471,6 +474,65 @@ class ClassMapping
 
         if ($this->parsesAfterValidation($property->type)) {
             return $this->parseValidated($property->type, $value);
+        }
+
+        return $value;
+    }
+
+    /**
+     * Applies the #[MapUsing] and other MapTransform attributes to the constructed values of
+     * getConstructorMappedValuesOrNestedClassesAsList().
+     *
+     * @param  list<mixed>  $values
+     * @return list<mixed>
+     */
+    public function transformConstructorValues(array $values): array
+    {
+        return array_map($this->transform(...), $this->getConstructorProperties(), $values);
+    }
+
+    /**
+     * Applies the MapTransform attributes to the constructed values of
+     * getClassPropertiesMappedValuesOrNestedClassesAsMap().
+     *
+     * @param  array<string, mixed>  $values
+     * @return array<string, mixed>
+     */
+    public function transformClassPropertyValues(array $values): array
+    {
+        foreach ($this->getClassProperties() as $property) {
+            if (array_key_exists($property->name, $values)) {
+                $values[$property->name] = $this->transform($property, $values[$property->name]);
+            }
+        }
+
+        return $values;
+    }
+
+    /**
+     * @throws RuntimeException when the transforms return a value the property's type doesn't accept
+     */
+    private function transform(Property $property, mixed $value): mixed
+    {
+        $transforms = array_filter($property->rawAttributes, fn (object $attribute) => $attribute instanceof MapTransform);
+
+        if ($transforms === [] || $value instanceof Missing) {
+            return $value;
+        }
+
+        foreach ($transforms as $transform) {
+            $value = $transform->mapValue($value);
+        }
+
+        $class = $this->class->class;
+        $type = $property->role === Role::Constructor
+            ? collect(new ReflectionMethod($class, '__construct')->getParameters())->firstWhere('name', $property->name)?->getType()
+            : new ReflectionProperty($class, $property->name)->getType();
+
+        if (! DeclaredType::accepts($type, $value, $class)) {
+            throw new RuntimeException(
+                "Roma property \"{$class}::\${$property->name}\" is typed {$type}, but its map transforms returned ".get_debug_type($value).'.'
+            );
         }
 
         return $value;
