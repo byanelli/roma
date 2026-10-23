@@ -4,6 +4,14 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[RejectUnknownKeys]` on a class makes input keys that no property maps from fail
+  validation, one error per key, such as "The input.config.k field is prohibited." under
+  `input.config.k`. It applies to the class and its subclasses, at the top level and as nested
+  objects, and `message:` replaces the message. A request checks only the top-level keys of its
+  body, without `_method` and `_token`, and a config object only those under its prefix. On a
+  property it throws when the definition is built. `Source` has new `checkedKeys()` and
+  `sharesKeysWith()` methods; a custom source checks no keys unless it overrides
+  `checkedKeys()`.
 - Breaking: a non-empty list, such as JSON `["x"]`, for a property typed as a class, an
   object in a list or a discriminated union fails validation with "The input.config field
   must be an object." instead of mapping as an object with its defaults.

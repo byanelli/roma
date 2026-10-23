@@ -77,6 +77,27 @@ abstract readonly class Source
     }
 
     /**
+     * The top-level keys of read()'s array that #[RejectUnknownKeys] checks, or null for all of
+     * them. Other keys are never unknown. The keys of nested objects are always checked.
+     *
+     * @param  I  $input
+     * @return ?list<array-key>
+     */
+    public function checkedKeys(object $input): ?array
+    {
+        return [];
+    }
+
+    /**
+     * Whether `$other` reads the keys that checkedKeys() returns, so that #[RejectUnknownKeys]
+     * counts the keys of its properties as known.
+     */
+    public function sharesKeysWith(Source $other): bool
+    {
+        return $this->isSameAs($other);
+    }
+
+    /**
      * Whether `$other` reads the same data, so that properties of both share one read and one
      * validator.
      */

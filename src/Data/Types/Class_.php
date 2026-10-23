@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data\Types;
 
+use BYanelli\Roma\Attributes\RejectUnknownKeys;
 use BYanelli\Roma\Data\Property;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\Type;
@@ -13,10 +14,12 @@ final readonly class Class_ extends Type
     /**
      * @param  class-string  $class
      * @param  list<Property>  $properties
+     * @param  ?RejectUnknownKeys  $rejectUnknownKeys  from the class or a parent
      */
     public function __construct(
         public string $class,
         public array $properties,
+        public ?RejectUnknownKeys $rejectUnknownKeys = null,
     ) {}
 
     /**

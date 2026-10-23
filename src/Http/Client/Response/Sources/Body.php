@@ -14,6 +14,11 @@ final readonly class Body extends ResponseSource
         return 'body';
     }
 
+    public function checkedKeys(object $input): ?array
+    {
+        return null;
+    }
+
     /**
      * @param  ResponseInput  $input
      * @return array<array-key, mixed>

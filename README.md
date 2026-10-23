@@ -85,7 +85,7 @@ readonly class ScrapflyConfig {
   in the request, such as attributes set by middleware.
 - **Typed and validated.** Automatic coercion (strings → `int` / `float` / `bool` / enum /
   date / `UploadedFile`, with `bool` read as `$request->boolean()` reads it, a JSON number
-  accepted for a `string`, and `null` taking a property's default), validation via `#[Rule]` and `#[RulePerItem]` for array items, `#[RequiredOnCreate]` for one class that serves POST and PUT, `#[IgnoreIfEmpty]` for a `{}` that means not sent, nested objects, discriminated unions
+  accepted for a `string`, and `null` taking a property's default), validation via `#[Rule]` and `#[RulePerItem]` for array items, `#[RequiredOnCreate]` for one class that serves POST and PUT, `#[IgnoreIfEmpty]` for a `{}` that means not sent, `#[RejectUnknownKeys]` for strict input, nested objects, discriminated unions
   (`#[Discriminated]`), and `#[Guard]` authorization methods. `#[Message]` sets a property's
   messages, and `HandlesFailedValidation` replaces the 422 with a response of your own.
 - **Transforms.** `#[MapUsing(strtolower(...))]` changes a value after validation, and a

@@ -13,6 +13,7 @@ use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
+use BYanelli\Roma\Attributes\RejectUnknownKeys;
 use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Source;
@@ -77,6 +78,13 @@ final class AttributesCollection extends Collection
                     "Roma property \"{$property->printableName}\" has #[AutoDiscriminated], which applies only to an interface or abstract "
                     .'class, since its members are found and cached per contract. Put it on the interface or abstract class, '
                     .'or list the classes on the property with #[Discriminated([...])].'
+                );
+            }
+
+            if ($attribute->getName() === RejectUnknownKeys::class) {
+                throw new RuntimeException(
+                    "Roma property \"{$property->printableName}\" has #[RejectUnknownKeys], which applies only to a class. "
+                    .'Put it on the class of the object whose keys it checks.'
                 );
             }
         }

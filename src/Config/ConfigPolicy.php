@@ -32,7 +32,7 @@ final readonly class ConfigPolicy implements SourcePolicy
 
     public function defaultSource(): Source
     {
-        return new ConfigSource($this->prefix);
+        return new ConfigSource($this->prefix, checksKeys: true);
     }
 
     /**

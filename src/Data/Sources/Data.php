@@ -24,6 +24,11 @@ final readonly class Data extends Source
         return ArrayInput::class;
     }
 
+    public function checkedKeys(object $input): ?array
+    {
+        return null;
+    }
+
     /**
      * @param  ArrayInput  $input
      * @return array<array-key, mixed>

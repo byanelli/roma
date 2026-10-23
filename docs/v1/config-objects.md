@@ -104,6 +104,10 @@ missing too:
 A nested object whose values are all missing is missing as well, so a nullable one is
 `null`.
 
+`#[RejectUnknownKeys]` on the class makes a key under the prefix that no property maps from
+fail validation, such as a misspelled `timout`. See [Rejecting unknown
+keys](/docs/roma/v1/validation#rejecting-unknown-keys).
+
 ## Lists, durations and sizes
 
 Three types cover values that are often set in `.env`. They work in requests and plain

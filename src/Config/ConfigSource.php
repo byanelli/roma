@@ -13,7 +13,11 @@ use Illuminate\Contracts\Config\Repository;
  */
 final readonly class ConfigSource extends Source
 {
-    public function __construct(private string $key) {}
+    /**
+     * `$checksKeys` is true for the config object's prefix, whose keys #[RejectUnknownKeys]
+     * checks, and false for the array of a #[ConfigKey], which has other keys.
+     */
+    public function __construct(private string $key, private bool $checksKeys = false) {}
 
     public function getKey(): string
     {
@@ -23,6 +27,11 @@ final readonly class ConfigSource extends Source
     public function inputType(): string
     {
         return Repository::class;
+    }
+
+    public function checkedKeys(object $input): ?array
+    {
+        return $this->checksKeys ? null : [];
     }
 
     /**

@@ -373,6 +373,55 @@ value is ignored fails as required on a `POST`. Both attributes apply in nested 
 the objects of a list. The property's type must include `Missing`; otherwise the class
 definition throws.
 
+### Rejecting unknown keys
+
+Roma ignores input keys that no property maps from. `#[RejectUnknownKeys]` on a class makes
+them fail validation instead, one error per key, keyed by its full path and worded with
+Laravel's `prohibited` message. It applies to the class and its subclasses wherever they are
+mapped: as a request, in `Mapper::fromArray()`, as a config object, or as a nested object of a
+class without the attribute:
+
+```php
+use BYanelli\Roma\Attributes\IgnoreIfEmpty;
+use BYanelli\Roma\Attributes\RejectUnknownKeys;
+use BYanelli\Roma\Missing;
+
+#[RejectUnknownKeys]
+readonly class ExportConfig {
+    public function __construct(
+        public bool $includeHeaders = true,
+    ) {}
+}
+
+readonly class UpdateExportRequest {
+    public function __construct(
+        #[IgnoreIfEmpty]
+        public ExportConfig|Missing $config, // {"k": "v"} -> "The input.config.k field is prohibited."
+    ) {}
+}
+```
+
+A key is known when a property maps from it, by its name, `#[Key]`, `#[SnakeCaseKeys]` or a
+source attribute. The keys of a [dotted key](/docs/roma/v1/sources#nested-keys) such as
+`#[Key('error.message')]` are known down to its end, so `error.code` is unknown. Keys of
+virtual properties are known, since the serializer writes them, and so is the discriminator of
+a [union](/docs/roma/v1/nested-objects#discriminated-unions) member. A key whose value
+`#[IgnoreIf]` or `#[IgnoreIfEmpty]` ignores is still known, and a value that takes a default or
+`Missing` is never checked, since it is absent. A key inside a known key's value is checked
+only if that value is an object whose class has the attribute.
+
+For a request class, only the top-level keys of the JSON or form body are checked, and they are
+known when an input or `#[Body]` property maps from them. Query string, header, cookie, route
+and file keys are never unknown, nor are the `_method` and `_token` fields of Laravel's forms.
+The keys of nested objects are always checked. A [precognitive
+request](/docs/roma/v1/precognition) checks a key only when `Precognition-Validate-Only`
+lists it, or when the header is absent. A config object checks the keys under its prefix,
+but not those beside a `#[ConfigKey]`. A [custom source](/docs/roma/v1/sources#custom-sources)
+checks none unless it overrides `checkedKeys()`.
+
+`#[RejectUnknownKeys(message: 'The :attribute key is not allowed.')]` replaces the message.
+The attribute only applies to a class; on a property it throws when the definition is built.
+
 ### `null` and defaults
 
 An input value of exactly `null` for a property that isn't nullable but has a default takes

@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Validation;
 
 use BYanelli\Roma\Attributes\Message;
+use BYanelli\Roma\Attributes\RejectUnknownKeys;
 use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Property;
 use BYanelli\Roma\Data\Source;
@@ -17,6 +18,7 @@ use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\ObjectValue;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
+use BYanelli\Roma\Validation\Rules\UnknownKey;
 use BYanelli\Roma\Validation\Rules\ValidInterval;
 
 /**
@@ -87,9 +89,12 @@ readonly class ValidationRules
      * discriminator, and the rules for a class that contains itself are only as deep as the
      * data, so an array that contains either gets rules per element. A single-value source's
      * value is validated under the source's key as one segment, e.g. "request.ip". `$isCreate`
-     * makes the #[RequiredOnCreate] properties required.
+     * makes the #[RequiredOnCreate] properties required. `$checkedKeys` are the source's
+     * top-level keys that #[RejectUnknownKeys] checks, or null for all of them.
+     *
+     * @param  ?list<array-key>  $checkedKeys
      */
-    public function __construct(Class_ $class, public Source $source, mixed $data, private bool $isCreate = false)
+    public function __construct(Class_ $class, public Source $source, mixed $data, private bool $isCreate = false, ?array $checkedKeys = [])
     {
         $dataDependent = [];
         $this->findDataDependent($class, [], $dataDependent);
@@ -105,13 +110,25 @@ readonly class ValidationRules
         $messages = [];
         $positions = [];
         $wildcards = [];
+        $groups = [];
 
         foreach ($class->properties as $index => $property) {
             if ($property->isVirtual || $property->source?->isInjected() || $property->source?->getKey() !== $source->getKey()) {
                 continue;
             }
 
-            foreach ($this->entryFromProperty($property, $base) as $entryIndex => $entry) {
+            $groups[$index] = $this->entryFromProperty($property, $base);
+        }
+
+        if ($class->rejectUnknownKeys !== null && ! $single) {
+            $groups[count($class->properties)] = $this->unknownKeyEntries(
+                $this->unknownKeys($this->data, $this->topLevelKeyTree($class), new KeyPath, $checkedKeys),
+                $class->rejectUnknownKeys,
+            );
+        }
+
+        foreach ($groups as $index => $entries) {
+            foreach ($entries as $entryIndex => $entry) {
                 $key = $entry['path']->toRuleKey();
                 $plainKey = $entry['path']->toKey();
 
@@ -139,6 +156,166 @@ readonly class ValidationRules
         $this->messages = $messages;
         $this->positions = $positions;
         $this->wildcards = $wildcards;
+    }
+
+    /**
+     * The known keys of a top-level class: those of the properties of the sources that share
+     * this source's keys, virtual ones included, since they are serialized.
+     *
+     * @return array<array-key, mixed>
+     */
+    private function topLevelKeyTree(Class_ $class): array
+    {
+        $properties = array_filter(
+            $class->properties,
+            fn (Property $property) => $property->source !== null && $this->source->sharesKeysWith($property->source),
+        );
+
+        return $this->keyTree(array_map(fn (Property $property) => $property->keyPath, $properties));
+    }
+
+    /**
+     * The key paths as nested arrays, with true for the end of a path.
+     *
+     * @param  array<KeyPath>  $paths
+     * @return array<array-key, mixed>
+     */
+    private function keyTree(array $paths): array
+    {
+        $tree = [];
+
+        foreach ($paths as $path) {
+            $tree = $this->withPath($tree, $path->segments);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $tree
+     * @param  list<string>  $segments
+     * @return array<array-key, mixed>
+     */
+    private function withPath(array $tree, array $segments): array
+    {
+        if ($segments === []) {
+            return $tree;
+        }
+
+        $segment = array_shift($segments);
+        $node = $tree[$segment] ?? [];
+
+        if ($node !== true) {
+            $tree[$segment] = $segments === [] ? true : $this->withPath(is_array($node) ? $node : [], $segments);
+        }
+
+        return $tree;
+    }
+
+    /**
+     * The paths of the keys of `$data` that aren't in `$tree`. The keys inside a known key's
+     * value are checked only for an object whose class has #[RejectUnknownKeys]. A key with a
+     * '*' is skipped, since Laravel reads it in a rule key as a wildcard.
+     *
+     * @param  array<array-key, mixed>  $data
+     * @param  array<array-key, mixed>  $tree
+     * @param  ?list<array-key>  $checked  the keys of `$data` that may be unknown, or null for all
+     * @return list<KeyPath>
+     */
+    private function unknownKeys(array $data, array $tree, KeyPath $path, ?array $checked = null): array
+    {
+        $checked = $checked === null ? null : array_map(strval(...), $checked);
+        $unknown = [];
+
+        foreach ($data as $key => $value) {
+            $key = (string) $key;
+            $node = $tree[$key] ?? null;
+
+            if (($checked !== null && ! in_array($key, $checked, true)) || str_contains($key, '*')) {
+                continue;
+            }
+
+            if ($node === null) {
+                $unknown[] = $path->append($key);
+            } elseif (is_array($node) && is_array($value)) {
+                $unknown = [...$unknown, ...$this->unknownKeys($value, $node, $path->append($key))];
+            }
+        }
+
+        return $unknown;
+    }
+
+    /**
+     * @param  list<KeyPath>  $paths
+     * @return list<Entry>
+     */
+    private function unknownKeyEntries(array $paths, RejectUnknownKeys $attribute): array
+    {
+        return array_map(fn (KeyPath $path) => [
+            'path' => $path,
+            'rules' => [new UnknownKey($attribute->message)],
+            'name' => $this->prefixedKey($path->toKey()),
+        ], $paths);
+    }
+
+    /**
+     * The unknown keys of the objects at `$path`, whose '*' segments stand for the members of
+     * arrays. A non-empty list fails the object's own rule, so its keys aren't reported.
+     *
+     * @param  ?string  $discriminator  the key of the union the class is a member of
+     * @return list<Entry>
+     */
+    private function objectUnknownKeyEntries(Class_ $class, KeyPath $path, ?string $discriminator): array
+    {
+        if ($class->rejectUnknownKeys === null) {
+            return [];
+        }
+
+        $paths = array_map(fn (Property $property) => $property->keyPath, $class->properties);
+        $tree = $this->keyTree($discriminator !== null ? [...$paths, new KeyPath([$discriminator])] : $paths);
+        $unknown = [];
+
+        foreach ($this->concretePaths($path) as $concrete) {
+            $object = $concrete->getFrom($this->data);
+
+            if (is_array($object) && ($object === [] || ! array_is_list($object))) {
+                $unknown = [...$unknown, ...$this->unknownKeys($object, $tree, $concrete)];
+            }
+        }
+
+        return $this->unknownKeyEntries($unknown, $class->rejectUnknownKeys);
+    }
+
+    /**
+     * The paths in the data that `$path` matches, with each '*' replaced by an array key.
+     *
+     * @return list<KeyPath>
+     */
+    private function concretePaths(KeyPath $path): array
+    {
+        $paths = [new KeyPath];
+
+        foreach ($path->segments as $segment) {
+            $next = [];
+
+            foreach ($paths as $concrete) {
+                if ($segment !== '*') {
+                    $next[] = $concrete->append($segment);
+
+                    continue;
+                }
+
+                $value = $concrete->getFrom($this->data);
+
+                foreach (is_array($value) ? array_keys($value) : [] as $key) {
+                    $next[] = $concrete->append((string) $key);
+                }
+            }
+
+            $paths = $next;
+        }
+
+        return $paths;
     }
 
     /**
@@ -316,7 +493,7 @@ readonly class ValidationRules
                 'rules' => [new DiscriminatorIn($path, $union->values())],
                 'name' => "$name.$union->key",
             ],
-            ...($member !== null ? $this->objectMemberEntries($member, $path, $name) : []),
+            ...($member !== null ? $this->objectMemberEntries($member, $path, $name, $union->key) : []),
         ];
     }
 
@@ -411,9 +588,10 @@ readonly class ValidationRules
     }
 
     /**
+     * @param  ?string  $discriminator  the key of the union the class is a member of
      * @return list<Entry>
      */
-    private function objectMemberEntries(Class_ $class, KeyPath $path, string $name): array
+    private function objectMemberEntries(Class_ $class, KeyPath $path, string $name, ?string $discriminator = null): array
     {
         $entries = [];
 
@@ -433,7 +611,7 @@ readonly class ValidationRules
             ))];
         }
 
-        return $entries;
+        return [...$entries, ...$this->objectUnknownKeyEntries($class, $path, $discriminator)];
     }
 
     /**

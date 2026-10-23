@@ -272,12 +272,16 @@ the tag to an overridden method, so the `@param` on `read()` repeats the type fo
 wherever the input is of its type, so `Tenant` works in a request, and a class that uses it
 throws under `Mapper::fromArray()`.
 
-Three methods are optional. `normalizeKey()` converts a property's key to its key in
+Five methods are optional. `normalizeKey()` converts a property's key to its key in
 `read()`'s array, as the header source does with `Content-Type` and `content_type`.
 `isSingleValue()` returns true when `read()` returns one value for the property instead of an
 array, as for an accessor such as `#[Ip]`; that property's error key is the source's key.
 `nestsKeys()` returns false when `read()`'s array is flat, as headers are, so that a dot in a
 key is part of the key instead of [separating nested keys](#nested-keys).
+`checkedKeys()` returns the top-level keys of `read()`'s array that
+[`#[RejectUnknownKeys]`](/docs/roma/v1/validation#rejecting-unknown-keys) checks, or null for
+all of them; it returns none by default. `sharesKeysWith()` returns true for another source
+whose properties' keys count as known for those keys, as the input and `#[Body]` sources do.
 
 The source's data is validated on its own, and its errors are keyed under its key, such as
 `tenant.tenant_id`. Two different sources with the same key in one class throw when the

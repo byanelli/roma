@@ -10,6 +10,7 @@ use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
+use BYanelli\Roma\Attributes\RejectUnknownKeys;
 use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\RulePerItem;
 use BYanelli\Roma\Attributes\Unit;
@@ -808,7 +809,25 @@ class ClassDefinitionBuilder
 
         $this->assertDistinctKeys($class, $properties);
 
-        return new Class_(class: $class->getName(), properties: $properties);
+        return new Class_(class: $class->getName(), properties: $properties, rejectUnknownKeys: $this->rejectUnknownKeys($class));
+    }
+
+    /**
+     * The #[RejectUnknownKeys] of the class or of its nearest parent with one.
+     *
+     * @param  ReflectionClass<object>  $class
+     */
+    private function rejectUnknownKeys(ReflectionClass $class): ?RejectUnknownKeys
+    {
+        for ($current = $class; $current !== false; $current = $current->getParentClass()) {
+            $attribute = $current->getAttributes(RejectUnknownKeys::class)[0] ?? null;
+
+            if ($attribute !== null) {
+                return $attribute->newInstance();
+            }
+        }
+
+        return null;
     }
 
     /**

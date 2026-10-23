@@ -29,7 +29,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `RequiredOnCreate`, `IgnoreIf`, `IgnoreIfEmpty`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `RequiredOnCreate`, `IgnoreIf`, `IgnoreIfEmpty`, `RejectUnknownKeys`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -94,6 +94,11 @@ class CreateContactController {
   validated, not serialized. `null`, `"0"`, `0`, `false` are kept. `#[IgnoreIf(callable)]`
   (repeatable) does the same when the callable returns true for the raw value. Both need
   `Missing` in the type, else they throw.
+- `#[RejectUnknownKeys]` (class only, inherited by subclasses, also as a nested object) makes
+  keys no property maps from fail with Laravel's `prohibited` message, keyed by full path
+  (`input.config.k`); `message:` replaces it. Requests check only top-level body keys (not
+  query, headers, `_method`, `_token`); nested objects are always checked. Ignored and
+  virtual properties' keys and union discriminators are known.
 - `#[DateFormat('Y-m-d')]` on a date property requires input in that format (`date_format`
   rule), parses it with `createFromFormat`, and serializes it in the same format. It covers
   the dates in an array, map or shape property, never those inside a nested object, and
