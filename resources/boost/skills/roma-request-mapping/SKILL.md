@@ -168,7 +168,8 @@ attribute, so `#[Query('a')]` with `#[Key('b')]` throws, as does an empty key
 (`#[Key('')]`) or two properties on the same key of one source or nested class. The serializer writes the property under the same key, from `#[Key]` or a
 source attribute. A nested class may contain itself (`list<Comment>` in `Comment`,
 `?Node $parent`); its rules are built from the data, and errors keep full keys such as
-`input.replies.0.replies.1.body`.
+`input.replies.0.replies.1.body`. A non-empty list for a nested object fails ("must be an
+object", `#[Message(object: ...)]`); an empty one maps as `{}`.
 
 A property that can be one of several classes is a discriminated union: type it as an
 interface, an abstract class or a native union, and list the classes with

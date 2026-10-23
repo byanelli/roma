@@ -4,6 +4,11 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: a non-empty list, such as JSON `["x"]`, for a property typed as a class, an
+  object in a list or a discriminated union fails validation with "The input.config field
+  must be an object." instead of mapping as an object with its defaults.
+  `#[Message(object: '...')]` replaces the message. An empty list still maps as an empty
+  object, since JSON `{}` decodes to one, and the top level of a mapping isn't checked.
 - `#[RequiredOnCreate]` makes an optional property, such as one typed `T|Missing`, required
   when the request is a POST, as `Request::isMethod('POST')` reports it, so one class can
   serve POST and PUT. On other methods and outside a request it stays optional, and

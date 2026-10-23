@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Attributes;
 
 use Attribute;
 use BYanelli\Roma\Validation\Rules\EnumCase;
+use BYanelli\Roma\Validation\Rules\ObjectValue;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use Illuminate\Support\Str;
@@ -18,13 +19,14 @@ use InvalidArgumentException;
 final readonly class Message
 {
     /**
-     * Roma validates these Laravel rules with rule objects, whose messages Laravel looks up by
-     * the snake case of the class name.
+     * Roma checks these rules with rule objects, whose messages Laravel looks up by the snake
+     * case of the class name. "object" is Roma's own rule, which rejects a list for an object.
      */
     private const array RULE_OBJECTS = [
         'required' => RequiredWithinObject::class,
         'boolean' => ScalarBoolean::class,
         'enum' => EnumCase::class,
+        'object' => ObjectValue::class,
     ];
 
     /**

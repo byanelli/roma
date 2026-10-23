@@ -14,6 +14,7 @@ use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\DiscriminatorIn;
 use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
+use BYanelli\Roma\Validation\Rules\ObjectValue;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use BYanelli\Roma\Validation\Rules\ValidInterval;
@@ -185,7 +186,8 @@ readonly class ValidationRules
                 $type->keyType instanceof Types\Integer => ['array', new IntegerKeys],
                 default => ['array'],
             },
-            $type instanceof Class_, $type instanceof Types\Shape, $type instanceof Types\Union => ['array'],
+            $type instanceof Class_, $type instanceof Types\Union => ['array', new ObjectValue],
+            $type instanceof Types\Shape => ['array'],
             $type instanceof Types\Enum => [new EnumCase($type->class)],
             default => [],
         };

@@ -51,6 +51,18 @@ readonly class OrderRequest {
 }
 ```
 
+## Lists for objects
+
+An object must be a JSON object. A list such as `["x"]` for a nested object, an object in a
+list or a [discriminated union](#discriminated-unions) fails with "The input.address field
+must be an object.", which `#[Message(object: '...')]` replaces. A value that isn't an array
+fails with Laravel's `array` message. An empty list passes and maps as an empty object, since
+PHP decodes both `[]` and `{}` to an empty array.
+
+The top level of a mapping isn't checked: a request body or `Mapper::fromArray()` array that
+is a list is read by its keys `0`, `1` and so on, which no property has unless one declares
+such a key.
+
 ## Classes that contain themselves
 
 A nested class may contain itself, directly or through other classes, for trees such as

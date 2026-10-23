@@ -151,7 +151,9 @@ readonly class CreateContactRequest {
 ```
 
 The message for `required`, `boolean` or `enum` also applies where Roma checks that rule
-itself, such as a required property of a nested object. A message on a nested class's
+itself, such as a required property of a nested object. The message for `object` applies
+when a nested object is given a list (see [Lists for
+objects](/docs/roma/v1/nested-objects#lists-for-objects)). A message on a nested class's
 property applies wherever the class is used, including the elements of a list.
 
 ## Custom error responses
