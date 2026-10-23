@@ -12,7 +12,7 @@ use InvalidArgumentException;
  * Profile::storage(). A null column reads as null, and a stored value that can't be read
  * throws InvalidAttributeValue.
  */
-final class AsRoma implements Castable
+final class AsMappedObject implements Castable
 {
     /**
      * A null JSON column reads as the class mapped from an empty array, and stays null on save.
@@ -26,7 +26,7 @@ final class AsRoma implements Castable
     public const string NULL_WHEN_INVALID = 'null-when-invalid';
 
     /**
-     * The cast for the class, as in `'settings' => AsRoma::of(Settings::class)`.
+     * The cast for the class, as in `'settings' => AsMappedObject::of(Settings::class)`.
      *
      * @param  class-string  $class
      */
@@ -49,13 +49,13 @@ final class AsRoma implements Castable
         $class = array_shift($arguments);
 
         if (! is_string($class) || ! class_exists($class)) {
-            throw new InvalidArgumentException('Roma AsRoma needs a class, as in AsRoma::of(Settings::class).');
+            throw new InvalidArgumentException('Roma AsMappedObject needs a class, as in AsMappedObject::of(Settings::class).');
         }
 
         $unknown = array_diff($arguments, [self::DEFAULT_WHEN_NULL, self::NULL_WHEN_INVALID]);
 
         if ($unknown !== []) {
-            throw new InvalidArgumentException('Roma AsRoma has no option '.implode(', ', $unknown).'.');
+            throw new InvalidArgumentException('Roma AsMappedObject has no option '.implode(', ', $unknown).'.');
         }
 
         $defaultWhenNull = in_array(self::DEFAULT_WHEN_NULL, $arguments, true);
@@ -66,7 +66,7 @@ final class AsRoma implements Castable
         }
 
         if ($defaultWhenNull) {
-            throw new InvalidArgumentException("Roma AsRoma's ".self::DEFAULT_WHEN_NULL." option applies to classes stored as JSON, and {$class} is StringBacked.");
+            throw new InvalidArgumentException("Roma AsMappedObject's ".self::DEFAULT_WHEN_NULL." option applies to classes stored as JSON, and {$class} is StringBacked.");
         }
 
         return new StringBackedCast($class, $nullWhenInvalid);

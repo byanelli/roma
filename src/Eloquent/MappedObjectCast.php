@@ -13,7 +13,7 @@ use InvalidArgumentException;
 
 /**
  * Casts a JSON object column to a class with Mapper::fromArray(), and stores the class with
- * Profile::storage(). Created by AsRoma.
+ * Profile::storage(). Created by AsMappedObject.
  *
  * @internal
  *

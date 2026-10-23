@@ -4,7 +4,7 @@
 
 use BYanelli\Roma\Attributes\SnakeCaseKeys;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Eloquent\AsRoma;
+use BYanelli\Roma\Eloquent\AsMappedObject;
 use BYanelli\Roma\Eloquent\InvalidAttributeValue;
 use BYanelli\Roma\Eloquent\MappedObjectCast;
 use BYanelli\Roma\Eloquent\StringBacked;
@@ -55,11 +55,11 @@ class CastRecord extends Model
     protected function casts(): array
     {
         return [
-            'settings' => AsRoma::of(CastSettings::class),
-            'defaulted' => AsRoma::of(CastSettings::class, defaultWhenNull: true),
-            'lenient' => AsRoma::of(CastSettings::class, nullWhenInvalid: true),
-            'postcode' => AsRoma::class.':'.CastPostcode::class,
-            'lenient_postcode' => AsRoma::of(CastPostcode::class, nullWhenInvalid: true),
+            'settings' => AsMappedObject::of(CastSettings::class),
+            'defaulted' => AsMappedObject::of(CastSettings::class, defaultWhenNull: true),
+            'lenient' => AsMappedObject::of(CastSettings::class, nullWhenInvalid: true),
+            'postcode' => AsMappedObject::class.':'.CastPostcode::class,
+            'lenient_postcode' => AsMappedObject::of(CastPostcode::class, nullWhenInvalid: true),
         ];
     }
 }
@@ -244,25 +244,25 @@ describe('a StringBacked column', function () {
 
 describe('the cast arguments', function () {
     it('chooses the cast by the class', function () {
-        expect(AsRoma::castUsing([CastSettings::class]))->toBeInstanceOf(MappedObjectCast::class)
-            ->and(AsRoma::castUsing([CastPostcode::class]))->toBeInstanceOf(StringBackedCast::class);
+        expect(AsMappedObject::castUsing([CastSettings::class]))->toBeInstanceOf(MappedObjectCast::class)
+            ->and(AsMappedObject::castUsing([CastPostcode::class]))->toBeInstanceOf(StringBackedCast::class);
     });
 
     it('lists the options after the class', function () {
-        expect(AsRoma::of(CastSettings::class))->toBe(AsRoma::class.':'.CastSettings::class)
-            ->and(AsRoma::of(CastSettings::class, defaultWhenNull: true, nullWhenInvalid: true))
-            ->toBe(AsRoma::class.':'.CastSettings::class.',default-when-null,null-when-invalid');
+        expect(AsMappedObject::of(CastSettings::class))->toBe(AsMappedObject::class.':'.CastSettings::class)
+            ->and(AsMappedObject::of(CastSettings::class, defaultWhenNull: true, nullWhenInvalid: true))
+            ->toBe(AsMappedObject::class.':'.CastSettings::class.',default-when-null,null-when-invalid');
     });
 
     it('throws for a missing class, an unknown option, or DEFAULT_WHEN_NULL on a StringBacked class', function (array $arguments, string $message) {
-        expect(fn () => AsRoma::castUsing($arguments))->toThrow(InvalidArgumentException::class, $message);
+        expect(fn () => AsMappedObject::castUsing($arguments))->toThrow(InvalidArgumentException::class, $message);
     })->with([
-        'no class' => [[], 'Roma AsRoma needs a class, as in AsRoma::of(Settings::class).'],
-        'not a class' => [['NoSuchClass'], 'Roma AsRoma needs a class'],
-        'unknown option' => [[CastSettings::class, 'lenient'], 'Roma AsRoma has no option lenient.'],
+        'no class' => [[], 'Roma AsMappedObject needs a class, as in AsMappedObject::of(Settings::class).'],
+        'not a class' => [['NoSuchClass'], 'Roma AsMappedObject needs a class'],
+        'unknown option' => [[CastSettings::class, 'lenient'], 'Roma AsMappedObject has no option lenient.'],
         'default for a string' => [
-            [CastPostcode::class, AsRoma::DEFAULT_WHEN_NULL],
-            "Roma AsRoma's default-when-null option applies to classes stored as JSON, and CastPostcode is StringBacked.",
+            [CastPostcode::class, AsMappedObject::DEFAULT_WHEN_NULL],
+            "Roma AsMappedObject's default-when-null option applies to classes stored as JSON, and CastPostcode is StringBacked.",
         ],
     ]);
 });

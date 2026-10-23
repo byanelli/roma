@@ -7,7 +7,7 @@ use Throwable;
 use UnexpectedValueException;
 
 /**
- * A stored attribute value that an AsRoma cast can't read.
+ * A stored attribute value that an AsMappedObject cast can't read.
  */
 class InvalidAttributeValue extends UnexpectedValueException
 {
