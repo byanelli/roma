@@ -28,10 +28,13 @@ and DTO in one.
 - For typed, validated config, prefer a Roma config object (`#[ConfigObject('services.x')]`)
   over `(string) config('services.x.key')` casts; inject it by type-hint and run
   `php artisan roma:config:validate` in CI and deploys.
+- For a model attribute that holds a typed object, prefer `AsRoma::of(Settings::class)` in
+  `casts()` over the `array` cast or a hand-written cast. A value object stored as a string
+  implements `StringBacked`.
 
 Full documentation: https://yanelli.dev/docs/roma (Markdown: https://yanelli.dev/docs/roma.md).
 
 IMPORTANT: Activate the `roma-request-mapping` skill whenever creating or editing Roma
 request/response objects, HTTP client request or response classes, config objects,
-source-binding attributes, header value objects, TypeScript generation, or Precognition
-validation.
+source-binding attributes, header value objects, Eloquent casts, TypeScript generation, or
+Precognition validation.

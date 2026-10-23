@@ -4,6 +4,14 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `Eloquent\AsRoma` casts a model attribute to a class: `AsRoma::of(Settings::class)`. A
+  class is stored as a JSON object, mapped with `Mapper::fromArray()` when read or set from
+  an array, and stored and serialized with `Profile::storage()`. A class that implements
+  `Eloquent\StringBacked` (`static parse(string): ?static` and `toString()`) is stored as a
+  string; a string set on the attribute is stored as given and serialized as stored. A null
+  column reads as null, or with `defaultWhenNull` as the class mapped from an empty array. A
+  stored value that can't be read throws `Eloquent\InvalidAttributeValue` with the model's
+  class, key and the attribute, or with `nullWhenInvalid` reads as null.
 - A `string` property accepts an int or float input and maps it to its string form, such as
   `35201` to `"35201"`, in the body, nested objects, lists, shapes and `Mapper::fromArray()`.
   It only accepts more input; a number used to fail validation. `#[RejectNumbers]` on a

@@ -9,7 +9,8 @@ description: >-
   #[Guard], #[Rule], Roma TypeScript generation (roma:typescript), or Roma
   Precognition, Roma JSON Schema for tools (ClassSchema), Roma config objects
   (#[ConfigObject], #[ConfigKey], roma:config:validate), or Roma's typed HTTP client
-  (TypedFactory, sendRequest(), RomaHttp, #[Get]/#[Post], #[Responses]). Do NOT use for plain Laravel FormRequests that are not mapped to a
+  (TypedFactory, sendRequest(), RomaHttp, #[Get]/#[Post], #[Responses]), or Roma
+  Eloquent casts (AsRoma, StringBacked). Do NOT use for plain Laravel FormRequests that are not mapped to a
   typed object, for Eloquent API Resources, or for other DTOs that Roma doesn't map.
 ---
 
@@ -38,6 +39,7 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`), `Serializer`, `RomaHttp` |
 | `BYanelli\Roma\JsonSchema` | `ClassSchema` |
 | `BYanelli\Roma\Config` | `ConfigObject`, `ConfigKey`, `ConfigValidationException` |
+| `BYanelli\Roma\Eloquent` | `AsRoma`, `StringBacked`, `InvalidAttributeValue` |
 | `BYanelli\Roma\Http\Client` | `Contracts\TypedFactory`, `TypedPendingRequest`; `Attributes\{Get, Head, Post, Put, Patch, Delete, Url, AsForm, AsMultipart, Responses}`; `Exceptions\{MalformedResponseException, UnmatchedResponseException}` |
 
 ## Defining and injecting a request
@@ -290,6 +292,36 @@ readonly class ScrapflyConfig {
   in `roma.discover` and exits 1 on failure. Run it in CI and in the deploy script:
   `optimize` runs it too but ignores failures. Classes used only with parameter-level
   prefixes aren't checked.
+
+## Eloquent casts
+
+Cast a model attribute to a class with `AsRoma::of()` in the model's `casts()` method,
+instead of a hand-written cast or the `array` cast plus manual mapping:
+
+```php
+protected function casts(): array
+{
+    return [
+        'settings' => AsRoma::of(Settings::class),                         // JSON object column
+        'config'   => AsRoma::of(FeedConfig::class, defaultWhenNull: true), // null column reads as defaults
+        'postcode' => AsRoma::of(Postcode::class, nullWhenInvalid: true),   // string column
+    ];
+}
+```
+
+- Any class is stored as a JSON object: read and set arrays are mapped with
+  `Mapper::fromArray()` (invalid arrays throw `MappingValidationException`), objects are
+  stored and serialized with `Profile::storage()`. Use `#[SnakeCaseKeys]` for snake_case JSON.
+- A class implementing `StringBacked` (`static parse(string): ?static`, null when invalid,
+  and `toString()`) is stored as a string. A set string is stored as given (it must parse
+  unless `nullWhenInvalid`) and `toArray()` writes the stored string.
+- Null reads as null; `defaultWhenNull` (JSON only) reads it as the class mapped from `[]`
+  and leaves the column null. An unreadable stored value throws `InvalidAttributeValue` (an
+  `UnexpectedValueException` with the model class, key and attribute); `nullWhenInvalid`
+  reads it as null.
+- Object caching is off, so reading never rewrites the stored value; assign a new object to
+  change it. In a `$casts` property write `AsRoma::class.':'.Settings::class`, with options
+  `,default-when-null` / `,null-when-invalid`.
 
 ## HTTP client
 

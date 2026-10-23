@@ -115,6 +115,9 @@ readonly class ScrapflyConfig {
   from its exception messages.
 - **Plain arrays too.** `Mapper::fromArray(Settings::class, $array)` maps and validates an
   array, such as tool input or a stored value, onto the same classes.
+- **Eloquent casts.** `'settings' => AsRoma::of(Settings::class)` stores an attribute as a
+  JSON object, mapped and validated when it is read or set from an array. A value object that implements
+  `StringBacked` (`parse()` and `toString()`) is stored as a string instead, such as a postcode.
 - **TypeScript generation.** `php artisan roma:typescript` emits interfaces for your
   requests and responses — one source of truth for your frontend (great with Inertia).
 - **JSON Schema.** `ClassSchema::properties(SearchInput::class)` builds Laravel `JsonSchema`
@@ -125,7 +128,8 @@ readonly class ScrapflyConfig {
 
 See the **[full documentation](https://yanelli.dev/docs/roma)** for everything: request
 objects, sources, validation & guards, headers & metadata, nested objects, responses, the HTTP
-client, config objects, TypeScript generation, JSON Schema, and Precognition.
+client, config objects, Eloquent casts, TypeScript generation, JSON Schema, and
+Precognition.
 
 ## Testing
 

@@ -37,3 +37,7 @@ arch('the generic value objects do not depend on HTTP')
 arch('the HTTP client does not depend on server requests or routing')
     ->expect('BYanelli\Roma\Http\Client')
     ->not->toUse(['Illuminate\Http\Request', 'Illuminate\Routing', 'BYanelli\Roma\Http\Request\Injection', 'BYanelli\Roma\Http\Request\Precognition']);
+
+arch('the Eloquent casts do not depend on HTTP')
+    ->expect('BYanelli\Roma\Eloquent')
+    ->not->toUse($http);
