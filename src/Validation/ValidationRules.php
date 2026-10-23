@@ -85,9 +85,10 @@ readonly class ValidationRules
      * `$data` is the coerced data of `$source`. The rules for a union depend on its
      * discriminator, and the rules for a class that contains itself are only as deep as the
      * data, so an array that contains either gets rules per element. A single-value source's
-     * value is validated under the source's key as one segment, e.g. "request.ip".
+     * value is validated under the source's key as one segment, e.g. "request.ip". `$isCreate`
+     * makes the #[RequiredOnCreate] properties required.
      */
-    public function __construct(Class_ $class, public Source $source, mixed $data)
+    public function __construct(Class_ $class, public Source $source, mixed $data, private bool $isCreate = false)
     {
         $dataDependent = [];
         $this->findDataDependent($class, [], $dataDependent);
@@ -226,7 +227,7 @@ readonly class ValidationRules
             $property->type,
             $base->concat($property->keyPath),
             $property->errorKey,
-            [...$this->leadingRules($property->nullable, $property->isRequired, null), ...$property->rules],
+            [...$this->leadingRules($property->nullable, $property->isRequiredFor($this->isCreate), null), ...$property->rules],
             $property->itemRules,
         ));
     }
@@ -425,7 +426,7 @@ readonly class ValidationRules
                 $member->type,
                 $path->concat($member->keyPath),
                 "$name.{$member->keyPath->toKey()}",
-                [...$this->leadingRules($member->nullable, $member->isRequired, $path), ...$member->rules],
+                [...$this->leadingRules($member->nullable, $member->isRequiredFor($this->isCreate), $path), ...$member->rules],
                 $member->itemRules,
             ))];
         }

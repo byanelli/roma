@@ -11,6 +11,7 @@ use BYanelli\Roma\Missing;
 use BYanelli\Roma\Validation\ValidationRules;
 use Carbon\CarbonInterface;
 use Carbon\CarbonInterval;
+use Closure;
 use DateInterval;
 use DateTimeInterface;
 use Illuminate\Support\Arr;
@@ -35,6 +36,7 @@ class ClassMapping
 
     /**
      * At the top level `$data` is keyed by source key; a nested object's data is its own slice.
+     * `$isCreate` applies to the top level, whose validation rules cover the nested objects.
      *
      * @param  array<string, mixed>  $data
      */
@@ -42,17 +44,20 @@ class ClassMapping
         private readonly Class_ $class,
         array $data,
         private readonly DateFactory $dateFactory,
+        private readonly bool $isCreate = false,
     ) {
         $this->data = $data;
 
+        $this->removeIgnoredValues();
         $this->removeDefaultedNulls();
         $this->castData();
     }
 
     /**
-     * Reads only the sources the class's properties map from.
+     * Reads only the sources the class's properties map from. `$isCreate` makes the
+     * #[RequiredOnCreate] properties required.
      */
-    public static function fromInput(Class_ $class, object $input, DateFactory $dateFactory = new DateFactory): self
+    public static function fromInput(Class_ $class, object $input, bool $isCreate = false, DateFactory $dateFactory = new DateFactory): self
     {
         $data = [];
 
@@ -60,7 +65,7 @@ class ClassMapping
             $data[$key] = $source->readFrom($input);
         }
 
-        return new self($class, $data, $dateFactory);
+        return new self($class, $data, $dateFactory, $isCreate);
     }
 
     /**
@@ -390,6 +395,27 @@ class ClassMapping
     }
 
     /**
+     * Removes the raw values that a property's #[IgnoreIf] or #[IgnoreIfEmpty] matches, so they
+     * validate and map as absent.
+     */
+    private function removeIgnoredValues(): void
+    {
+        foreach ($this->class->properties as $property) {
+            $path = $property->fullKey();
+
+            if ($property->ignoreIf === [] || ! $path->existsIn($this->data)) {
+                continue;
+            }
+
+            $value = $path->getFrom($this->data);
+
+            if (array_any($property->ignoreIf, fn (Closure $ignores) => $ignores($value) === true)) {
+                $path->removeFrom($this->data);
+            }
+        }
+    }
+
+    /**
      * Removes the nulls of properties that take their default for null, so they validate and
      * map as absent.
      */
@@ -651,7 +677,7 @@ class ClassMapping
     public function validationRules(): array
     {
         return $this->validationRules ??= array_values(array_map(
-            fn (Source $source) => new ValidationRules($this->class, $source, $this->normalizeValue($this->data[$source->getKey()] ?? null)),
+            fn (Source $source) => new ValidationRules($this->class, $source, $this->normalizeValue($this->data[$source->getKey()] ?? null), $this->isCreate),
             array_filter($this->class->sources(), fn (Source $source) => ! $source->isInjected()),
         ));
     }

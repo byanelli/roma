@@ -29,7 +29,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `RequiredOnCreate`, `IgnoreIf`, `IgnoreIfEmpty`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -86,6 +86,14 @@ class CreateContactController {
   redundant there. `Missing` alone (`Missing`, `?Missing`) throws; write `string|Missing`. A
   non-promoted `#[Optional]` property without `Missing` stays unset when absent. An
   `#[Optional]` parameter that is not nullable, has no `Missing` and no default throws. The serializer omits `Missing` values and TypeScript emits `x?: T`.
+- `#[RequiredOnCreate]` on an optional property (usually `T|Missing`) adds `required` on a
+  POST (`Request::isMethod('POST')`, so `_method=PUT` is a PUT); on other methods and in
+  `Mapper::fromArray()` it stays optional. `#[Message(required: ...)]` applies. On an
+  always-required property it throws.
+- `#[IgnoreIfEmpty]` treats a raw `''` or `[]` (JSON `{}` too) as absent: `Missing`, not
+  validated, not serialized. `null`, `"0"`, `0`, `false` are kept. `#[IgnoreIf(callable)]`
+  (repeatable) does the same when the callable returns true for the raw value. Both need
+  `Missing` in the type, else they throw.
 - `#[DateFormat('Y-m-d')]` on a date property requires input in that format (`date_format`
   rule), parses it with `createFromFormat`, and serializes it in the same format. It covers
   the dates in an array, map or shape property, never those inside a nested object, and

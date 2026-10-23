@@ -4,6 +4,15 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[RequiredOnCreate]` makes an optional property, such as one typed `T|Missing`, required
+  when the request is a POST, as `Request::isMethod('POST')` reports it, so one class can
+  serve POST and PUT. On other methods and outside a request it stays optional, and
+  `#[Message(required: ...)]` applies. On a property that is always required, it throws when
+  the definition is built. `SourcePolicy` has a new `isCreate()` method.
+- `#[IgnoreIf(callable)]` treats a property's key as absent when the callable returns true for
+  the raw input value, and `#[IgnoreIfEmpty]` does so for exactly `''` or `[]`, such as a JSON
+  `{}`. An ignored value isn't validated, maps to `Missing` and isn't serialized. On a property
+  whose type has no `Missing`, either throws when the definition is built.
 - `#[RulePerItem(...)]` sets the validation rules for each item of an array property, in the
   forms `#[Rule]` accepts. Errors are keyed by the item, such as `input.emails.1`, the
   property's `#[Message]` applies to its items, and the rules add their JSON Schema keywords

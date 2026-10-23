@@ -2,6 +2,8 @@
 
 namespace BYanelli\Roma\Data;
 
+use Closure;
+
 readonly class Property
 {
     public bool $isRequired;
@@ -19,6 +21,8 @@ readonly class Property
      * @param  array<int, mixed>  $rules
      * @param  array<int, object>  $rawAttributes
      * @param  list<mixed>  $itemRules  the rules for each item of an array, from #[RulePerItem]
+     * @param  bool  $requiredOnCreate  from #[RequiredOnCreate]: required when the input is a create
+     * @param  list<Closure(mixed): bool>  $ignoreIf  tests of the raw input value; a match treats the key as absent
      */
     public function __construct(
         public string $name,
@@ -36,6 +40,8 @@ readonly class Property
         public bool $optional = false,
         public bool $nullTakesDefault = false,
         public array $itemRules = [],
+        public bool $requiredOnCreate = false,
+        public array $ignoreIf = [],
     ) {
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).
@@ -79,5 +85,13 @@ readonly class Property
         }
 
         return null;
+    }
+
+    /**
+     * Whether the property is required, given whether the input is a create.
+     */
+    public function isRequiredFor(bool $isCreate): bool
+    {
+        return $this->isRequired || ($isCreate && $this->requiredOnCreate);
     }
 }

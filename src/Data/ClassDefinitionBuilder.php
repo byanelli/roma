@@ -4,10 +4,13 @@ namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Attributes\Delimited;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\IgnoreIf;
+use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
+use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\RulePerItem;
 use BYanelli\Roma\Attributes\Unit;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
@@ -22,6 +25,7 @@ use BYanelli\Roma\Data\Sources\InputObject;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Data\Types\Mixed_;
 use BYanelli\Roma\Missing;
+use Closure;
 use DateInterval;
 use Illuminate\Http\UploadedFile;
 use InvalidArgumentException;
@@ -71,7 +75,7 @@ class ClassDefinitionBuilder
         $key = $attributes->declaredKey() ?: $this->policy->defaultKey($prop->defaultKey);
         $optional = $prop->acceptsMissing || $attributes->hasInstanceOf(Optional::class);
 
-        return new Property(
+        $property = new Property(
             name: $prop->name,
             keyPath: $this->keyPath($source, $key, $prop->name),
             wirePath: $this->splitKey($source, $attributes->wireKey() ?: $key, $prop->name),
@@ -88,7 +92,62 @@ class ClassDefinitionBuilder
             optional: $optional,
             nullTakesDefault: $this->nullTakesDefault($prop),
             itemRules: $attributes->firstInstanceOf(RulePerItem::class)->rules ?? [],
+            requiredOnCreate: $attributes->hasInstanceOf(RequiredOnCreate::class),
+            ignoreIf: $this->ignoreIf($prop, $source),
         );
+
+        if ($property->requiredOnCreate && $property->isRequired) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[RequiredOnCreate], but it is always required, since its type has no "
+                .'Missing and it has no default. Add Missing to its type, e.g. string|Missing, so it may be absent from an update.'
+            );
+        }
+
+        return $property;
+    }
+
+    /**
+     * The tests of #[IgnoreIf] and #[IgnoreIfEmpty]. An ignored value is absent, so the property's
+     * type must include Missing.
+     *
+     * @return list<Closure(mixed): bool>
+     */
+    private function ignoreIf(ReflectionParamOrProperty $prop, ?Source $source): array
+    {
+        $tests = [];
+        $attribute = null;
+
+        foreach ($prop->attributes as $candidate) {
+            $test = match (true) {
+                $candidate instanceof IgnoreIf => $candidate->callback,
+                $candidate instanceof IgnoreIfEmpty => static fn (mixed $value): bool => $value === '' || $value === [],
+                default => null,
+            };
+
+            if ($test !== null) {
+                $tests[] = $test;
+                $attribute ??= class_basename($candidate);
+            }
+        }
+
+        if ($attribute === null) {
+            return [];
+        }
+
+        if (! $prop->acceptsMissing) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[{$attribute}], which treats a value as absent, but its type has no "
+                .'Missing. Add Missing to its type, e.g. string|Missing.'
+            );
+        }
+
+        if ($source?->isInjected()) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" is not read from the input, so #[{$attribute}] has no effect. Remove it."
+            );
+        }
+
+        return $tests;
     }
 
     /**

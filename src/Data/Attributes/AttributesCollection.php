@@ -5,12 +5,15 @@ namespace BYanelli\Roma\Data\Attributes;
 use BYanelli\Roma\Attributes\AutoDiscriminated;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\IgnoreIf;
+use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
+use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Serialization\Destination;
@@ -45,6 +48,9 @@ final class AttributesCollection extends Collection
         Message::class,
         Optional::class,
         RulesAttribute::class,
+        RequiredOnCreate::class,
+        IgnoreIf::class,
+        IgnoreIfEmpty::class,
     ];
 
     /**
@@ -285,7 +291,8 @@ final class AttributesCollection extends Collection
     public function assertAllowedOnVirtual(): void
     {
         foreach ($this->declared() as $attribute) {
-            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute || $attribute instanceof Message || $attribute instanceof MapTransform || $attribute instanceof RejectNull || $attribute instanceof RejectNumbers)
+            if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute || $attribute instanceof Message || $attribute instanceof MapTransform || $attribute instanceof RejectNull || $attribute instanceof RejectNumbers
+                || $attribute instanceof RequiredOnCreate || $attribute instanceof IgnoreIf || $attribute instanceof IgnoreIfEmpty)
                 && ! $attribute instanceof DestinationAttribute) {
                 throw new RuntimeException(
                     "Roma property \"{$this->property->printableName}\" is virtual (a hooked property with no backing value), so it is never "

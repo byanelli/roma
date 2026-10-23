@@ -65,7 +65,7 @@ readonly class ObjectMapper
     {
         $class = new ClassDefinitionBuilder($policy)->buildClassDefinition($className);
 
-        return ClassMapping::fromInput($class, $input);
+        return ClassMapping::fromInput($class, $input, $policy->isCreate($input));
     }
 
     /**

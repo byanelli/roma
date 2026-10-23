@@ -63,4 +63,12 @@ readonly class RequestSourcePolicy implements SourcePolicy
     {
         return in_array($destination, [Destination::Header, Destination::Query, Destination::Path, Destination::Body], true);
     }
+
+    /**
+     * A POST, as Request::isMethod() reports it, so a form's _method override counts.
+     */
+    public function isCreate(object $input): bool
+    {
+        return $input instanceof Request && $input->isMethod('POST');
+    }
 }

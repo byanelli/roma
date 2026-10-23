@@ -54,4 +54,9 @@ readonly class ArrayPolicy implements SourcePolicy
     {
         return false;
     }
+
+    public function isCreate(object $input): bool
+    {
+        return false;
+    }
 }

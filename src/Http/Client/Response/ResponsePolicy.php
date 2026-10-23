@@ -71,4 +71,9 @@ final readonly class ResponsePolicy implements SourcePolicy
     {
         return in_array($destination, [Destination::Body, Destination::Header, Destination::Status], true);
     }
+
+    public function isCreate(object $input): bool
+    {
+        return false;
+    }
 }

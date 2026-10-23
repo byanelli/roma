@@ -57,4 +57,10 @@ interface SourcePolicy
      * this destination.
      */
     public function allowsDestination(Destination $destination): bool;
+
+    /**
+     * Whether the input creates a resource, which makes the #[RequiredOnCreate] properties
+     * required.
+     */
+    public function isCreate(object $input): bool;
 }

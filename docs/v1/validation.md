@@ -300,6 +300,77 @@ input it was mapped from. An `#[Optional]` constructor parameter must be nullabl
 `#[Present]` on a type with `Missing` throws too, and so does a type with nothing but
 `Missing` and `null`, such as `?Missing`: add the type of the value, e.g. `string|Missing`.
 
+### Required only on create
+
+One class can serve both `POST` and `PUT` for a resource when its properties include `Missing`,
+so a `PUT` changes only the fields it sends. `#[RequiredOnCreate]` makes such a property
+required when the request is a create, which Roma defines as an HTTP `POST`:
+
+```php
+use BYanelli\Roma\Attributes\Message;
+use BYanelli\Roma\Attributes\RequiredOnCreate;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Missing;
+
+readonly class ContactRequest {
+    public function __construct(
+        #[RequiredOnCreate]
+        #[Message(required: 'Send a name.')]
+        #[Rule('max:255')]
+        public string|Missing $name,       // required on POST, Missing when absent otherwise
+        public string|Missing|null $phone,
+    ) {}
+}
+```
+
+The method is the one Laravel's `Request::isMethod()` checks, so a form that posts
+`_method=PUT` is a `PUT`. A `PUT`, `PATCH` or any other method doesn't count, and outside a
+request, as in `Mapper::fromArray()`, the property is never required. On a create Roma adds
+Laravel's `required` rule before the property's own rules, so `#[Message(required: ...)]`
+replaces its message, and on a nullable property a `null` fails as well. In a nested object the
+property is required when the object is present. JSON Schema and TypeScript show the property
+as optional. On a property that is always required, one with no `Missing`, default or `null` in
+its type, the attribute throws when the class definition is built.
+
+### Ignoring empty values
+
+`#[IgnoreIfEmpty]` treats a key as absent when its raw value is exactly `''` or `[]`, so a
+client that sends `"config": {}` or `"tags": []` leaves the property `Missing`. The value is not
+validated, and the serializer omits it. Nothing else counts as empty: `null`, `"0"`, `0` and
+`false` are kept, unlike PHP's `empty()`. Laravel's `ConvertEmptyStringsToNull` middleware turns
+a request's `""` into `null` before Roma sees it, so in a request the attribute usually only
+affects `[]`, including a JSON `{}`.
+
+`#[IgnoreIf]` does the same for any test. Its callable receives the raw input value, before
+coercion, and the key is treated as absent when the callable returns `true`. It is not called
+for an absent key. As with `#[MapUsing]`, the callable is a first-class callable or a static
+closure, and the attribute may be repeated: any match ignores the value.
+
+```php
+use BYanelli\Roma\Attributes\IgnoreIf;
+use BYanelli\Roma\Attributes\IgnoreIfEmpty;
+use BYanelli\Roma\Missing;
+
+readonly class UpdateExportRequest {
+    public function __construct(
+        #[IgnoreIfEmpty]
+        public ExportConfig|Missing|null $config, // {} -> Missing, null -> null
+
+        #[IgnoreIf(self::isPlaceholder(...))]
+        public int|Missing $limit,                // "n/a" -> Missing
+    ) {}
+
+    public static function isPlaceholder(mixed $value): bool {
+        return $value === 'n/a';
+    }
+}
+```
+
+An ignored key behaves as an absent one in every way, so a `#[RequiredOnCreate]` property whose
+value is ignored fails as required on a `POST`. Both attributes apply in nested objects and in
+the objects of a list. The property's type must include `Missing`; otherwise the class
+definition throws.
+
 ### `null` and defaults
 
 An input value of exactly `null` for a property that isn't nullable but has a default takes

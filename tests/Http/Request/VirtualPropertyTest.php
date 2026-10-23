@@ -4,9 +4,11 @@
 
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Description;
+use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\Present;
+use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Accessors\Ip;
@@ -101,6 +103,26 @@ class VirtualWithMessage
     }
 }
 
+class VirtualWithRequiredOnCreate
+{
+    public string $first = 'Ada';
+
+    #[RequiredOnCreate]
+    public string $upper {
+        get => strtoupper($this->first);
+    }
+}
+
+class VirtualWithIgnoreIfEmpty
+{
+    public string $first = 'Ada';
+
+    #[IgnoreIfEmpty]
+    public string $upper {
+        get => strtoupper($this->first);
+    }
+}
+
 class VirtualWithAccessor
 {
     #[Ip]
@@ -123,6 +145,8 @@ it('rejects a mapping attribute on a virtual property', function (string $class,
     [VirtualWithPresent::class, 'Present'],
     [VirtualWithAccessor::class, 'Ip'],
     [VirtualWithMessage::class, 'Message'],
+    [VirtualWithRequiredOnCreate::class, 'RequiredOnCreate'],
+    [VirtualWithIgnoreIfEmpty::class, 'IgnoreIfEmpty'],
 ]);
 
 class VirtualWithOutputAttributes extends Response
