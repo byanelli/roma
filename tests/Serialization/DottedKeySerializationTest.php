@@ -119,14 +119,15 @@ it('writes dotted keys under one parent as one nested object in all profiles', f
 })->with([
     'response' => [Profile::response(), ['name' => 'High', 'value' => 'high'], []],
     'client request' => [Profile::clientRequest(), 'high', ['auth' => ['token' => 'secret']]],
-    'storage' => [Profile::storage(), 'high', []],
+    'storage' => [Profile::storage(), 'high', ['auth' => ['token' => 'secret']]],
+    'safe storage' => [Profile::storage()->withoutSensitive(), 'high', []],
 ]);
 
 it('leaves no parent behind when all of its values are absent or sensitive', function () {
     $error = dottedSerializationError();
     $error->traceId = Missing::instance();
 
-    expect(Serializer::toArray($error))->not->toHaveKeys(['meta', 'auth']);
+    expect(Serializer::toSafeArray($error))->not->toHaveKeys(['meta', 'auth']);
 });
 
 it('maps a serialized object with dotted keys back to an equal object', function () {
@@ -145,7 +146,7 @@ it('keeps a dot in header and cookie keys, and nests the body beside them', func
 
     $response->hint = 'Try again';
 
-    expect(Serializer::toArray($response))->toBe(['error' => ['hint' => 'Try again', 'message' => 'Invalid']])
+    expect(Serializer::toResponseBody($response))->toBe(['error' => ['hint' => 'Try again', 'message' => 'Invalid']])
         ->and(Serializer::toArray(new DottedSerializationCookie('dark')))->toBe(['my.pref' => 'dark']);
 });
 

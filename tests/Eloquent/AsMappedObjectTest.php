@@ -24,6 +24,15 @@ readonly class CastSettings
     ) {}
 }
 
+readonly class CastCredentials
+{
+    public function __construct(
+        public string $user,
+        #[SensitiveParameter]
+        public string $token,
+    ) {}
+}
+
 final readonly class CastPostcode implements StringBacked
 {
     public function __construct(public string $digits) {}
@@ -45,6 +54,7 @@ final readonly class CastPostcode implements StringBacked
  * @property ?CastSettings $lenient
  * @property ?CastPostcode $postcode
  * @property ?CastPostcode $lenient_postcode
+ * @property ?CastCredentials $credentials
  */
 class CastRecord extends Model
 {
@@ -60,6 +70,7 @@ class CastRecord extends Model
             'lenient' => AsMappedObject::of(CastSettings::class, nullWhenInvalid: true),
             'postcode' => AsMappedObject::class.':'.CastPostcode::class,
             'lenient_postcode' => AsMappedObject::of(CastPostcode::class, nullWhenInvalid: true),
+            'credentials' => AsMappedObject::of(CastCredentials::class),
         ];
     }
 }
@@ -73,6 +84,7 @@ beforeEach(function () {
         $table->json('lenient')->nullable();
         $table->string('postcode')->nullable();
         $table->string('lenient_postcode')->nullable();
+        $table->json('credentials')->nullable();
     });
 });
 
@@ -152,6 +164,14 @@ describe('a JSON object column', function () {
             'defaulted' => ['theme' => 'light', 'page_size' => 20, 'api_url' => null],
             'lenient' => null,
         ]);
+    });
+
+    it('stores #[\SensitiveParameter] properties and leaves them out of the model\'s array form', function () {
+        $record = CastRecord::create(['credentials' => new CastCredentials('ox', 'secret')]);
+
+        expect(json_decode(storedColumn($record, 'credentials'), true))->toBe(['user' => 'ox', 'token' => 'secret'])
+            ->and($record->fresh()?->credentials)->toEqual(new CastCredentials('ox', 'secret'))
+            ->and($record->toArray()['credentials'])->toBe(['user' => 'ox']);
     });
 
     it('throws with the model and attribute when the JSON is not an object', function (string $json) {

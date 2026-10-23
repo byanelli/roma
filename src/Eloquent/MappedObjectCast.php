@@ -13,7 +13,8 @@ use InvalidArgumentException;
 
 /**
  * Casts a JSON object column to a class with Mapper::fromArray(), and stores the class with
- * Profile::storage(). Created by AsMappedObject.
+ * Profile::storage(). The model's toArray() and toJson() leave out sensitive values. Created by
+ * AsMappedObject.
  *
  * @internal
  *
@@ -93,7 +94,7 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
      */
     public function serialize(Model $model, string $key, mixed $value, array $attributes): array
     {
-        return Serializer::toArray($value, Profile::storage());
+        return Serializer::toSafeArray($value);
     }
 
     /**

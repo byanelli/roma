@@ -184,5 +184,5 @@ it('rejects a parameter-level #[ConfigObject] on a parameter without a class typ
 it('serializes a resolved object without its sensitive values', function () {
     config(['services.mailer' => ['api_key' => 'key_1']]);
 
-    expect(Serializer::toArray(app(MailerConfig::class)))->toBe(['from' => 'noreply@example.com']);
+    expect(Serializer::toSafeArray(app(MailerConfig::class)))->toBe(['from' => 'noreply@example.com']);
 });

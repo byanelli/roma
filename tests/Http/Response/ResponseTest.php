@@ -83,7 +83,7 @@ it('converts enums and dates to their JSON form', function () {
         new DateTimeImmutable('2024-01-02T03:04:05+00:00'),
     );
 
-    expect($response->toArray())->toBe([
+    expect($response->toResponseBody())->toBe([
         'status' => ['name' => 'Active', 'value' => 'active'], // backed enum -> {name, value}
         'rank' => 'Gold',                     // unit enum -> name
         'createdAt' => '2024-01-02T03:04:05+00:00',
@@ -108,7 +108,7 @@ it('recurses through arrays of response objects and enums', function () {
         [TestResponseStatus::Active, TestResponseStatus::Active],
     );
 
-    expect($response->toArray())->toBe([
+    expect($response->toResponseBody())->toBe([
         'addresses' => [
             ['city' => 'NYC', 'zip' => '10001'],
             ['city' => 'LA', 'zip' => '90001'],

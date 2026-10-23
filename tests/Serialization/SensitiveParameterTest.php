@@ -2,6 +2,7 @@
 
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
+use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Attributes\Header;
 use BYanelli\Roma\Http\Response\Response;
@@ -92,10 +93,10 @@ it('leaves #[\SensitiveParameter] properties out of nested objects and arrays', 
     ]);
 })->with([
     'response' => fn () => Profile::response(),
-    'storage' => fn () => Profile::storage(),
+    'storage without sensitive' => fn () => Profile::storage()->withoutSensitive(),
 ]);
 
-it('writes #[\SensitiveParameter] properties under the HTTP client profiles', function (Profile $profile) {
+it('writes #[\SensitiveParameter] properties under the HTTP client and storage profiles', function (Profile $profile) {
     expect(Serializer::toArray(sensitiveAccount(), $profile))->toBe([
         'name' => 'main',
         'apiKey' => 'key_1',
@@ -105,12 +106,33 @@ it('writes #[\SensitiveParameter] properties under the HTTP client profiles', fu
 })->with([
     'client request' => fn () => Profile::clientRequest(),
     'client response' => fn () => Profile::clientResponse(),
+    'storage' => fn () => Profile::storage(),
 ]);
 
-it('leaves #[\SensitiveParameter] properties out of toArray() and JSON', function () {
+it('writes #[\SensitiveParameter] properties by default, so stored data maps back to an equal object', function () {
+    $stored = Serializer::toArray(sensitiveAccount());
+
+    expect($stored['apiKey'])->toBe('key_1')
+        ->and(Mapper::fromArray(SensitiveAccount::class, $stored))->toEqual(sensitiveAccount());
+});
+
+it('leaves #[\SensitiveParameter] properties out of toSafeArray() and toResponseBody()', function () {
+    $expected = [
+        'name' => 'main',
+        'primary' => ['user' => 'ox'],
+        'fallbacks' => [['user' => 'di']],
+    ];
+
+    expect(Serializer::toSafeArray(sensitiveAccount()))->toBe($expected)
+        ->and(Serializer::toResponseBody(sensitiveAccount()))->toBe($expected);
+});
+
+it('writes #[\SensitiveParameter] properties in toArray() and leaves them out of the other methods and JSON', function () {
     $object = new SensitiveArrayable('main', 'key_1');
 
-    expect($object->toArray())->toBe(['name' => 'main'])
+    expect($object->toArray())->toBe(['name' => 'main', 'token' => 'key_1'])
+        ->and($object->toSafeArray())->toBe(['name' => 'main'])
+        ->and($object->toResponseBody())->toBe(['name' => 'main'])
         ->and(json_encode($object))->toBe('{"name":"main"}');
 });
 
@@ -123,5 +145,5 @@ it('leaves #[\SensitiveParameter] properties out of a response body and headers'
 });
 
 it('leaves out a property assigned from a #[\SensitiveParameter] parameter of the same name', function () {
-    expect(Serializer::toArray(new SensitiveAssigned('main', ' key_1 ')))->toBe(['name' => 'main']);
+    expect(Serializer::toSafeArray(new SensitiveAssigned('main', ' key_1 ')))->toBe(['name' => 'main']);
 });

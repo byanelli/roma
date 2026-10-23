@@ -9,8 +9,8 @@ use InvalidArgumentException;
 /**
  * Casts an attribute to a class. A StringBacked class is stored in a string column, and any
  * other class in a JSON object column, mapped with Mapper::fromArray() and stored with
- * Profile::storage(). A null column reads as null, and a stored value that can't be read
- * throws InvalidAttributeValue.
+ * Profile::storage(), sensitive values included. A null column reads as null, and a stored
+ * value that can't be read throws InvalidAttributeValue.
  */
 final class AsMappedObject implements Castable
 {

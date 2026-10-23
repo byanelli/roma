@@ -4,6 +4,21 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `Serializer::toArray($object)` and `IsArrayable::toArray()` without a profile use
+  `Profile::storage()` instead of `Profile::response()`, so backed enums are written as their
+  value instead of `{ name, value }`, sensitive values are written, and a `#[Status]` or
+  `#[Header]` property throws. `Serializer::normalize()` has the same default.
+  `Serializer::serialize()` and `jsonSerialize()`, which Laravel calls for an object returned
+  from a controller, still use `Profile::response()`. To keep the old output, call
+  `toResponseBody()`.
+- Breaking: `Profile::storage()` writes `#[\SensitiveParameter]` properties, so stored data maps
+  back to an equal object. `AsMappedObject` now stores them in the column; the model's
+  `toArray()` and `toJson()` still leave them out.
+- `Serializer::toSafeArray($object)` serializes with the storage settings and without
+  sensitive values, for logs and other output that leaves the system, and
+  `Serializer::toResponseBody($object)` with `Profile::response()`, for a response body built by
+  hand. `IsArrayable` has both methods, and `jsonSerialize()` returns `toResponseBody()`.
+  `Profile::withoutSensitive()` returns a copy of a profile that leaves sensitive values out.
 - `#[RejectUnknownKeys]` on a class makes input keys that no property maps from fail
   validation, one error per key, such as "The input.config.k field is prohibited." under
   `input.config.k`. It applies to the class and its subclasses, at the top level and as nested

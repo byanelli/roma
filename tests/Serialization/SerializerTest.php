@@ -84,7 +84,7 @@ function palette(): SerializedPalette
 it('applies the profile enum style to the same object', function () {
     $nameAndValue = ['name' => 'Red', 'value' => 'red'];
 
-    expect(Serializer::toArray(palette())['primary'])->toBe($nameAndValue)
+    expect(Serializer::toArray(palette(), Profile::response())['primary'])->toBe($nameAndValue)
         ->and(Serializer::toArray(palette(), Profile::clientRequest())['primary'])->toBe('red')
         ->and(Serializer::toArray(palette(), Profile::storage())['primary'])->toBe('red')
         ->and(Serializer::toArray(palette(), new Profile(EnumStyle::Name, DATE_ATOM, BoolStyle::Native, [Destination::Body]))['primary'])->toBe('Red')
@@ -103,7 +103,7 @@ it('applies the profile to nested objects, arrays, plain objects and foreign arr
 });
 
 it('serializes a plain nested object without the trait under the response profile', function () {
-    expect(palette()->toArray()['point'])->toBe(['x' => 3, 'color' => ['name' => 'Red', 'value' => 'red']]);
+    expect(palette()->toResponseBody()['point'])->toBe(['x' => 3, 'color' => ['name' => 'Red', 'value' => 'red']]);
 });
 
 it('serializes a plain object passed to the facade', function () {
@@ -199,11 +199,11 @@ it('takes a date format from CustomizesSerialization before #[DateFormat] and th
     ]);
 });
 
-it('encodes a response as JSON the same way as its array form', function () {
+it('encodes a response as JSON the same way as its response body', function () {
     $response = palette();
 
-    expect(json_encode($response))->toBe(json_encode($response->toArray()))
-        ->and(json_encode(['wrapped' => $response]))->toBe(json_encode(['wrapped' => $response->toArray()]));
+    expect(json_encode($response))->toBe(json_encode($response->toResponseBody()))
+        ->and(json_encode(['wrapped' => $response]))->toBe(json_encode(['wrapped' => $response->toResponseBody()]));
 });
 
 class SerializedHookResponse extends Response

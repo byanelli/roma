@@ -65,6 +65,8 @@ final readonly class Profile
 
     /**
      * Output that maps back to an equal object through Mapper::fromArray(), for casts and caches.
+     * Sensitive values are written, so they round-trip; use withoutSensitive() for output that
+     * leaves the system, such as logs.
      */
     public static function storage(): self
     {
@@ -73,7 +75,16 @@ final readonly class Profile
             DateTimeInterface::ATOM,
             BoolStyle::Native,
             [Destination::Body],
+            sensitive: true,
         );
+    }
+
+    /**
+     * The same settings, with #[\SensitiveParameter] properties left out.
+     */
+    public function withoutSensitive(): self
+    {
+        return new self($this->enums, $this->dateFormat, $this->queryBools, $this->destinations);
     }
 
     public function allows(Destination $destination): bool

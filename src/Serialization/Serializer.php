@@ -84,23 +84,46 @@ class Serializer
     }
 
     /**
+     * The body under the profile, by default Profile::storage(), which includes sensitive values.
+     *
      * @return array<string, mixed>
      */
     public function toArray(object $object, ?Profile $profile = null): array
     {
-        return $this->serialize($object, $profile)->body;
+        return $this->serialize($object, $profile ?? Profile::storage())->body;
+    }
+
+    /**
+     * The storage array without #[\SensitiveParameter] properties, for logs and other output
+     * that leaves the system.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSafeArray(object $object): array
+    {
+        return $this->toArray($object, Profile::storage()->withoutSensitive());
+    }
+
+    /**
+     * The body as a response would send it.
+     *
+     * @return array<string, mixed>
+     */
+    public function toResponseBody(object $object): array
+    {
+        return $this->toArray($object, Profile::response());
     }
 
     /**
      * Converts the values of an array, such as the output of an overridden toArray(), as the
-     * serializer converts property values.
+     * serializer converts property values. The default profile is the same as toArray()'s.
      *
      * @param  array<array-key, mixed>  $value
      * @return array<array-key, mixed>
      */
     public function normalize(array $value, ?Profile $profile = null): array
     {
-        $profile ??= Profile::response();
+        $profile ??= Profile::storage();
 
         return array_map(fn (mixed $item): mixed => $this->normalizeValue($item, $profile, $profile->dateFormat), $value);
     }

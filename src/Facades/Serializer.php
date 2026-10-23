@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Facade;
 /**
  * @method static Serialized serialize(object $object, ?Profile $profile = null)
  * @method static array<string, mixed> toArray(object $object, ?Profile $profile = null)
+ * @method static array<string, mixed> toSafeArray(object $object)
+ * @method static array<string, mixed> toResponseBody(object $object)
  * @method static array<array-key, mixed> normalize(array<array-key, mixed> $value, ?Profile $profile = null)
  * @method static bool overridesToArray(object $object)
  *

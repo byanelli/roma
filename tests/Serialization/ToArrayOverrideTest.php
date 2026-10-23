@@ -62,7 +62,7 @@ function swatchPalette(): SwatchPalette
 it('calls a nested object\'s own toArray() with the response profile', function () {
     $red = ['name' => 'Red', 'value' => 'red'];
 
-    expect(Serializer::toArray(swatchPalette()))->toBe([
+    expect(Serializer::toResponseBody(swatchPalette()))->toBe([
         'extended' => ['color' => $red, 'shade' => $red],
         'handWritten' => ['custom' => true, 'color' => $red],
         'plain' => ['color' => $red],
@@ -93,12 +93,12 @@ class LabeledSwatch implements Arrayable, JsonSerializable
     }
 }
 
-it('gives the same output from toArray() and json_encode', function () {
+it('gives the same output from toResponseBody() and json_encode', function () {
     $swatch = new LabeledSwatch(OverrideColor::Red);
 
-    expect($swatch->toArray())->toBe(['color' => ['name' => 'Red', 'value' => 'red'], 'label' => 'warm'])
-        ->and(json_decode(json_encode($swatch), true))->toBe($swatch->toArray())
-        ->and(json_decode(json_encode(swatchPalette()), true))->toBe(swatchPalette()->toArray());
+    expect($swatch->toResponseBody())->toBe(['color' => ['name' => 'Red', 'value' => 'red'], 'label' => 'warm'])
+        ->and(json_decode(json_encode($swatch), true))->toBe($swatch->toResponseBody())
+        ->and(json_decode(json_encode(swatchPalette()), true))->toBe(swatchPalette()->toResponseBody());
 });
 
 class OverriddenResponse extends Response
@@ -206,7 +206,7 @@ it('normalizes the override\'s output in toResponse()', function () {
 it('normalizes the override\'s output when the object is nested', function () {
     $holder = new AnnotatedSwatchHolder(new AnnotatedSwatch(OverrideColor::Red));
 
-    expect(Serializer::toArray($holder))->toBe(['swatch' => normalizedAnnotations()])
+    expect(Serializer::toResponseBody($holder))->toBe(['swatch' => normalizedAnnotations()])
         ->and(Serializer::toArray($holder, Profile::clientRequest()))->toBe(['swatch' => [
             'color' => 'red',
             'shade' => 'red',

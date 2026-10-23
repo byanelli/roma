@@ -60,8 +60,10 @@ The same object serialized directly, or through a property typed as `Card`, has 
 key. The value must be one of the union's classes.
 
 `Response` implements `JsonSerializable`, and `IsArrayable` provides `jsonSerialize()`, so
-`json_encode($response)` produces the same output as `toArray()`, or as an overridden
-`toArray()` after normalization (see below).
+`json_encode($response)` produces the same output as `toResponseBody()`, which serializes
+with the response profile and normalizes an overridden `toArray()` (see below). `toArray()`
+itself uses the storage profile; see
+[Serializing without a response](#serializing-without-a-response).
 
 ## Rename a key with `#[Key]`
 
@@ -126,12 +128,14 @@ TypeScript marks it optional.
 
 ## Leave out secrets with `#[\SensitiveParameter]`
 
-A property whose constructor parameter has PHP's `#[\SensitiveParameter]` is not
-serialized. Its key is left out of the body and the headers, including in nested objects, and
-the generated TypeScript response types leave it out as well. The
-[HTTP client's](/docs/roma/v1/http-client) profiles are the exception: a request sends the
-value to the server, and a fake response includes it. A property
-assigned in the constructor from a sensitive parameter of the same name is left out too.
+A property whose constructor parameter has PHP's `#[\SensitiveParameter]` is left out of a
+response. Its key is left out of the body and the headers, including in nested objects, and
+the generated TypeScript response types leave it out as well. `toSafeArray()` leaves it out
+too, for logs and other output that leaves the system. The storage profile, which
+`toArray()` uses by default, and the [HTTP client's](/docs/roma/v1/http-client) profiles write
+it: stored data maps back to an equal object, a request sends the value to the server, and a
+fake response includes it. A property assigned in the constructor from a sensitive parameter
+of the same name is treated the same way.
 
 ```php
 use BYanelli\Roma\Facades\Serializer;
@@ -144,11 +148,14 @@ readonly class ProxyCredentials {
     ) {}
 }
 
-Serializer::toArray(new ProxyCredentials('ox', 'secret')); // ['user' => 'ox']
+$credentials = new ProxyCredentials('ox', 'secret');
+
+Serializer::toResponseBody($credentials); // ['user' => 'ox']
+Serializer::toSafeArray($credentials);    // ['user' => 'ox']
+Serializer::toArray($credentials);        // ['user' => 'ox', 'password' => 'secret']
 ```
 
-`Profile::storage()` leaves the value out too, so such an object doesn't round-trip through
-storage. Request types in TypeScript keep the property, since the client sends it, so a class
+Request types in TypeScript keep the property, since the client sends it, so a class
 nested in both a request and a response gets
 [a separate response type](/docs/roma/v1/typescript#classes-used-in-requests-and-responses).
 
@@ -311,10 +318,20 @@ The `Serializer` facade serializes any object, with or without the traits:
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Profile;
 
-Serializer::toArray($object);                      // the body, as a response would send it
-Serializer::serialize($object);                    // body, headers, status, query, path and URL
-Serializer::toArray($object, Profile::storage());  // output Mapper::fromArray() can map back
+Serializer::toArray($object);                       // output Mapper::fromArray() can map back
+Serializer::toSafeArray($object);                   // the same, without sensitive values
+Serializer::toResponseBody($object);                // the body, as a response would send it
+Serializer::serialize($object);                     // body, headers, status, query, path and URL
+Serializer::toArray($object, Profile::response());  // any profile
 ```
+
+`toArray()` uses `Profile::storage()`, for casts, caches and other data that is read back.
+Use `toSafeArray()` for logs, debug output and anything else that leaves the system, and
+`toResponseBody()` to build a response body by hand. `serialize()` uses `Profile::response()`.
+A class that uses `IsArrayable` has the same `toArray()`, `toSafeArray()` and
+`toResponseBody()` methods; `jsonSerialize()` returns `toResponseBody()`, so an object returned
+from a controller or passed to `response()->json()` is sent with the response profile. The two
+methods without a profile normalize an overridden `toArray()`'s output.
 
 A `Profile` sets the enum style, the default date format and which destinations are allowed:
 
@@ -323,9 +340,13 @@ A `Profile` sets the enum style, the default date format and which destinations 
 | `Profile::response()`       | `{ name, value }`  | body, header, status           | left out         |
 | `Profile::clientRequest()`  | value              | body, query, path, header, URL | written          |
 | `Profile::clientResponse()` | value              | body, header, status           | written          |
-| `Profile::storage()`        | value              | body                           | left out         |
+| `Profile::storage()`        | value              | body                           | written          |
+
+`Profile::storage()->withoutSensitive()`, which `toSafeArray()` uses, has the storage settings
+and leaves sensitive values out. `withoutSensitive()` applies to any profile.
 
 The profile applies to nested objects too. A property whose destination the profile doesn't
-allow, such as `#[Status]` under `Profile::storage()`, throws. `#[Query]`, `#[Path]` and
+allow, such as `#[Status]` under `Profile::storage()`, throws, so call `toResponseBody()` or
+`serialize()` on a response object with `#[Status]` or `#[Header]` properties. `#[Query]`, `#[Path]` and
 `#[Body]` are sources as well, so under such a profile their properties are written to the
 body, and a request object serializes back to the keys it maps from.

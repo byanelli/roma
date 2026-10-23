@@ -195,5 +195,5 @@ it('accepts a computed property whose type implies a source', function () {
     $typescript = new TypeScriptGenerator(responses: [VirtualMethodResponse::class])->generate();
 
     expect($typescript)->toContain('export interface VirtualMethodResponseBody {')
-        ->and(Serializer::toArray(new VirtualMethodResponse('/a')))->toBe(['path' => '/a', 'method' => ['name' => 'Get', 'value' => 'GET']]);
+        ->and(Serializer::toResponseBody(new VirtualMethodResponse('/a')))->toBe(['path' => '/a', 'method' => ['name' => 'Get', 'value' => 'GET']]);
 });

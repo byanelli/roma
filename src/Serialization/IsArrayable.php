@@ -5,9 +5,9 @@ namespace BYanelli\Roma\Serialization;
 use BYanelli\Roma\Facades\Serializer;
 
 /**
- * Serializes the object with the Roma serializer and the response profile.
- * Use on a class that implements Arrayable, and JsonSerializable where
- * Laravel calls json_encode on the object directly.
+ * Serializes the object with the Roma serializer: toArray() with the storage profile, and
+ * jsonSerialize() with the response profile. Use on a class that implements Arrayable, and
+ * JsonSerializable where Laravel calls json_encode on the object directly.
  */
 trait IsArrayable
 {
@@ -23,16 +23,43 @@ trait IsArrayable
     }
 
     /**
+     * The storage array without #[\SensitiveParameter] properties, for logs and other output
+     * that leaves the system.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function toSafeArray(): array
+    {
+        return $this->normalizedArray(Profile::storage()->withoutSensitive());
+    }
+
+    /**
+     * The body as a response would send it.
+     *
+     * @return array<array-key, mixed>
+     */
+    public function toResponseBody(): array
+    {
+        return $this->normalizedArray(Profile::response());
+    }
+
+    /**
+     * Laravel calls this for an object returned from a controller or passed to response()->json().
+     *
      * @return array<array-key, mixed>
      */
     public function jsonSerialize(): array
     {
-        if (! Serializer::overridesToArray($this)) {
-            return $this->toArray();
-        }
+        return $this->toResponseBody();
+    }
 
-        $profile = Profile::response();
+    /**
+     * @return array<array-key, mixed>
+     */
+    private function normalizedArray(Profile $profile): array
+    {
+        $array = $this->toArray($profile);
 
-        return Serializer::normalize($this->toArray($profile), $profile);
+        return Serializer::overridesToArray($this) ? Serializer::normalize($array, $profile) : $array;
     }
 }

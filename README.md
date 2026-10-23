@@ -111,8 +111,8 @@ readonly class ScrapflyConfig {
   `CarbonInterval` accepts `"90 seconds"` (or a number with `#[Unit('seconds')]`), and
   `ByteSize` accepts `"25MB"`. They work in requests and config alike.
 - **Secrets stay out of output.** Properties marked `#[\SensitiveParameter]` are left out of
-  serialized output and validation messages. The HTTP client sends them, and redacts them
-  from its exception messages.
+  responses, `toSafeArray()` and validation messages. Stored data keeps them so it maps back,
+  and the HTTP client sends them and redacts them from its exception messages.
 - **Plain arrays too.** `Mapper::fromArray(Settings::class, $array)` maps and validates an
   array, such as tool input or a stored value, onto the same classes.
 - **Eloquent casts.** `'settings' => AsMappedObject::of(Settings::class)` stores an attribute as a

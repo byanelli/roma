@@ -12,7 +12,7 @@ group: Eloquent
 
 `AsMappedObject` casts a model attribute to a class. Any class is stored as a JSON object:
 it is mapped and validated with `Mapper::fromArray()` when read or set from an array, and
-stored with `Profile::storage()`. A class that implements `StringBacked` is stored as a
+stored with `Profile::storage()`, including `#[\SensitiveParameter]` properties. A class that implements `StringBacked` is stored as a
 string instead.
 
 ```php
@@ -62,7 +62,8 @@ $account->toArray()['settings'];                  // ['theme' => 'light', 'page_
 An array is mapped before it is stored, and invalid data throws
 `MappingValidationException`, as `Mapper::fromArray()` does. Setting a value that is neither
 the class, an array nor null throws `InvalidArgumentException`. `toArray()` and `toJson()`
-write the storage array.
+write the storage array without `#[\SensitiveParameter]` properties, as
+`Serializer::toSafeArray()` does, so a model returned from a controller doesn't send them.
 
 A null column reads as null. To read it as the class mapped from an empty array, pass
 `defaultWhenNull`. The column stays null until the attribute is set:

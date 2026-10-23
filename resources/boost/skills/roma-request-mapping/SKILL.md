@@ -243,9 +243,14 @@ implement `CustomizesSerialization` for date formats. Prefer get-only hooked pro
 computed values (they reach TypeScript, and `#[Rule]`, `#[Present]`, `#[Input]`, `#[Cookie]` or
 an accessor on one throws); an overridden `toArray(?Profile $profile = null)` is
 the escape hatch and should pass `$profile` to `Serializer::toArray($this, $profile)`; a
-`Response`'s HTTP body uses the override. `Serializer::toArray($obj, $profile)` /
-`Serializer::serialize()` (facade `BYanelli\Roma\Facades\Serializer`) serialize any object
-outside a response.
+`Response`'s HTTP body uses the override. The facade `BYanelli\Roma\Facades\Serializer`
+serializes any object: `toArray($obj, ?Profile)` defaults to `Profile::storage()` (enums as
+value, body only, `#[\SensitiveParameter]` values written, maps back with `Mapper::fromArray()`);
+`toSafeArray($obj)` is storage without sensitive values, for logs and output leaving the system;
+`toResponseBody($obj)` uses `Profile::response()` (enums `{name,value}`, sensitive left out);
+`serialize()` defaults to the response profile. `IsArrayable` has the same three methods, and
+`jsonSerialize()` returns `toResponseBody()`. `toArray()` on a response with `#[Status]` or
+`#[Header]` throws, so use `toResponseBody()` there.
 
 ## TypeScript
 
@@ -328,7 +333,8 @@ protected function casts(): array
 
 - Any class is stored as a JSON object: read and set arrays are mapped with
   `Mapper::fromArray()` (invalid arrays throw `MappingValidationException`), objects are
-  stored and serialized with `Profile::storage()`. Use `#[SnakeCaseKeys]` for snake_case JSON.
+  stored with `Profile::storage()` (sensitive values included), and the model's `toArray()`/
+  `toJson()` write them as `toSafeArray()` does. Use `#[SnakeCaseKeys]` for snake_case JSON.
 - A class implementing `StringBacked` (`static parse(string): ?static`, null when invalid,
   and `toString()`) is stored as a string. A set string is stored as given (it must parse
   unless `nullWhenInvalid`) and `toArray()` writes the stored string.
