@@ -8,6 +8,7 @@ use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
+use BYanelli\Roma\Attributes\RulePerItem;
 use BYanelli\Roma\Attributes\Unit;
 use BYanelli\Roma\Data\Attributes\AttributeTarget;
 use BYanelli\Roma\Data\Attributes\ErrorKeyAttribute;
@@ -86,6 +87,7 @@ class ClassDefinitionBuilder
             isVirtual: $prop->isVirtual,
             optional: $optional,
             nullTakesDefault: $this->nullTakesDefault($prop),
+            itemRules: $attributes->firstInstanceOf(RulePerItem::class)->rules ?? [],
         );
     }
 
@@ -200,6 +202,12 @@ class ClassDefinitionBuilder
         if ($attributes->hasInstanceOf(Delimited::class) && ! $type instanceof Types\Array_) {
             throw new RuntimeException(
                 "Roma property \"{$prop->printableName}\" has #[Delimited], which splits a string into an array, but its type is not an array."
+            );
+        }
+
+        if ($attributes->hasInstanceOf(RulePerItem::class) && ! $type instanceof Types\Array_) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[RulePerItem], which validates the items of an array, but its type is not an array."
             );
         }
 

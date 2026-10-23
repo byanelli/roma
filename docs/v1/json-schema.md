@@ -118,6 +118,9 @@ Rules from `#[Rule]` that have a JSON Schema equivalent add it:
 | `regex`                  | `pattern`, without the PHP delimiters                               |
 | `required`, `present`    | required                                                            |
 
+Rules from `#[RulePerItem]` add their keywords to the schema of the array's `items`, so
+`#[RulePerItem('email')]` on a `list<string>` gives items `format: email`.
+
 Other rules, closure rules and a `regex` with modifiers other than `u` are left out of the
 schema. The mapper still enforces them when it validates the input.
 

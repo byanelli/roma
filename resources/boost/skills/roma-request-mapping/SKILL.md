@@ -29,7 +29,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -183,6 +183,9 @@ an explicit list unless the member list changes often.
 
 - **Dynamic rules:** pass a first-class-callable to `#[Rule]`; Roma resolves it through the
   container at validation time (`#[Rule('string', self::maxLength(...))]`).
+- **Item rules:** `#[RulePerItem('email')]` on an array property validates each item, with
+  errors keyed per item (`input.emails.1`). Same rule forms as `#[Rule]`; the property's
+  `#[Message]` covers its items; throws on a non-array property.
 - **Cross-field rules** (`required_if:type,card`, `same:password`) use keys relative to the
   property's source, without the prefix, and see only that source's data. Compare values
   from different sources in a `#[Guard]`.

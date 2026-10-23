@@ -4,6 +4,11 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[RulePerItem(...)]` sets the validation rules for each item of an array property, in the
+  forms `#[Rule]` accepts. Errors are keyed by the item, such as `input.emails.1`, the
+  property's `#[Message]` applies to its items, and the rules add their JSON Schema keywords
+  to the array's `items`. On a property that isn't an array, it throws when the definition is
+  built.
 - `Eloquent\AsMappedObject` casts a model attribute to a class:
   `AsMappedObject::of(Settings::class)`. A class is stored as a JSON object, mapped with
   `Mapper::fromArray()` when read or set from an array, and stored and serialized with

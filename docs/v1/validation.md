@@ -52,6 +52,32 @@ readonly class UpdateBioRequest {
 }
 ```
 
+## Rules for array items
+
+`#[RulePerItem]` sets the rules for each item of an array property. It accepts the same
+rule forms as `#[Rule]`, and errors are keyed by the item, such as `input.emails.1`:
+
+```php
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Attributes\RulePerItem;
+
+readonly class InviteRequest {
+    /**
+     * @param  list<string>  $emails
+     */
+    public function __construct(
+        #[Rule('max:50')]            // the list
+        #[RulePerItem('email')]      // each address
+        public array $emails,
+    ) {}
+}
+```
+
+The rules apply to the array's own items: in a `list<list<int>>`, each item is a list. As
+with `#[Rule]`, they come before the item type's rule. The property's `#[Message]` applies to
+its items too, so `#[Message(email: '...')]` sets the message for an invalid address. On a
+property that isn't an array, including an array shape, the class definition throws.
+
 ## Rules that refer to other fields
 
 Each source is validated on its own, with keys relative to the source. A rule that refers to

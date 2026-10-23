@@ -18,6 +18,7 @@ readonly class Property
      *
      * @param  array<int, mixed>  $rules
      * @param  array<int, object>  $rawAttributes
+     * @param  list<mixed>  $itemRules  the rules for each item of an array, from #[RulePerItem]
      */
     public function __construct(
         public string $name,
@@ -34,6 +35,7 @@ readonly class Property
         public bool $isVirtual = false,
         public bool $optional = false,
         public bool $nullTakesDefault = false,
+        public array $itemRules = [],
     ) {
         // A nullable property with no explicit default resolves to null when
         // its key is absent, which in turn makes it optional (not required).

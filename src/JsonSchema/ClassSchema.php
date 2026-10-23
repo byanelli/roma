@@ -139,6 +139,7 @@ final readonly class ClassSchema
         $schema = $this->typeOf($property->type, $ancestors, $property->attribute(Description::class)?->text);
 
         $this->rules->apply($schema, $property->rules);
+        $this->applyItemRules($schema, $property, $ancestors);
         $this->applyDefault($schema, $property->default);
 
         if ($property->nullable) {
@@ -150,6 +151,22 @@ final readonly class ClassSchema
         }
 
         return $schema;
+    }
+
+    /**
+     * @param  array<class-string, true>  $ancestors
+     */
+    private function applyItemRules(Schema\Type $schema, Property $property, array $ancestors): void
+    {
+        $type = $property->type;
+
+        if ($property->itemRules === [] || ! $schema instanceof Schema\ArrayType || ! $type instanceof Types\Array_ || $type->memberType instanceof Types\Mixed_) {
+            return;
+        }
+
+        $items = $this->typeOf($type->memberType, $ancestors);
+        $this->rules->apply($items, $property->itemRules);
+        $schema->items($items);
     }
 
     /**

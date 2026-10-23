@@ -227,19 +227,30 @@ readonly class ValidationRules
             $base->concat($property->keyPath),
             $property->errorKey,
             [...$this->leadingRules($property->nullable, $property->isRequired, null), ...$property->rules],
+            $property->itemRules,
         ));
     }
 
     /**
-     * Attaches the property's #[Message] to its own entry, the first, and not to its members'.
+     * Attaches the property's #[Message] to its own entry, the first, and to the entries of its
+     * items when it has #[RulePerItem], but not to its members'.
      *
      * @param  list<Entry>  $entries
      * @return list<Entry>
      */
     private function withMessage(Property $property, array $entries): array
     {
-        if ($entries !== []) {
-            $entries[0]['message'] = $property->attribute(Message::class);
+        if ($entries === []) {
+            return $entries;
+        }
+
+        $message = $property->attribute(Message::class);
+        $itemDepth = count($entries[0]['path']->segments) + 1;
+
+        foreach ($entries as $index => $entry) {
+            if ($index === 0 || ($property->itemRules !== [] && count($entry['path']->segments) === $itemDepth)) {
+                $entries[$index]['message'] = $message;
+            }
         }
 
         return $entries;
@@ -250,9 +261,10 @@ readonly class ValidationRules
      * segment stands for the members of an enclosing array.
      *
      * @param  list<mixed>  $rules  the presence and declared rules, which precede the type's rules
+     * @param  list<mixed>  $itemRules  the declared rules of an array's items
      * @return list<Entry>
      */
-    private function valueEntries(Type $type, KeyPath $path, string $name, array $rules): array
+    private function valueEntries(Type $type, KeyPath $path, string $name, array $rules, array $itemRules = []): array
     {
         // A value object that parses from a raw string and vets it with its own
         // rule is validated as a leaf string at its own key — the input is one
@@ -279,8 +291,8 @@ readonly class ValidationRules
             $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $path, $name)],
             $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $path, $name)],
             $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $path, $name)],
-            $type instanceof Types\Array_ && $this->dependsOnData($type->memberType) => [$entry, ...$this->elementEntries($type, $path, $name)],
-            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, $path->append('*'), "$name.*", [])],
+            $type instanceof Types\Array_ && $this->dependsOnData($type->memberType) => [$entry, ...$this->elementEntries($type, $path, $name, $itemRules)],
+            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, $path->append('*'), "$name.*", $itemRules)],
             default => [$entry],
         };
     }
@@ -308,9 +320,10 @@ readonly class ValidationRules
     /**
      * Entries for each element present in the data, under its own key.
      *
+     * @param  list<mixed>  $itemRules
      * @return list<Entry>
      */
-    private function elementEntries(Types\Array_ $array, KeyPath $path, string $name): array
+    private function elementEntries(Types\Array_ $array, KeyPath $path, string $name, array $itemRules): array
     {
         $elements = $path->getFrom($this->data);
 
@@ -321,7 +334,7 @@ readonly class ValidationRules
         $entries = [];
 
         foreach (array_keys($elements) as $key) {
-            $entries = [...$entries, ...$this->valueEntries($array->memberType, $path->append((string) $key), "$name.$key", [])];
+            $entries = [...$entries, ...$this->valueEntries($array->memberType, $path->append((string) $key), "$name.$key", $itemRules)];
         }
 
         return $entries;
@@ -413,6 +426,7 @@ readonly class ValidationRules
                 $path->concat($member->keyPath),
                 "$name.{$member->keyPath->toKey()}",
                 [...$this->leadingRules($member->nullable, $member->isRequired, $path), ...$member->rules],
+                $member->itemRules,
             ))];
         }
 
