@@ -27,6 +27,7 @@ final class StringBackedCast implements CastsAttributes, SerializesCastableAttri
      */
     public function __construct(
         private readonly string $class,
+        private readonly bool $defaultWhenNull = false,
         private readonly bool $nullWhenInvalid = false,
     ) {}
 
@@ -38,7 +39,7 @@ final class StringBackedCast implements CastsAttributes, SerializesCastableAttri
     public function get(Model $model, string $key, mixed $value, array $attributes): ?StringBacked
     {
         if ($value === null) {
-            return null;
+            return $this->defaultWhenNull && is_a($this->class, HasDefault::class, true) ? $this->class::default() : null;
         }
 
         $parsed = is_string($value) || is_int($value) ? $this->class::parse((string) $value) : null;
@@ -79,7 +80,8 @@ final class StringBackedCast implements CastsAttributes, SerializesCastableAttri
     }
 
     /**
-     * Only called for a value that reads as an object, since Laravel serializes null as null.
+     * Only called for a value that reads as an object, since Laravel serializes null as null. A
+     * null column read with defaultWhenNull serializes as null.
      */
     public function serialize(Model $model, string $key, mixed $value, array $attributes): mixed
     {

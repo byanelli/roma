@@ -4,6 +4,10 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `AsMappedObject::of(Class, defaultWhenNull: true)` accepts a `StringBacked` class that
+  implements the new `HasDefault` interface: a null column reads as `Class::default()`, stays
+  null on save, and serializes as null. A `StringBacked` class without `HasDefault` still throws
+  when the cast is resolved.
 - Breaking: `Serializer::toArray($object)` and `IsArrayable::toArray()` without a profile use
   `Profile::storage()` instead of `Profile::response()`, so backed enums are written as their
   value instead of `{ name, value }`, sensitive values are written, and a `#[Status]` or

@@ -108,6 +108,34 @@ An object is stored as its `toString()`. A string is stored as given, after chec
 parses, so the column keeps the original format. `toArray()` and `toJson()` write the stored
 string.
 
+A null column reads as null. To read it as an object instead, implement `HasDefault` and pass
+`defaultWhenNull`. The column stays null until the attribute is set, and `toArray()` and
+`toJson()` write null for it, since they write the stored string. Setting the default object
+stores its `toString()`.
+
+```php
+use BYanelli\Roma\Eloquent\HasDefault;
+use BYanelli\Roma\Eloquent\StringBacked;
+
+final readonly class Region implements HasDefault, StringBacked
+{
+    // parse() and toString() as above
+
+    public static function default(): static
+    {
+        return new self('ZZ');
+    }
+}
+
+'region' => AsMappedObject::of(Region::class, defaultWhenNull: true),
+
+$account->region;                  // Region::default(), even when the column is null
+$account->toArray()['region'];     // null when the column is null
+```
+
+`defaultWhenNull` on a `StringBacked` class that doesn't implement `HasDefault` throws
+`InvalidArgumentException` when the cast is resolved.
+
 ## Invalid values
 
 A stored value that can't be read throws `BYanelli\Roma\Eloquent\InvalidAttributeValue`, an
@@ -135,11 +163,11 @@ $account->getAttributes()['postcode'];    // "unknown"
 An attribute that reads as null serializes as null, since Laravel serializes a null cast
 value without calling the cast.
 
-| Option            | JSON object column                                  | String column                                  |
-| ----------------- | --------------------------------------------------- | ---------------------------------------------- |
-| neither           | null reads as null; invalid data throws             | null reads as null; an invalid string throws   |
-| `defaultWhenNull` | null reads as the class mapped from `[]`            | throws when the cast is resolved               |
-| `nullWhenInvalid` | invalid data reads as null                          | an invalid string reads as null and can be set |
+| Option            | JSON object column                                  | String column                                                                  |
+| ----------------- | --------------------------------------------------- | ------------------------------------------------------------------------------ |
+| neither           | null reads as null; invalid data throws             | null reads as null; an invalid string throws                                   |
+| `defaultWhenNull` | null reads as the class mapped from `[]`            | null reads as `default()`, and serializes as null; throws without `HasDefault` |
+| `nullWhenInvalid` | invalid data reads as null                          | an invalid string reads as null and can be set                                 |
 
 In a `$casts` string, the options are `default-when-null` and `null-when-invalid` after the
 class: `AsMappedObject::class.':'.Postcode::class.',null-when-invalid'`.

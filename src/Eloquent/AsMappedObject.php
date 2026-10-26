@@ -15,7 +15,8 @@ use InvalidArgumentException;
 final class AsMappedObject implements Castable
 {
     /**
-     * A null JSON column reads as the class mapped from an empty array, and stays null on save.
+     * A null column reads as the class mapped from an empty array, or as default() for a
+     * StringBacked class that implements HasDefault, and stays null on save.
      */
     public const string DEFAULT_WHEN_NULL = 'default-when-null';
 
@@ -65,10 +66,10 @@ final class AsMappedObject implements Castable
             return new MappedObjectCast($class, $defaultWhenNull, $nullWhenInvalid);
         }
 
-        if ($defaultWhenNull) {
-            throw new InvalidArgumentException("Roma AsMappedObject's ".self::DEFAULT_WHEN_NULL." option applies to classes stored as JSON, and {$class} is StringBacked.");
+        if ($defaultWhenNull && ! is_a($class, HasDefault::class, true)) {
+            throw new InvalidArgumentException("Roma AsMappedObject's ".self::DEFAULT_WHEN_NULL.' option needs StringBacked class '.$class.' to implement '.HasDefault::class.'.');
         }
 
-        return new StringBackedCast($class, $nullWhenInvalid);
+        return new StringBackedCast($class, $defaultWhenNull, $nullWhenInvalid);
     }
 }
