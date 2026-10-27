@@ -325,6 +325,20 @@ Serializer::serialize($object);                     // body, headers, status, qu
 Serializer::toArray($object, Profile::response());  // any profile
 ```
 
+`serialize()` and `toArray()` also take an `Operation` (see
+[Validation](/docs/roma/v1/validation#required-on-create-optional-on-update)). With
+`Operation::None`, the default, a `Missing` property is omitted. With `Create` or `Update`, a
+`Missing` property that the operation requires, such as a `#[RequiredOnCreate]` property in a
+`Create`, throws `InvalidArgumentException` instead, listing the class and the properties. The
+check applies to the object's own properties, not those of nested objects:
+
+```php
+use BYanelli\Roma\Data\Operation;
+
+Serializer::toArray($request, operation: Operation::Create);
+// Roma cannot serialize App\Http\Requests\ContactRequest for a Create, since $email is Missing.
+```
+
 `toArray()` uses `Profile::storage()`, for casts, caches and other data that is read back.
 Use `toSafeArray()` for logs, debug output and anything else that leaves the system, and
 `toResponseBody()` to build a response body by hand. `serialize()` uses `Profile::response()`.

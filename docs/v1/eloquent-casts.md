@@ -193,17 +193,31 @@ use BYanelli\Roma\Eloquent\MapsDataFromObjects;
 
 class Contact extends Model
 {
+    /** @use MapsDataFromObjects<ContactRequest, ContactRequest> */
     use MapsDataFromObjects;
 
     protected $fillable = ['name', 'email', 'phone'];
 }
 
-Route::post('/contacts', fn (ContactRequest $request) => Contact::createFrom($request));
-Route::put('/contacts/{contact}', fn (Contact $contact, ContactRequest $request) => $contact->updateFrom($request));
+Route::post('/contacts', fn (ContactRequest $request) => Contact::createFromObject($request));
+Route::put('/contacts/{contact}', fn (Contact $contact, ContactRequest $request) => $contact->updateFromObject($request));
 ```
 
-`createFrom()` returns `static::create()`'s model. It throws `InvalidArgumentException` when a
-property of the object is `Missing`, listing the properties, instead of leaving the columns to
-their database defaults. `updateFrom()` returns `update()`'s result. The serializer omits
-`Missing` properties, so their columns keep their values. With `#[OptionalOnUpdate]` and
-`#[RequiredOnCreate]` (see [Validation](/docs/roma/v1/validation)), one class can serve both routes.
+`createFromObject()` serializes with `Operation::Create` and returns `static::create()`'s model.
+A `Missing` property is left out, so its column takes its database default, unless the
+property is required in a `Create`, such as one with `#[RequiredOnCreate]` or
+`#[OptionalOnUpdate]`; then it throws `InvalidArgumentException`, listing the properties.
+`updateFromObject()` serializes with `Operation::Update` and returns `update()`'s result.
+`Missing` properties are left out, so their columns keep their values. With
+`#[OptionalOnUpdate]` and `#[RequiredOnCreate]` (see [Validation](/docs/roma/v1/validation)), one
+class can serve both routes.
+
+The trait's two template types are the classes `createFromObject()` and `updateFromObject()`
+accept, which PHPStan checks. Without the `@use` tag, both accept any object. A model that is
+never updated from an object can pass `never` as the second type, and PHPStan then reports
+any call to `updateFromObject()`:
+
+```php
+/** @use MapsDataFromObjects<NewContactRequest, never> */
+use MapsDataFromObjects;
+```

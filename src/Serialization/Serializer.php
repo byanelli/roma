@@ -6,9 +6,12 @@ use BackedEnum;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\OptionalOnUpdate;
+use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\Discriminator;
 use BYanelli\Roma\Data\KeyPath;
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\PhpDocTypeParser;
 use BYanelli\Roma\Data\Reflection\ReflectionParamOrProperty;
 use BYanelli\Roma\Data\Type;
@@ -59,14 +62,20 @@ class Serializer
      */
     private array $overridesToArray = [];
 
-    public function serialize(object $object, ?Profile $profile = null): Serialized
+    /**
+     * A Missing property is left out. Under an Operation other than None, one that is required
+     * in that operation, as when mapping, throws instead. Nested objects are not checked.
+     *
+     * @throws InvalidArgumentException
+     */
+    public function serialize(object $object, ?Profile $profile = null, Operation $operation = Operation::None): Serialized
     {
         $profile ??= Profile::response();
 
         $body = $headers = $query = $path = [];
         $status = $url = null;
 
-        foreach ($this->values($object, $profile) as [$property, $value, $dateFormat, $destination]) {
+        foreach ($this->values($object, $profile, $operation) as [$property, $value, $dateFormat, $destination]) {
             $key = $property->path;
 
             match ($destination) {
@@ -85,12 +94,15 @@ class Serializer
 
     /**
      * The body under the profile, by default Profile::storage(), which includes sensitive values.
+     * `$operation` is as for serialize().
      *
      * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException
      */
-    public function toArray(object $object, ?Profile $profile = null): array
+    public function toArray(object $object, ?Profile $profile = null, Operation $operation = Operation::None): array
     {
-        return $this->serialize($object, $profile ?? Profile::storage())->body;
+        return $this->serialize($object, $profile ?? Profile::storage(), $operation)->body;
     }
 
     /**
@@ -162,8 +174,10 @@ class Serializer
      *
      * @return Generator<int, array{PropertyPlan, mixed, string, Destination}>
      */
-    private function values(object $object, Profile $profile): Generator
+    private function values(object $object, Profile $profile, Operation $operation = Operation::None): Generator
     {
+        $missing = [];
+
         foreach ($this->plan($object::class) as $property) {
             $reflection = $property->reflection;
             $destination = $property->destination;
@@ -200,6 +214,10 @@ class Serializer
             $value = $reflection->getValue($object);
 
             if ($value instanceof Missing) {
+                if ($operation !== Operation::None && $property->isRequiredFor($operation)) {
+                    $missing[] = '$'.$reflection->getName();
+                }
+
                 continue;
             }
 
@@ -214,6 +232,16 @@ class Serializer
                 ?? $profile->dateFormat;
 
             yield [$property, $value, $dateFormat, $destination];
+        }
+
+        if ($missing !== []) {
+            throw new InvalidArgumentException(sprintf(
+                'Roma cannot serialize %s for a %s, since %s %s Missing.',
+                $object::class,
+                $operation->name,
+                implode(', ', $missing),
+                count($missing) === 1 ? 'is' : 'are',
+            ));
         }
     }
 
@@ -401,6 +429,7 @@ class Serializer
             Missing::assertNotAlone($prop->type, $prop->printableName);
 
             $destination = $attributes->destinationAttribute();
+            $optional = $attributes->hasInstanceOf(Optional::class) || $prop->acceptsMissing;
             $dateFormat = $attributes->dateFormat();
 
             if ($dateFormat !== null && ! $this->hasDate($prop)) {
@@ -413,10 +442,13 @@ class Serializer
                 path: $this->path($attributes, $destination?->destinationKey() ?? $attributes->explicitKey() ?? $prop->defaultKey, $prop->printableName),
                 destination: $destination?->destination() ?? Destination::Body,
                 dateFormat: $dateFormat,
-                optional: $attributes->hasInstanceOf(Optional::class) || $prop->acceptsMissing,
+                optional: $optional,
                 discriminated: $this->discriminatedType($prop),
                 sensitive: $prop->isSensitive,
                 fallsBackToBody: $destination instanceof FallsBackToBody,
+                required: ! $optional && ! $prop->hasDefault && ! $prop->nullable,
+                requiredOnCreate: $attributes->hasInstanceOf(RequiredOnCreate::class),
+                optionalOnUpdate: $attributes->hasInstanceOf(OptionalOnUpdate::class),
             );
         }
 

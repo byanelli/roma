@@ -4,11 +4,17 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
-- `Eloquent\MapsDataFromObjects` is a trait for models. `Model::createFrom($object)` and
-  `$model->updateFrom($object)` serialize the object with `Serializer::toArray()` and pass the
-  array to `create()` or `update()`, so `$fillable` and `$guarded` apply. `updateFrom()` leaves
-  out `Missing` properties, and `createFrom()` throws `InvalidArgumentException` when a property
-  is `Missing`.
+- `Eloquent\MapsDataFromObjects` is a trait for models. `Model::createFromObject($object)` and
+  `$model->updateFromObject($object)` serialize the object with `Serializer::toArray()` under
+  `Operation::Create` or `Operation::Update` and pass the array to `create()` or `update()`, so
+  `$fillable` and `$guarded` apply. `Missing` properties are left out, and a `Missing` property
+  that is required in a `Create` throws. The trait's template types,
+  `@use MapsDataFromObjects<CreateClass, UpdateClass>`, are the classes each method accepts;
+  both default to `object`, and `never` makes PHPStan reject calls to that method.
+- `Serializer::serialize()` and `Serializer::toArray()` take an optional `Operation`. Under
+  `Create` or `Update`, a `Missing` property that the operation requires, as when mapping,
+  throws `InvalidArgumentException` instead of being omitted. `Operation::None`, the default,
+  omits it as before.
 - `AsMappedObject::of(Class, defaultWhenNull: true)` accepts a `StringBacked` class that
   implements the new `HasDefault` interface: a null column reads as `Class::default()`, stays
   null on save, and serializes as null. A `StringBacked` class without `HasDefault` still throws

@@ -94,8 +94,6 @@ readonly class Property
      */
     public function isRequiredFor(Operation $operation): bool
     {
-        return $this->isRequired
-            || ($this->requiredOnCreate && $operation === Operation::Create)
-            || ($this->optionalOnUpdate && $operation !== Operation::Update);
+        return $operation->requires($this->isRequired, $this->requiredOnCreate, $this->optionalOnUpdate);
     }
 }

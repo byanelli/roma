@@ -12,4 +12,16 @@ enum Operation
     case Create;
     case Update;
     case None;
+
+    /**
+     * Whether a property is required in this operation. `$always` is whether it is required in
+     * any operation, `$onCreate` whether it has #[RequiredOnCreate], and `$exceptOnUpdate` whether
+     * it has #[OptionalOnUpdate].
+     */
+    public function requires(bool $always, bool $onCreate, bool $exceptOnUpdate): bool
+    {
+        return $always
+            || ($onCreate && $this === self::Create)
+            || ($exceptOnUpdate && $this !== self::Update);
+    }
 }

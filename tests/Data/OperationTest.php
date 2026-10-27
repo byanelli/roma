@@ -86,6 +86,11 @@ function operationErrors(array $data, Operation $operation): array
     return [];
 }
 
+function missingContact(): OperationContact
+{
+    return Mapper::fromArray(OperationContact::class, [], Operation::Update);
+}
+
 describe('the request policy', function () {
     it('maps the method to an operation', function (string $method, Operation $operation) {
         expect(new RequestSourcePolicy()->operation(Request::create('/', $method)))->toBe($operation);
@@ -146,6 +151,36 @@ describe('Mapper::fromArray()', function () {
 
         expect($contact->note)->toBe(Missing::instance());
     })->with([Operation::Create, Operation::Update, Operation::None]);
+});
+
+describe('Serializer::toArray() with an operation', function () {
+    it('omits Missing properties without an operation', function () {
+        expect(Serializer::toArray(missingContact()))->toBe([])
+            ->and(Serializer::toArray(missingContact(), operation: Operation::None))->toBe([])
+            ->and(Serializer::serialize(missingContact(), operation: Operation::None)->body)->toBe([]);
+    });
+
+    it('omits Missing properties that are optional in an Update', function () {
+        expect(Serializer::toArray(missingContact(), operation: Operation::Update))->toBe([]);
+    });
+
+    it('throws on Missing properties that are required in a Create', function () {
+        expect(fn () => Serializer::toArray(missingContact(), operation: Operation::Create))->toThrow(
+            InvalidArgumentException::class,
+            'Roma cannot serialize OperationContact for a Create, since $email, $name, $phone are Missing.',
+        );
+
+        expect(fn () => Serializer::serialize(new OperationContact('a@example.com', 'Ada', Missing::instance(), Missing::instance()), operation: Operation::Create))->toThrow(
+            InvalidArgumentException::class,
+            'Roma cannot serialize OperationContact for a Create, since $phone is Missing.',
+        );
+    });
+
+    it('omits Missing properties that are optional in a Create', function () {
+        $contact = new OperationContact('a@example.com', 'Ada', null, Missing::instance());
+
+        expect(Serializer::toArray($contact, operation: Operation::Create))->toBe(['email' => 'a@example.com', 'name' => 'Ada', 'phone' => null]);
+    });
 });
 
 describe('a request', function () {

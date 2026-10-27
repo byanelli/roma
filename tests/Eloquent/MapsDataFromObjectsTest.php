@@ -3,6 +3,7 @@
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 use BYanelli\Roma\Attributes\OptionalOnUpdate;
+use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\SnakeCaseKeys;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Eloquent\MapsDataFromObjects;
@@ -19,7 +20,7 @@ readonly class MappedContactData
         #[OptionalOnUpdate]
         public string|Missing $name,
 
-        #[OptionalOnUpdate]
+        #[RequiredOnCreate]
         public string|Missing $emailAddress,
 
         public string|Missing|null $phone,
@@ -37,6 +38,7 @@ readonly class MappedContactData
  */
 class MappedContact extends Model
 {
+    /** @use MapsDataFromObjects<MappedContactData, MappedContactData> */
     use MapsDataFromObjects;
 
     public $timestamps = false;
@@ -57,43 +59,48 @@ beforeEach(function () {
 it('creates a model from an object', function () {
     $data = Mapper::fromArray(MappedContactData::class, ['name' => 'Ada', 'email_address' => 'ada@example.com', 'phone' => null], Operation::Create);
 
-    $contact = MappedContact::createFrom($data)->refresh();
+    $contact = MappedContact::createFromObject($data)->refresh();
 
     expect($contact->exists)->toBeTrue()
         ->and($contact->only('name', 'email_address', 'phone'))->toBe(['name' => 'Ada', 'email_address' => 'ada@example.com', 'phone' => null]);
 });
 
-it('updates only the provided properties', function () {
-    $contact = MappedContact::createFrom(new MappedContactData('Ada', 'ada@example.com', '555'));
-
-    $data = Mapper::fromArray(MappedContactData::class, ['phone' => '777'], Operation::Update);
-
-    expect($contact->updateFrom($data))->toBeTrue()
-        ->and($contact->refresh()->only('name', 'email_address', 'phone'))->toBe(['name' => 'Ada', 'email_address' => 'ada@example.com', 'phone' => '777']);
-});
-
-it('throws on create when a property is Missing', function () {
+it('leaves optional Missing properties to their database defaults on create', function () {
     $data = Mapper::fromArray(MappedContactData::class, ['name' => 'Ada', 'email_address' => 'ada@example.com'], Operation::Create);
 
-    expect(fn () => MappedContact::createFrom($data))->toThrow(
+    expect(MappedContact::createFromObject($data)->refresh()->phone)->toBe('none');
+});
+
+it('throws on create when a property required in a Create is Missing', function () {
+    // Built directly, since mapping with Operation::Create would reject the input.
+    expect(fn () => MappedContact::createFromObject(new MappedContactData('Ada', Missing::instance(), '555')))->toThrow(
         InvalidArgumentException::class,
-        'Roma cannot create MappedContact from MappedContactData, since $phone is Missing.',
+        'Roma cannot serialize MappedContactData for a Create, since $emailAddress is Missing.',
     );
 
-    expect(fn () => MappedContact::createFrom(Mapper::fromArray(MappedContactData::class, [], Operation::Update)))->toThrow(
+    expect(fn () => MappedContact::createFromObject(Mapper::fromArray(MappedContactData::class, [], Operation::Update)))->toThrow(
         InvalidArgumentException::class,
-        'since $name, $emailAddress, $phone are Missing.',
+        'since $name, $emailAddress are Missing.',
     );
 
     expect(MappedContact::query()->count())->toBe(0);
 });
 
+it('updates only the provided properties', function () {
+    $contact = MappedContact::createFromObject(new MappedContactData('Ada', 'ada@example.com', '555'));
+
+    $data = Mapper::fromArray(MappedContactData::class, ['phone' => '777'], Operation::Update);
+
+    expect($contact->updateFromObject($data))->toBeTrue()
+        ->and($contact->refresh()->only('name', 'email_address', 'phone'))->toBe(['name' => 'Ada', 'email_address' => 'ada@example.com', 'phone' => '777']);
+});
+
 it('respects the model\'s $fillable', function () {
-    $contact = MappedContact::createFrom(new MappedContactData('Ada', 'ada@example.com', null, isAdmin: true));
+    $contact = MappedContact::createFromObject(new MappedContactData('Ada', 'ada@example.com', null, isAdmin: true));
 
     expect($contact->refresh()->is_admin)->toBeFalsy();
 
-    $contact->updateFrom(new MappedContactData(Missing::instance(), Missing::instance(), Missing::instance(), isAdmin: true));
+    $contact->updateFromObject(new MappedContactData(Missing::instance(), Missing::instance(), Missing::instance(), isAdmin: true));
 
     expect($contact->refresh()->is_admin)->toBeFalsy();
 });

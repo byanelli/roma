@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Serialization;
 
 use BYanelli\Roma\Data\Attributes\AttributesCollection;
 use BYanelli\Roma\Data\KeyPath;
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Type;
 use ReflectionProperty;
 
@@ -20,6 +21,9 @@ final readonly class PropertyPlan
      * @param  ?Type  $discriminated  where the value, or an element of it, is written with its discriminator
      * @param  bool  $sensitive  whether its constructor parameter has #[\SensitiveParameter]
      * @param  bool  $fallsBackToBody  whether it is written to the body under a profile that doesn't allow its destination
+     * @param  bool  $required  whether it is required in any operation, as when mapping
+     * @param  bool  $requiredOnCreate  from #[RequiredOnCreate]
+     * @param  bool  $optionalOnUpdate  from #[OptionalOnUpdate]
      */
     public function __construct(
         public ReflectionProperty $reflection,
@@ -31,5 +35,13 @@ final readonly class PropertyPlan
         public ?Type $discriminated = null,
         public bool $sensitive = false,
         public bool $fallsBackToBody = false,
+        public bool $required = false,
+        public bool $requiredOnCreate = false,
+        public bool $optionalOnUpdate = false,
     ) {}
+
+    public function isRequiredFor(Operation $operation): bool
+    {
+        return $operation->requires($this->required, $this->requiredOnCreate, $this->optionalOnUpdate);
+    }
 }
