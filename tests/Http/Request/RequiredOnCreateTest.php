@@ -6,6 +6,8 @@ use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Data\MappingValidationException;
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Http\Request\Injection\Request as RomaRequest;
@@ -128,11 +130,16 @@ it('requires a nested object\'s property on a POST when the object is present', 
     $this->putJson('/things', ['limits' => ['monthly' => 9]])->assertOk()->assertExactJson(['note' => null, 'limits' => ['monthly' => 9]]);
 });
 
-it('never requires the properties outside a request', function () {
-    $request = Mapper::fromArray(OnCreateRequest::class, []);
+it('requires the properties in an array only for Operation::Create', function (Operation $operation) {
+    $request = Mapper::fromArray(OnCreateRequest::class, [], $operation);
 
     expect($request->account_id)->toBe(Missing::instance())
         ->and($request->note)->toBeNull();
+})->with([Operation::None, Operation::Update]);
+
+it('requires the properties in an array mapped with Operation::Create', function () use ($valid) {
+    expect(fn () => Mapper::fromArray(OnCreateRequest::class, [], Operation::Create))->toThrow(MappingValidationException::class)
+        ->and(Mapper::fromArray(OnCreateRequest::class, $valid, Operation::Create)->name)->toBe('Ada');
 });
 
 it('rejects #[RequiredOnCreate] on a property that is always required', function () {

@@ -8,6 +8,7 @@ use BYanelli\Roma\Attributes\IgnoreIf;
 use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\MapUsing;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\OptionalOnUpdate;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
 use BYanelli\Roma\Attributes\RejectUnknownKeys;
@@ -94,6 +95,7 @@ class ClassDefinitionBuilder
             nullTakesDefault: $this->nullTakesDefault($prop),
             itemRules: $attributes->firstInstanceOf(RulePerItem::class)->rules ?? [],
             requiredOnCreate: $attributes->hasInstanceOf(RequiredOnCreate::class),
+            optionalOnUpdate: $this->optionalOnUpdate($prop),
             ignoreIf: $this->ignoreIf($prop, $source),
         );
 
@@ -105,6 +107,33 @@ class ClassDefinitionBuilder
         }
 
         return $property;
+    }
+
+    /**
+     * Whether the property has #[OptionalOnUpdate]. Its value in an Update must be Missing when
+     * absent, so the type must include Missing and the property may have no default.
+     */
+    private function optionalOnUpdate(ReflectionParamOrProperty $prop): bool
+    {
+        $attributes = $prop->attributes;
+
+        if (! $attributes->hasInstanceOf(OptionalOnUpdate::class)) {
+            return false;
+        }
+
+        $reason = match (true) {
+            $attributes->hasInstanceOf(RequiredOnCreate::class) => ' and #[RequiredOnCreate], which contradict each other. Remove one of them.',
+            ! $prop->acceptsMissing => ', but its type has no Missing, which it takes when absent from an update. Add Missing to its type, e.g. string|Missing.',
+            $prop->hasDefault => ', but it has a default, so it is never required. Remove the default or the attribute.',
+            $attributes->hasInstanceOf(Optional::class) => ' and #[Optional], which makes it never required. Remove one of them.',
+            default => null,
+        };
+
+        if ($reason !== null) {
+            throw new RuntimeException("Roma property \"{$prop->printableName}\" has #[OptionalOnUpdate]{$reason}");
+        }
+
+        return true;
     }
 
     /**

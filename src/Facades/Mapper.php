@@ -5,11 +5,12 @@ namespace BYanelli\Roma\Facades;
 use BYanelli\Roma\Config\ConfigMapper;
 use BYanelli\Roma\Config\ConfigValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Data\Operation;
 use Illuminate\Support\Facades\Facade;
 use RuntimeException;
 
 /**
- * @method static T fromArray<T of object>(class-string<T> $class, array<array-key, mixed> $data)
+ * @method static T fromArray<T of object>(class-string<T> $class, array<array-key, mixed> $data, Operation $operation = Operation::None)
  *
  * @see ObjectMapper
  */

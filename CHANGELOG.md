@@ -37,10 +37,17 @@ All notable changes to `roma` will be documented in this file.
   `#[Message(object: '...')]` replaces the message. An empty list still maps as an empty
   object, since JSON `{}` decodes to one, and the top level of a mapping isn't checked.
 - `#[RequiredOnCreate]` makes an optional property, such as one typed `T|Missing`, required
-  when the request is a POST, as `Request::isMethod('POST')` reports it, so one class can
-  serve POST and PUT. On other methods and outside a request it stays optional, and
-  `#[Message(required: ...)]` applies. On a property that is always required, it throws when
-  the definition is built. `SourcePolicy` has a new `isCreate()` method.
+  when the mapping's `Data\Operation` is `Create`, so one class can serve POST and PUT. A
+  request is a `Create` when it is a POST, as `Request::isMethod('POST')` reports it. Otherwise
+  the property stays optional, and when required, `#[Message(required: ...)]` applies. On a
+  property that is always required, it throws when the definition is built.
+- `#[OptionalOnUpdate]` makes a property typed `T|Missing` required unless the mapping's
+  operation is `Update`, where an absent key maps to `Missing`. A request is an `Update` when it
+  is a PUT or PATCH. It throws when the definition is built on a property whose type has no
+  `Missing`, on one with a default or `#[Optional]`, and with `#[RequiredOnCreate]`.
+- `Data\Operation` has the cases `Create`, `Update` and `None`. `SourcePolicy` has a new
+  `operation()` method, and `Mapper::fromArray()` takes an optional `Operation $operation`,
+  `Operation::None` by default.
 - `#[IgnoreIf(callable)]` treats a property's key as absent when the callable returns true for
   the raw input value, and `#[IgnoreIfEmpty]` does so for exactly `''` or `[]`, such as a JSON
   `{}`. An ignored value isn't validated, maps to `Missing` and isn't serialized. On a property

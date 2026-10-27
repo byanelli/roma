@@ -12,5 +12,5 @@ readonly class ArrayInput
     /**
      * @param  array<array-key, mixed>  $data
      */
-    public function __construct(public array $data) {}
+    public function __construct(public array $data, public Operation $operation = Operation::None) {}
 }

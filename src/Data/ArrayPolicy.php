@@ -55,8 +55,11 @@ readonly class ArrayPolicy implements SourcePolicy
         return false;
     }
 
-    public function isCreate(object $input): bool
+    /**
+     * The operation the caller passed to Mapper::fromArray().
+     */
+    public function operation(object $input): Operation
     {
-        return false;
+        return $input instanceof ArrayInput ? $input->operation : Operation::None;
     }
 }

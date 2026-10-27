@@ -41,7 +41,8 @@ readonly class ObjectMapper
     }
 
     /**
-     * Maps a plain array, such as a tool's arguments or a stored value.
+     * Maps a plain array, such as a tool's arguments or a stored value. `$operation` decides
+     * whether the #[RequiredOnCreate] and #[OptionalOnUpdate] properties are required.
      *
      * @template T of object
      *
@@ -51,9 +52,9 @@ readonly class ObjectMapper
      *
      * @throws \ReflectionException|MappingValidationException
      */
-    public function fromArray(string $className, array $data): object
+    public function fromArray(string $className, array $data, Operation $operation = Operation::None): object
     {
-        return $this->map($className, new ArrayInput($data), new ArrayPolicy);
+        return $this->map($className, new ArrayInput($data, $operation), new ArrayPolicy);
     }
 
     /**
@@ -65,7 +66,7 @@ readonly class ObjectMapper
     {
         $class = new ClassDefinitionBuilder($policy)->buildClassDefinition($className);
 
-        return ClassMapping::fromInput($class, $input, $policy->isCreate($input));
+        return ClassMapping::fromInput($class, $input, $policy->operation($input));
     }
 
     /**

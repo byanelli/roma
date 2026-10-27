@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Http\Request;
 
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Http\Enums\HasRequestSource;
@@ -65,10 +66,16 @@ readonly class RequestSourcePolicy implements SourcePolicy
     }
 
     /**
-     * A POST, as Request::isMethod() reports it, so a form's _method override counts.
+     * POST is a Create, and PUT and PATCH are an Update, as Request::isMethod() reports the
+     * method, so a form's _method override counts.
      */
-    public function isCreate(object $input): bool
+    public function operation(object $input): Operation
     {
-        return $input instanceof Request && $input->isMethod('POST');
+        return match (true) {
+            ! $input instanceof Request => Operation::None,
+            $input->isMethod('POST') => Operation::Create,
+            $input->isMethod('PUT'), $input->isMethod('PATCH') => Operation::Update,
+            default => Operation::None,
+        };
     }
 }

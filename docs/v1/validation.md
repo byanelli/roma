@@ -302,14 +302,19 @@ input it was mapped from. An `#[Optional]` constructor parameter must be nullabl
 `#[Present]` on a type with `Missing` throws too, and so does a type with nothing but
 `Missing` and `null`, such as `?Missing`: add the type of the value, e.g. `string|Missing`.
 
-### Required only on create
+### Required on create, optional on update
 
 One class can serve both `POST` and `PUT` for a resource when its properties include `Missing`,
-so a `PUT` changes only the fields it sends. `#[RequiredOnCreate]` makes such a property
-required when the request is a create, which Roma defines as an HTTP `POST`:
+so a `PUT` changes only the fields it sends. Two attributes make a property's requirement depend
+on the mapping's operation, a `BYanelli\Roma\Data\Operation`:
+
+- `#[RequiredOnCreate]` makes an optional property required in a `Create`.
+- `#[OptionalOnUpdate]` makes a property required except in an `Update`, where an absent key
+  maps to `Missing`.
 
 ```php
 use BYanelli\Roma\Attributes\Message;
+use BYanelli\Roma\Attributes\OptionalOnUpdate;
 use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\Rule;
 use BYanelli\Roma\Missing;
@@ -317,22 +322,50 @@ use BYanelli\Roma\Missing;
 readonly class ContactRequest {
     public function __construct(
         #[RequiredOnCreate]
-        #[Message(required: 'Send a name.')]
+        #[Message(required: 'Send an email.')]
+        public string|Missing $email,      // required on POST
+
+        #[OptionalOnUpdate]
         #[Rule('max:255')]
-        public string|Missing $name,       // required on POST, Missing when absent otherwise
-        public string|Missing|null $phone,
+        public string|Missing $name,       // required except on PUT and PATCH
+
+        public string|Missing|null $phone, // never required
     ) {}
 }
 ```
 
-The method is the one Laravel's `Request::isMethod()` checks, so a form that posts
-`_method=PUT` is a `PUT`. A `PUT`, `PATCH` or any other method doesn't count, and outside a
-request, as in `Mapper::fromArray()`, the property is never required. On a create Roma adds
-Laravel's `required` rule before the property's own rules, so `#[Message(required: ...)]`
-replaces its message, and on a nullable property a `null` fails as well. In a nested object the
-property is required when the object is present. JSON Schema and TypeScript show the property
-as optional. On a property that is always required, one with no `Missing`, default or `null` in
-its type, the attribute throws when the class definition is built.
+A request's operation comes from its method, as Laravel's `Request::isMethod()` reports it, so a
+form that posts `_method=PUT` is a `PUT`:
+
+| Method              | Operation |
+| ------------------- | --------- |
+| `POST`              | `Create`  |
+| `PUT`, `PATCH`      | `Update`  |
+| any other           | `None`    |
+
+`Mapper::fromArray()` maps with `Operation::None` unless it is passed another, and config objects
+and HTTP client responses always use `None`:
+
+```php
+use BYanelli\Roma\Data\Operation;
+
+Mapper::fromArray(ContactRequest::class, $data, Operation::Update);
+```
+
+| Attribute             | `Create` | `Update` | `None`   |
+| --------------------- | -------- | -------- | -------- |
+| `#[RequiredOnCreate]` | required | optional | optional |
+| `#[OptionalOnUpdate]` | required | optional | required |
+
+When the property is required, Roma adds Laravel's `required` rule before the property's own
+rules, so `#[Message(required: ...)]` replaces its message, and on a nullable property a `null`
+fails as well. In a nested object the property is required when the object is present. JSON
+Schema and TypeScript show both kinds of property as optional.
+
+The class definition throws for `#[RequiredOnCreate]` on a property that is always required,
+one with no `Missing`, default or `null` in its type. It throws for `#[OptionalOnUpdate]` on a
+property whose type has no `Missing`, on one with a default or `#[Optional]`, which is never
+required, and together with `#[RequiredOnCreate]`.
 
 ### Ignoring empty values
 

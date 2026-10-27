@@ -21,7 +21,8 @@ readonly class Property
      * @param  array<int, mixed>  $rules
      * @param  array<int, object>  $rawAttributes
      * @param  list<mixed>  $itemRules  the rules for each item of an array, from #[RulePerItem]
-     * @param  bool  $requiredOnCreate  from #[RequiredOnCreate]: required when the input is a create
+     * @param  bool  $requiredOnCreate  from #[RequiredOnCreate]: required in a Create
+     * @param  bool  $optionalOnUpdate  from #[OptionalOnUpdate]: required except in an Update
      * @param  list<Closure(mixed): bool>  $ignoreIf  tests of the raw input value; a match treats the key as absent
      */
     public function __construct(
@@ -41,6 +42,7 @@ readonly class Property
         public bool $nullTakesDefault = false,
         public array $itemRules = [],
         public bool $requiredOnCreate = false,
+        public bool $optionalOnUpdate = false,
         public array $ignoreIf = [],
     ) {
         // A nullable property with no explicit default resolves to null when
@@ -88,10 +90,12 @@ readonly class Property
     }
 
     /**
-     * Whether the property is required, given whether the input is a create.
+     * Whether the property is required in the operation.
      */
-    public function isRequiredFor(bool $isCreate): bool
+    public function isRequiredFor(Operation $operation): bool
     {
-        return $this->isRequired || ($isCreate && $this->requiredOnCreate);
+        return $this->isRequired
+            || ($this->requiredOnCreate && $operation === Operation::Create)
+            || ($this->optionalOnUpdate && $operation !== Operation::Update);
     }
 }

@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Validation;
 use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\RejectUnknownKeys;
 use BYanelli\Roma\Data\KeyPath;
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Property;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\Type;
@@ -88,13 +89,13 @@ readonly class ValidationRules
      * `$data` is the coerced data of `$source`. The rules for a union depend on its
      * discriminator, and the rules for a class that contains itself are only as deep as the
      * data, so an array that contains either gets rules per element. A single-value source's
-     * value is validated under the source's key as one segment, e.g. "request.ip". `$isCreate`
-     * makes the #[RequiredOnCreate] properties required. `$checkedKeys` are the source's
+     * value is validated under the source's key as one segment, e.g. "request.ip". `$operation`
+     * decides whether the #[RequiredOnCreate] and #[OptionalOnUpdate] properties are required. `$checkedKeys` are the source's
      * top-level keys that #[RejectUnknownKeys] checks, or null for all of them.
      *
      * @param  ?list<array-key>  $checkedKeys
      */
-    public function __construct(Class_ $class, public Source $source, mixed $data, private bool $isCreate = false, ?array $checkedKeys = [])
+    public function __construct(Class_ $class, public Source $source, mixed $data, private Operation $operation = Operation::None, ?array $checkedKeys = [])
     {
         $dataDependent = [];
         $this->findDataDependent($class, [], $dataDependent);
@@ -406,7 +407,7 @@ readonly class ValidationRules
             $property->type,
             $base->concat($property->keyPath),
             $property->errorKey,
-            [...$this->leadingRules($property->nullable, $property->isRequiredFor($this->isCreate), null), ...$property->rules],
+            [...$this->leadingRules($property->nullable, $property->isRequiredFor($this->operation), null), ...$property->rules],
             $property->itemRules,
         ));
     }
@@ -606,7 +607,7 @@ readonly class ValidationRules
                 $member->type,
                 $path->concat($member->keyPath),
                 "$name.{$member->keyPath->toKey()}",
-                [...$this->leadingRules($member->nullable, $member->isRequiredFor($this->isCreate), $path), ...$member->rules],
+                [...$this->leadingRules($member->nullable, $member->isRequiredFor($this->operation), $path), ...$member->rules],
                 $member->itemRules,
             ))];
         }

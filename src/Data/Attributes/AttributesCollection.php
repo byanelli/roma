@@ -10,6 +10,7 @@ use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\Optional;
+use BYanelli\Roma\Attributes\OptionalOnUpdate;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Attributes\RejectNull;
 use BYanelli\Roma\Attributes\RejectNumbers;
@@ -50,6 +51,7 @@ final class AttributesCollection extends Collection
         Optional::class,
         RulesAttribute::class,
         RequiredOnCreate::class,
+        OptionalOnUpdate::class,
         IgnoreIf::class,
         IgnoreIfEmpty::class,
     ];
@@ -300,7 +302,7 @@ final class AttributesCollection extends Collection
     {
         foreach ($this->declared() as $attribute) {
             if (($attribute instanceof SourceAttribute || $attribute instanceof RulesAttribute || $attribute instanceof Message || $attribute instanceof MapTransform || $attribute instanceof RejectNull || $attribute instanceof RejectNumbers
-                || $attribute instanceof RequiredOnCreate || $attribute instanceof IgnoreIf || $attribute instanceof IgnoreIfEmpty)
+                || $attribute instanceof RequiredOnCreate || $attribute instanceof OptionalOnUpdate || $attribute instanceof IgnoreIf || $attribute instanceof IgnoreIfEmpty)
                 && ! $attribute instanceof DestinationAttribute) {
                 throw new RuntimeException(
                     "Roma property \"{$this->property->printableName}\" is virtual (a hooked property with no backing value), so it is never "

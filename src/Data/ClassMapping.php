@@ -36,7 +36,7 @@ class ClassMapping
 
     /**
      * At the top level `$data` is keyed by source key; a nested object's data is its own slice.
-     * `$isCreate` and `$checkedKeys` apply to the top level, whose validation rules cover the
+     * `$operation` and `$checkedKeys` apply to the top level, whose validation rules cover the
      * nested objects.
      *
      * @param  array<string, mixed>  $data
@@ -46,7 +46,7 @@ class ClassMapping
         private readonly Class_ $class,
         array $data,
         private readonly DateFactory $dateFactory,
-        private readonly bool $isCreate = false,
+        private readonly Operation $operation = Operation::None,
         private readonly array $checkedKeys = [],
     ) {
         $this->data = $data;
@@ -57,10 +57,10 @@ class ClassMapping
     }
 
     /**
-     * Reads only the sources the class's properties map from. `$isCreate` makes the
-     * #[RequiredOnCreate] properties required.
+     * Reads only the sources the class's properties map from. `$operation` decides whether the
+     * #[RequiredOnCreate] and #[OptionalOnUpdate] properties are required.
      */
-    public static function fromInput(Class_ $class, object $input, bool $isCreate = false, DateFactory $dateFactory = new DateFactory): self
+    public static function fromInput(Class_ $class, object $input, Operation $operation = Operation::None, DateFactory $dateFactory = new DateFactory): self
     {
         $data = [];
         $checkedKeys = [];
@@ -70,7 +70,7 @@ class ClassMapping
             $checkedKeys[$key] = $source->checkedKeys($input);
         }
 
-        return new self($class, $data, $dateFactory, $isCreate, $checkedKeys);
+        return new self($class, $data, $dateFactory, $operation, $checkedKeys);
     }
 
     /**
@@ -686,7 +686,7 @@ class ClassMapping
                 $this->class,
                 $source,
                 $this->normalizeValue($this->data[$source->getKey()] ?? null),
-                $this->isCreate,
+                $this->operation,
                 array_key_exists($source->getKey(), $this->checkedKeys) ? $this->checkedKeys[$source->getKey()] : [],
             ),
             array_filter($this->class->sources(), fn (Source $source) => ! $source->isInjected()),

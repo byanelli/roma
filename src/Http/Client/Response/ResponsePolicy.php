@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Http\Client\Response;
 
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Http\Request\Sources as RequestSources;
@@ -72,8 +73,8 @@ final readonly class ResponsePolicy implements SourcePolicy
         return in_array($destination, [Destination::Body, Destination::Header, Destination::Status], true);
     }
 
-    public function isCreate(object $input): bool
+    public function operation(object $input): Operation
     {
-        return false;
+        return Operation::None;
     }
 }

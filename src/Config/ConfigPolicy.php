@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Config;
 
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Data\SourcePolicy;
 use BYanelli\Roma\Serialization\Destination;
@@ -63,8 +64,8 @@ final readonly class ConfigPolicy implements SourcePolicy
         return false;
     }
 
-    public function isCreate(object $input): bool
+    public function operation(object $input): Operation
     {
-        return false;
+        return Operation::None;
     }
 }
