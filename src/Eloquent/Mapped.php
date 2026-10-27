@@ -12,7 +12,7 @@ use InvalidArgumentException;
  * Profile::storage(), sensitive values included. A null column reads as null, and a stored
  * value that can't be read throws InvalidAttributeValue.
  */
-final class AsMappedObject implements Castable
+final class Mapped implements Castable
 {
     /**
      * A null column reads as the class mapped from an empty array, or as default() for a
@@ -27,11 +27,11 @@ final class AsMappedObject implements Castable
     public const string NULL_WHEN_INVALID = 'null-when-invalid';
 
     /**
-     * The cast for the class, as in `'settings' => AsMappedObject::of(Settings::class)`.
+     * The cast for the class, as in `'settings' => Mapped::to(Settings::class)`.
      *
      * @param  class-string  $class
      */
-    public static function of(string $class, bool $defaultWhenNull = false, bool $nullWhenInvalid = false): string
+    public static function to(string $class, bool $defaultWhenNull = false, bool $nullWhenInvalid = false): string
     {
         $options = array_keys(array_filter([
             self::DEFAULT_WHEN_NULL => $defaultWhenNull,
@@ -50,13 +50,13 @@ final class AsMappedObject implements Castable
         $class = array_shift($arguments);
 
         if (! is_string($class) || ! class_exists($class)) {
-            throw new InvalidArgumentException('Roma AsMappedObject needs a class, as in AsMappedObject::of(Settings::class).');
+            throw new InvalidArgumentException('Roma Mapped needs a class, as in Mapped::to(Settings::class).');
         }
 
         $unknown = array_diff($arguments, [self::DEFAULT_WHEN_NULL, self::NULL_WHEN_INVALID]);
 
         if ($unknown !== []) {
-            throw new InvalidArgumentException('Roma AsMappedObject has no option '.implode(', ', $unknown).'.');
+            throw new InvalidArgumentException('Roma Mapped has no option '.implode(', ', $unknown).'.');
         }
 
         $defaultWhenNull = in_array(self::DEFAULT_WHEN_NULL, $arguments, true);
@@ -67,7 +67,7 @@ final class AsMappedObject implements Castable
         }
 
         if ($defaultWhenNull && ! is_a($class, HasDefault::class, true)) {
-            throw new InvalidArgumentException("Roma AsMappedObject's ".self::DEFAULT_WHEN_NULL.' option needs StringBacked class '.$class.' to implement '.HasDefault::class.'.');
+            throw new InvalidArgumentException("Roma Mapped's ".self::DEFAULT_WHEN_NULL.' option needs StringBacked class '.$class.' to implement '.HasDefault::class.'.');
         }
 
         return new StringBackedCast($class, $defaultWhenNull, $nullWhenInvalid);

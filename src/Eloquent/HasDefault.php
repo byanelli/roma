@@ -3,7 +3,7 @@
 namespace BYanelli\Roma\Eloquent;
 
 /**
- * A StringBacked class with a value for a null column. AsMappedObject's defaultWhenNull option
+ * A StringBacked class with a value for a null column. Mapped's defaultWhenNull option
  * requires it for a StringBacked class.
  */
 interface HasDefault

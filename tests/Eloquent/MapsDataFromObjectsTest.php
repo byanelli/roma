@@ -8,7 +8,7 @@ use BYanelli\Roma\Attributes\OptionalOnUpdate;
 use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\SnakeCaseKeys;
 use BYanelli\Roma\Data\Operation;
-use BYanelli\Roma\Eloquent\AsMappedObject;
+use BYanelli\Roma\Eloquent\Mapped;
 use BYanelli\Roma\Eloquent\MapsDataFromObjects;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Missing;
@@ -120,7 +120,7 @@ class MergeAccount extends Model
     {
         return [
             'user_settings' => 'array',
-            'prefs' => AsMappedObject::of(MergeSettings::class, defaultWhenNull: true),
+            'prefs' => Mapped::to(MergeSettings::class, defaultWhenNull: true),
             'plain_settings' => 'array',
         ];
     }

@@ -9,7 +9,7 @@ use InvalidArgumentException;
 
 /**
  * Casts a string column to a StringBacked class. A string set on the attribute is stored as
- * given and serialized as stored. Created by AsMappedObject.
+ * given and serialized as stored. Created by Mapped.
  *
  * @internal
  *

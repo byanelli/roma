@@ -29,7 +29,7 @@ and DTO in one.
   over `(string) config('services.x.key')` casts; inject it by type-hint and run
   `php artisan roma:config:validate` in CI and deploys.
 - For a model attribute that holds a typed object, prefer
-  `AsMappedObject::of(Settings::class)` in `casts()` over the `array` cast or a hand-written
+  `Mapped::to(Settings::class)` in `casts()` over the `array` cast or a hand-written
   cast. A value object stored as a string implements `StringBacked`.
 
 Full documentation: https://yanelli.dev/docs/roma (Markdown: https://yanelli.dev/docs/roma.md).

@@ -10,7 +10,7 @@ group: Eloquent
 
 # Eloquent casts
 
-`AsMappedObject` casts a model attribute to a class. Any class is stored as a JSON object:
+`Mapped` casts a model attribute to a class. Any class is stored as a JSON object:
 it is mapped and validated with `Mapper::fromArray()` when read or set from an array, and
 stored with `Profile::storage()`, including `#[\SensitiveParameter]` properties. A class that implements `StringBacked` is stored as a
 string instead.
@@ -18,22 +18,22 @@ string instead.
 ```php
 use App\Values\Postcode;
 use App\Values\Settings;
-use BYanelli\Roma\Eloquent\AsMappedObject;
+use BYanelli\Roma\Eloquent\Mapped;
 
 class Account extends Model
 {
     protected function casts(): array
     {
         return [
-            'settings' => AsMappedObject::of(Settings::class),  // a JSON column
-            'postcode' => AsMappedObject::of(Postcode::class),  // a string column
+            'settings' => Mapped::to(Settings::class),  // a JSON column
+            'postcode' => Mapped::to(Postcode::class),  // a string column
         ];
     }
 }
 ```
 
-`AsMappedObject::of()` returns a cast string, so it goes in the `casts()` method. In the
-`$casts` property, write the same string: `AsMappedObject::class.':'.Settings::class`.
+`Mapped::to()` returns a cast string, so it goes in the `casts()` method. In the
+`$casts` property, write the same string: `Mapped::class.':'.Settings::class`.
 
 ## JSON object columns
 
@@ -69,7 +69,7 @@ A null column reads as null. To read it as the class mapped from an empty array,
 `defaultWhenNull`. The column stays null until the attribute is set:
 
 ```php
-'settings' => AsMappedObject::of(Settings::class, defaultWhenNull: true),
+'settings' => Mapped::to(Settings::class, defaultWhenNull: true),
 
 $account->settings;  // new Settings, even when the column is null
 ```
@@ -127,7 +127,7 @@ final readonly class Region implements HasDefault, StringBacked
     }
 }
 
-'region' => AsMappedObject::of(Region::class, defaultWhenNull: true),
+'region' => Mapped::to(Region::class, defaultWhenNull: true),
 
 $account->region;                  // Region::default(), even when the column is null
 $account->toArray()['region'];     // null when the column is null
@@ -153,7 +153,7 @@ also accepts a string that doesn't parse, and stores it as given, which suits a 
 keeps raw input:
 
 ```php
-'postcode' => AsMappedObject::of(Postcode::class, nullWhenInvalid: true),
+'postcode' => Mapped::to(Postcode::class, nullWhenInvalid: true),
 
 $account->postcode = 'unknown';           // stored as "unknown"
 $account->postcode;                       // null
@@ -170,12 +170,12 @@ value without calling the cast.
 | `nullWhenInvalid` | invalid data reads as null                          | an invalid string reads as null and can be set                                 |
 
 In a `$casts` string, the options are `default-when-null` and `null-when-invalid` after the
-class: `AsMappedObject::class.':'.Postcode::class.',null-when-invalid'`.
+class: `Mapped::class.':'.Postcode::class.',null-when-invalid'`.
 
 ## Object caching
 
 Laravel caches a cast object and writes it back through the cast when the model is saved.
-`AsMappedObject` turns that off, so reading an attribute never changes what is stored: a
+`Mapped` turns that off, so reading an attribute never changes what is stored: a
 column with keys the class doesn't have, a string in a format other than `toString()`'s,
 and a null column read with `defaultWhenNull` are saved unchanged. Mapped classes are
 usually readonly, so assign a new object to change the attribute.

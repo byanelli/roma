@@ -4,9 +4,9 @@
 
 use BYanelli\Roma\Attributes\SnakeCaseKeys;
 use BYanelli\Roma\Data\MappingValidationException;
-use BYanelli\Roma\Eloquent\AsMappedObject;
 use BYanelli\Roma\Eloquent\HasDefault;
 use BYanelli\Roma\Eloquent\InvalidAttributeValue;
+use BYanelli\Roma\Eloquent\Mapped;
 use BYanelli\Roma\Eloquent\MappedObjectCast;
 use BYanelli\Roma\Eloquent\StringBacked;
 use BYanelli\Roma\Eloquent\StringBackedCast;
@@ -88,14 +88,14 @@ class CastRecord extends Model
     protected function casts(): array
     {
         return [
-            'settings' => AsMappedObject::of(CastSettings::class),
-            'defaulted' => AsMappedObject::of(CastSettings::class, defaultWhenNull: true),
-            'lenient' => AsMappedObject::of(CastSettings::class, nullWhenInvalid: true),
-            'postcode' => AsMappedObject::class.':'.CastPostcode::class,
-            'lenient_postcode' => AsMappedObject::of(CastPostcode::class, nullWhenInvalid: true),
-            'credentials' => AsMappedObject::of(CastCredentials::class),
-            'region' => AsMappedObject::of(CastRegion::class, defaultWhenNull: true),
-            'lenient_region' => AsMappedObject::of(CastRegion::class, defaultWhenNull: true, nullWhenInvalid: true),
+            'settings' => Mapped::to(CastSettings::class),
+            'defaulted' => Mapped::to(CastSettings::class, defaultWhenNull: true),
+            'lenient' => Mapped::to(CastSettings::class, nullWhenInvalid: true),
+            'postcode' => Mapped::class.':'.CastPostcode::class,
+            'lenient_postcode' => Mapped::to(CastPostcode::class, nullWhenInvalid: true),
+            'credentials' => Mapped::to(CastCredentials::class),
+            'region' => Mapped::to(CastRegion::class, defaultWhenNull: true),
+            'lenient_region' => Mapped::to(CastRegion::class, defaultWhenNull: true, nullWhenInvalid: true),
         ];
     }
 }
@@ -329,26 +329,26 @@ describe('a StringBacked column with DEFAULT_WHEN_NULL', function () {
 
 describe('the cast arguments', function () {
     it('chooses the cast by the class', function () {
-        expect(AsMappedObject::castUsing([CastSettings::class]))->toBeInstanceOf(MappedObjectCast::class)
-            ->and(AsMappedObject::castUsing([CastPostcode::class]))->toBeInstanceOf(StringBackedCast::class)
-            ->and(AsMappedObject::castUsing([CastRegion::class, AsMappedObject::DEFAULT_WHEN_NULL]))->toBeInstanceOf(StringBackedCast::class);
+        expect(Mapped::castUsing([CastSettings::class]))->toBeInstanceOf(MappedObjectCast::class)
+            ->and(Mapped::castUsing([CastPostcode::class]))->toBeInstanceOf(StringBackedCast::class)
+            ->and(Mapped::castUsing([CastRegion::class, Mapped::DEFAULT_WHEN_NULL]))->toBeInstanceOf(StringBackedCast::class);
     });
 
     it('lists the options after the class', function () {
-        expect(AsMappedObject::of(CastSettings::class))->toBe(AsMappedObject::class.':'.CastSettings::class)
-            ->and(AsMappedObject::of(CastSettings::class, defaultWhenNull: true, nullWhenInvalid: true))
-            ->toBe(AsMappedObject::class.':'.CastSettings::class.',default-when-null,null-when-invalid');
+        expect(Mapped::to(CastSettings::class))->toBe(Mapped::class.':'.CastSettings::class)
+            ->and(Mapped::to(CastSettings::class, defaultWhenNull: true, nullWhenInvalid: true))
+            ->toBe(Mapped::class.':'.CastSettings::class.',default-when-null,null-when-invalid');
     });
 
     it('throws for a missing class, an unknown option, or DEFAULT_WHEN_NULL on a StringBacked class without HasDefault', function (array $arguments, string $message) {
-        expect(fn () => AsMappedObject::castUsing($arguments))->toThrow(InvalidArgumentException::class, $message);
+        expect(fn () => Mapped::castUsing($arguments))->toThrow(InvalidArgumentException::class, $message);
     })->with([
-        'no class' => [[], 'Roma AsMappedObject needs a class, as in AsMappedObject::of(Settings::class).'],
-        'not a class' => [['NoSuchClass'], 'Roma AsMappedObject needs a class'],
-        'unknown option' => [[CastSettings::class, 'lenient'], 'Roma AsMappedObject has no option lenient.'],
+        'no class' => [[], 'Roma Mapped needs a class, as in Mapped::to(Settings::class).'],
+        'not a class' => [['NoSuchClass'], 'Roma Mapped needs a class'],
+        'unknown option' => [[CastSettings::class, 'lenient'], 'Roma Mapped has no option lenient.'],
         'default for a string' => [
-            [CastPostcode::class, AsMappedObject::DEFAULT_WHEN_NULL],
-            "Roma AsMappedObject's default-when-null option needs StringBacked class CastPostcode to implement BYanelli\\Roma\\Eloquent\\HasDefault.",
+            [CastPostcode::class, Mapped::DEFAULT_WHEN_NULL],
+            "Roma Mapped's default-when-null option needs StringBacked class CastPostcode to implement BYanelli\\Roma\\Eloquent\\HasDefault.",
         ],
     ]);
 });
