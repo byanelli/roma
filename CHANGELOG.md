@@ -2,7 +2,7 @@
 
 All notable changes to `roma` will be documented in this file.
 
-## Unreleased
+## 0.9.0 - 2026-10-27
 
 - `Eloquent\MapsDataFromObjects` is a trait for models. `Model::createFromObject($object)` and
   `$model->updateFromObject($object)` serialize the object with `Serializer::toArray()` under
