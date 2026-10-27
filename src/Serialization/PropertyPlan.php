@@ -24,6 +24,7 @@ final readonly class PropertyPlan
      * @param  bool  $required  whether it is required in any operation, as when mapping
      * @param  bool  $requiredOnCreate  from #[RequiredOnCreate]
      * @param  bool  $optionalOnUpdate  from #[OptionalOnUpdate]
+     * @param  bool  $mergeOnUpdate  from #[MergeOnUpdate]
      */
     public function __construct(
         public ReflectionProperty $reflection,
@@ -38,6 +39,7 @@ final readonly class PropertyPlan
         public bool $required = false,
         public bool $requiredOnCreate = false,
         public bool $optionalOnUpdate = false,
+        public bool $mergeOnUpdate = false,
     ) {}
 
     public function isRequiredFor(Operation $operation): bool

@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Facades;
 
+use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Serialization\Profile;
 use BYanelli\Roma\Serialization\Serialized;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static array<string, mixed> toResponseBody(object $object)
  * @method static array<array-key, mixed> normalize(array<array-key, mixed> $value, ?Profile $profile = null)
  * @method static bool overridesToArray(object $object)
+ * @method static list<KeyPath> mergePaths(object $object)
  *
  * @see SerializerService
  */

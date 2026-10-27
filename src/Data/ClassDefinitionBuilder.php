@@ -7,6 +7,7 @@ use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\IgnoreIf;
 use BYanelli\Roma\Attributes\IgnoreIfEmpty;
 use BYanelli\Roma\Attributes\MapUsing;
+use BYanelli\Roma\Attributes\MergeOnUpdate;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\OptionalOnUpdate;
 use BYanelli\Roma\Attributes\RejectNull;
@@ -291,6 +292,13 @@ class ClassDefinitionBuilder
         if ($attributes->hasInstanceOf(Delimited::class) && ! $type instanceof Types\Array_) {
             throw new RuntimeException(
                 "Roma property \"{$prop->printableName}\" has #[Delimited], which splits a string into an array, but its type is not an array."
+            );
+        }
+
+        if ($attributes->hasInstanceOf(MergeOnUpdate::class) && (! $type instanceof Class_ || $type->parsesStringValue())) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[MergeOnUpdate], which merges a nested object into a stored JSON object, "
+                .'but its type is not a nested object class.'
             );
         }
 

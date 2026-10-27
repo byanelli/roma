@@ -11,6 +11,12 @@ All notable changes to `roma` will be documented in this file.
   that is required in a `Create` throws. The trait's template types,
   `@use MapsDataFromObjects<CreateClass, UpdateClass>`, are the classes each method accepts;
   both default to `object`, and `never` makes PHPStan reject calls to that method.
+- `#[MergeOnUpdate]` on a nested object property makes `updateFromObject()` merge the
+  serialized object over the column's stored JSON object, so keys the object leaves out keep
+  their stored values. The merge is shallow. Null clears the column, `Missing` leaves it alone,
+  and a null column is set as it is. The class definition throws when the property's type is not
+  a nested object class, and `updateFromObject()` throws when the column can't be merged.
+  `Serializer::mergePaths($object)` returns the body paths of the properties to merge.
 - `Serializer::serialize()` and `Serializer::toArray()` take an optional `Operation`. Under
   `Create` or `Update`, a `Missing` property that the operation requires, as when mapping,
   throws `InvalidArgumentException` instead of being omitted. `Operation::None`, the default,

@@ -212,6 +212,36 @@ property is required in a `Create`, such as one with `#[RequiredOnCreate]` or
 `#[OptionalOnUpdate]` and `#[RequiredOnCreate]` (see [Validation](/docs/roma/v1/validation)), one
 class can serve both routes.
 
+By default an object property replaces its column, so keys the request leaves out are lost.
+`#[MergeOnUpdate]` on a nested object property, typically `SomeInput|Missing|null`, makes
+`updateFromObject()` merge the serialized object over the column's stored JSON object instead:
+keys the object leaves out, such as `Missing` ones, keep their stored values, and keys it
+writes replace them. The merge is shallow, so a nested object inside it is still replaced.
+
+```php
+use BYanelli\Roma\Attributes\MergeOnUpdate;
+
+#[SnakeCaseKeys]
+readonly class UpdateExportRequest
+{
+    public function __construct(
+        #[MergeOnUpdate]
+        public ExportConfigInput|Missing|null $config,
+    ) {}
+}
+
+// Stored config: {"to": ["a@example.com"], "password": "secret"}
+// PATCH {"config": {"to": ["b@example.com"]}} stores {"to": ["b@example.com"], "password": "secret"}
+```
+
+The column is merged by its key in the serialized array, so `#[Key]` and `#[SnakeCaseKeys]`
+apply. Its stored value is read raw, without the cast, so a null column is set to the object as
+it is, even under `defaultWhenNull`. Null still clears the column, and `Missing` still leaves it
+alone. The attribute has no effect in `createFromObject()` or in a nested object. The class
+definition throws when the property's type is not a nested object class, and
+`updateFromObject()` throws `InvalidArgumentException` when the attribute has no array, JSON or
+class cast, or its stored value is not a JSON object.
+
 The trait's two template types are the classes `createFromObject()` and `updateFromObject()`
 accept, which PHPStan checks. Without the `@use` tag, both accept any object. A model that is
 never updated from an object can pass `never` as the second type, and PHPStan then reports

@@ -5,6 +5,7 @@ namespace BYanelli\Roma\Serialization;
 use BackedEnum;
 use BYanelli\Roma\Attributes\DateFormat;
 use BYanelli\Roma\Attributes\Discriminated;
+use BYanelli\Roma\Attributes\MergeOnUpdate;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\OptionalOnUpdate;
 use BYanelli\Roma\Attributes\RequiredOnCreate;
@@ -43,7 +44,7 @@ class Serializer
     /**
      * Other attributes are left uninstantiated, since their classes may not be loadable.
      */
-    private const array ATTRIBUTES = [...AttributesCollection::CHECKED, DateFormat::class, Discriminated::class, SerializeTransform::class];
+    private const array ATTRIBUTES = [...AttributesCollection::CHECKED, DateFormat::class, Discriminated::class, MergeOnUpdate::class, SerializeTransform::class];
 
     public function __construct(private PhpDocTypeParser $phpDocTypeParser = new PhpDocTypeParser) {}
 
@@ -138,6 +139,32 @@ class Serializer
         $profile ??= Profile::storage();
 
         return array_map(fn (mixed $item): mixed => $this->normalizeValue($item, $profile, $profile->dateFormat), $value);
+    }
+
+    /**
+     * The body paths of the object's #[MergeOnUpdate] properties whose value is an object.
+     *
+     * @return list<KeyPath>
+     */
+    public function mergePaths(object $object): array
+    {
+        $paths = [];
+
+        foreach ($this->plan($object::class) as $property) {
+            $reflection = $property->reflection;
+
+            if (! $property->mergeOnUpdate || ($property->destination !== Destination::Body && ! $property->fallsBackToBody) || ! $reflection->isInitialized($object)) {
+                continue;
+            }
+
+            $value = $reflection->getValue($object);
+
+            if (is_object($value) && ! $value instanceof Missing) {
+                $paths[] = $property->path;
+            }
+        }
+
+        return $paths;
     }
 
     /**
@@ -449,6 +476,7 @@ class Serializer
                 required: ! $optional && ! $prop->hasDefault && ! $prop->nullable,
                 requiredOnCreate: $attributes->hasInstanceOf(RequiredOnCreate::class),
                 optionalOnUpdate: $attributes->hasInstanceOf(OptionalOnUpdate::class),
+                mergeOnUpdate: $attributes->hasInstanceOf(MergeOnUpdate::class),
             );
         }
 
