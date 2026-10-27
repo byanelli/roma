@@ -179,3 +179,31 @@ Laravel caches a cast object and writes it back through the cast when the model 
 column with keys the class doesn't have, a string in a format other than `toString()`'s,
 and a null column read with `defaultWhenNull` are saved unchanged. Mapped classes are
 usually readonly, so assign a new object to change the attribute.
+
+## Creating and updating models
+
+The `MapsDataFromObjects` trait creates and updates a model from a mapped object, such as a
+request object. Both methods serialize the object with `Serializer::toArray()`, which uses
+`Profile::storage()`, and fill the model with the result, so the model's `$fillable` and
+`$guarded` apply. The object's keys are the column names, so `#[SnakeCaseKeys]` on the class
+gives snake_case columns.
+
+```php
+use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+
+class Contact extends Model
+{
+    use MapsDataFromObjects;
+
+    protected $fillable = ['name', 'email', 'phone'];
+}
+
+Route::post('/contacts', fn (ContactRequest $request) => Contact::createFrom($request));
+Route::put('/contacts/{contact}', fn (Contact $contact, ContactRequest $request) => $contact->updateFrom($request));
+```
+
+`createFrom()` returns `static::create()`'s model. It throws `InvalidArgumentException` when a
+property of the object is `Missing`, listing the properties, instead of leaving the columns to
+their database defaults. `updateFrom()` returns `update()`'s result. The serializer omits
+`Missing` properties, so their columns keep their values. With `#[OptionalOnUpdate]` and
+`#[RequiredOnCreate]` (see [Validation](/docs/roma/v1/validation)), one class can serve both routes.
