@@ -126,6 +126,58 @@ class MergeAccount extends Model
     }
 }
 
+enum UpsertListingStatus: string
+{
+    case Open = 'open';
+    case Closed = 'closed';
+}
+
+#[SnakeCaseKeys]
+readonly class UpsertListingData
+{
+    /**
+     * @param  list<string>|Missing  $tags
+     */
+    public function __construct(
+        public string $sku,
+
+        #[RequiredOnCreate]
+        public string|Missing $title,
+
+        public array|Missing $tags,
+        public string|Missing|null $note,
+        public UpsertListingStatus $status = UpsertListingStatus::Open,
+        public bool $featured = false,
+    ) {}
+}
+
+/**
+ * @property int $id
+ * @property string $sku
+ * @property string $title
+ * @property UpsertListingStatus $status
+ * @property ?list<string> $tags
+ * @property ?string $note
+ * @property bool $featured
+ */
+class UpsertListing extends Model
+{
+    /** @use MapsDataFromObjects<never, never, UpsertListingData> */
+    use MapsDataFromObjects;
+
+    protected $fillable = ['sku', 'title', 'status', 'tags', 'note'];
+
+    protected $attributes = ['note' => 'model default'];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => UpsertListingStatus::class,
+            'tags' => 'array',
+        ];
+    }
+}
+
 beforeEach(function () {
     Schema::create('mapped_contacts', function (Blueprint $table) {
         $table->id();
@@ -142,7 +194,28 @@ beforeEach(function () {
         $table->json('prefs')->nullable();
         $table->json('plain_settings')->nullable();
     });
+
+    Schema::create('upsert_listings', function (Blueprint $table) {
+        $table->id();
+        $table->string('sku')->unique();
+        $table->string('title');
+        $table->string('status');
+        $table->json('tags')->nullable();
+        $table->string('note')->nullable()->default('none');
+        $table->boolean('featured')->default(false);
+        $table->timestamps();
+    });
 });
+
+function listing(array $input): UpsertListingData
+{
+    return Mapper::fromArray(UpsertListingData::class, $input);
+}
+
+function upsertListingRow(string $sku): array
+{
+    return (array) DB::table('upsert_listings')->where('sku', $sku)->first();
+}
 
 function mergeAccount(): MergeAccount
 {
@@ -267,4 +340,113 @@ it('throws when #[MergeOnUpdate] is on a property that is not a nested object', 
         RuntimeException::class,
         'has #[MergeOnUpdate], which merges a nested object into a stored JSON object, but its type is not a nested object class.',
     );
+});
+
+it('inserts a row from an object', function () {
+    $affected = UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp', 'tags' => ['home']]), ['sku']);
+
+    expect($affected)->toBe(1)
+        ->and(UpsertListing::query()->sole()->only('sku', 'title', 'status', 'tags'))->toBe([
+            'sku' => 'A1',
+            'title' => 'Lamp',
+            'status' => UpsertListingStatus::Open,
+            'tags' => ['home'],
+        ]);
+});
+
+it('updates the row with the same unique key and keeps its created_at', function () {
+    $this->travelTo('2026-01-01 00:00:00');
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp']), ['sku']);
+
+    $this->travelTo('2026-02-01 00:00:00');
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Desk lamp', 'status' => 'closed']), ['sku']);
+
+    expect(UpsertListing::query()->count())->toBe(1)
+        ->and(upsertListingRow('A1'))->toMatchArray([
+            'title' => 'Desk lamp',
+            'status' => 'closed',
+            'created_at' => '2026-01-01 00:00:00',
+            'updated_at' => '2026-02-01 00:00:00',
+        ]);
+});
+
+it('updates only the $update columns on conflict', function () {
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp']), ['sku']);
+
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Desk lamp', 'status' => 'closed']), ['sku'], ['status']);
+
+    expect(upsertListingRow('A1'))->toMatchArray(['title' => 'Lamp', 'status' => 'closed']);
+});
+
+it('applies the model\'s casts to the stored row', function () {
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp', 'status' => 'closed', 'tags' => ['home', 'light']]), ['sku']);
+
+    expect(upsertListingRow('A1'))->toMatchArray(['status' => 'closed', 'tags' => '["home","light"]']);
+});
+
+it('respects the model\'s $fillable on upsert', function () {
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp', 'featured' => true]), ['sku']);
+
+    expect(upsertListingRow('A1')['featured'])->toBe(0);
+});
+
+it('throws on upsert when a property required in a Create is Missing', function () {
+    expect(fn () => UpsertListing::upsertFromObject(new UpsertListingData('A1', Missing::instance(), Missing::instance(), Missing::instance()), ['sku']))->toThrow(
+        InvalidArgumentException::class,
+        'Roma cannot serialize UpsertListingData for a Create, since $title is Missing.',
+    );
+
+    expect(UpsertListing::query()->count())->toBe(0);
+});
+
+it('leaves optional Missing properties out of the upsert', function () {
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp']), ['sku']);
+    DB::table('upsert_listings')->update(['note' => 'kept', 'tags' => '["kept"]']);
+
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Desk lamp']), ['sku']);
+    UpsertListing::upsertFromObject(listing(['sku' => 'B2', 'title' => 'Rug']), ['sku']);
+
+    // The model's default note is not written either, so a new row takes the database default.
+    expect(upsertListingRow('A1'))->toMatchArray(['title' => 'Desk lamp', 'note' => 'kept', 'tags' => '["kept"]'])
+        ->and(upsertListingRow('B2'))->toMatchArray(['note' => 'none', 'tags' => null]);
+});
+
+it('upserts many objects in one query', function () {
+    UpsertListing::upsertFromObject(listing(['sku' => 'A1', 'title' => 'Lamp']), ['sku']);
+
+    DB::enableQueryLog();
+
+    $affected = UpsertListing::upsertManyFromObjects(
+        (function () {
+            yield listing(['sku' => 'A1', 'title' => 'Desk lamp']);
+            yield listing(['sku' => 'B2', 'title' => 'Rug']);
+            yield listing(['sku' => 'C3', 'title' => 'Chair']);
+        })(),
+        ['sku'],
+    );
+
+    expect(DB::getQueryLog())->toHaveCount(1)
+        ->and($affected)->toBe(3)
+        ->and(UpsertListing::query()->orderBy('sku')->pluck('title', 'sku')->all())->toBe(['A1' => 'Desk lamp', 'B2' => 'Rug', 'C3' => 'Chair']);
+});
+
+it('runs no query when upserting no objects', function () {
+    DB::enableQueryLog();
+
+    expect(UpsertListing::upsertManyFromObjects([], ['sku']))->toBe(0)
+        ->and(DB::getQueryLog())->toBe([]);
+});
+
+it('throws when upserted objects give rows with different columns', function () {
+    DB::enableQueryLog();
+
+    expect(fn () => UpsertListing::upsertManyFromObjects([
+        listing(['sku' => 'A1', 'title' => 'Lamp', 'tags' => ['home']]),
+        listing(['sku' => 'B2', 'title' => 'Rug']),
+    ], ['sku']))->toThrow(
+        InvalidArgumentException::class,
+        'Roma cannot upsert UpsertListing rows with different columns: row 1 has [sku, status, title], but row 0 has [sku, status, tags, title].',
+    );
+
+    expect(DB::getQueryLog())->toBe([]);
 });

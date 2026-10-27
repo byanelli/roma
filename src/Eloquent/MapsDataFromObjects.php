@@ -6,16 +6,18 @@ use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Facades\Serializer;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 use InvalidArgumentException;
 
 /**
- * Creates and updates a model from a mapped object, serialized with Profile::storage(). Both
- * fill the model, so its $fillable and $guarded apply. A model lists the classes it accepts
- * with `@use MapsDataFromObjects<CreateRequest, UpdateRequest>`; `never` for one of them makes
- * PHPStan reject calls to that method.
+ * Creates, updates and upserts models from mapped objects, serialized with Profile::storage().
+ * All methods fill a model, so its $fillable, $guarded and casts apply. A model lists the classes
+ * it accepts with `@use MapsDataFromObjects<CreateRequest, UpdateRequest, UpsertRequest>`;
+ * `never` for one of them makes PHPStan reject calls to that method.
  *
  * @template TCreateFrom of object = object
  * @template TUpdateFrom of object = object
+ * @template TUpsertFrom of object = object
  *
  * @phpstan-require-extends Model
  */
@@ -51,6 +53,81 @@ trait MapsDataFromObjects
         }
 
         return $this->update($attributes);
+    }
+
+    /**
+     * Inserts a row from the object, or updates the row with the same $uniqueBy values. Missing
+     * properties are left out, as in createFromObject(), and a Missing property that is required
+     * in a Create throws. Returns the number of affected rows, as the driver reports it.
+     *
+     * @param  TUpsertFrom  $data
+     * @param  list<string>  $uniqueBy
+     * @param  ?list<string>  $update  The columns to update on conflict; null updates all of them.
+     *
+     * @throws InvalidArgumentException
+     * @throws QueryException
+     */
+    public static function upsertFromObject(object $data, array $uniqueBy, ?array $update = null): int
+    {
+        return static::upsertManyFromObjects([$data], $uniqueBy, $update);
+    }
+
+    /**
+     * Upserts the objects in a single query, so a caller with many rows chunks them. The rows
+     * must have the same columns, so a Missing property must be Missing in all objects or none.
+     *
+     * @param  iterable<TUpsertFrom>  $data
+     * @param  list<string>  $uniqueBy
+     * @param  ?list<string>  $update  The columns to update on conflict; null updates all of them.
+     *
+     * @throws InvalidArgumentException
+     * @throws QueryException
+     */
+    public static function upsertManyFromObjects(iterable $data, array $uniqueBy, ?array $update = null): int
+    {
+        $query = static::query();
+        $rows = [];
+
+        foreach ($data as $object) {
+            $row = static::upsertRow($query->newModelInstance(), $object);
+
+            if ($rows !== [] && array_keys($row) !== array_keys($rows[0])) {
+                throw new InvalidArgumentException(sprintf(
+                    'Roma cannot upsert %s rows with different columns: row %d has [%s], but row 0 has [%s].',
+                    static::class,
+                    count($rows),
+                    implode(', ', array_keys($row)),
+                    implode(', ', array_keys($rows[0])),
+                ));
+            }
+
+            $rows[] = $row;
+        }
+
+        if ($rows === []) {
+            return 0;
+        }
+
+        return $query->upsert($rows, $uniqueBy, $update);
+    }
+
+    /**
+     * The query builder's upsert() skips casts and mass assignment, so the row is filled into a
+     * model first. Its default attributes are cleared, so they don't overwrite columns on update.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws InvalidArgumentException
+     */
+    private static function upsertRow(Model $model, object $data): array
+    {
+        $model->setRawAttributes([]);
+        $model->fill(Serializer::toArray($data, operation: Operation::Create));
+
+        $row = $model->getAttributes();
+        ksort($row);
+
+        return $row;
     }
 
     /**

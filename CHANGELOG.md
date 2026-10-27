@@ -11,6 +11,12 @@ All notable changes to `roma` will be documented in this file.
   that is required in a `Create` throws. The trait's template types,
   `@use MapsDataFromObjects<CreateClass, UpdateClass>`, are the classes each method accepts;
   both default to `object`, and `never` makes PHPStan reject calls to that method.
+- `MapsDataFromObjects` has `Model::upsertFromObject($object, $uniqueBy, $update)` and
+  `Model::upsertManyFromObjects($objects, $uniqueBy, $update)`, which serialize objects with
+  `Operation::Create` and pass the rows to Eloquent's `upsert()` in one query. Each row is
+  filled into a new model first, so the model's casts, `$fillable` and `$guarded` apply. Rows
+  with different columns throw `InvalidArgumentException`. A third template type,
+  `@use MapsDataFromObjects<CreateClass, UpdateClass, UpsertClass>`, is the class they accept.
 - `#[MergeOnUpdate]` on a nested object property makes `updateFromObject()` merge the
   serialized object over the column's stored JSON object, so keys the object leaves out keep
   their stored values. The merge is shallow. Null clears the column, `Missing` leaves it alone,

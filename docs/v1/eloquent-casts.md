@@ -242,12 +242,53 @@ definition throws when the property's type is not a nested object class, and
 `updateFromObject()` throws `InvalidArgumentException` when the attribute has no array, JSON or
 class cast, or its stored value is not a JSON object.
 
-The trait's two template types are the classes `createFromObject()` and `updateFromObject()`
-accept, which PHPStan checks. Without the `@use` tag, both accept any object. A model that is
-never updated from an object can pass `never` as the second type, and PHPStan then reports
-any call to `updateFromObject()`:
+### Upserting
+
+`upsertFromObject()` inserts a row from an object, or updates the row that has the same values
+in the `$uniqueBy` columns, through Eloquent's `upsert()`. `upsertManyFromObjects()` does the
+same for an iterable of objects in a single query, and returns 0 without a query when it is
+empty. Both return the number of affected rows as the database driver reports it.
+
+```php
+Product::upsertFromObject($product, uniqueBy: ['vendor_id', 'sku']);
+
+foreach (array_chunk($products, 500) as $chunk) {
+    Product::upsertManyFromObjects($chunk, uniqueBy: ['vendor_id', 'sku'], update: ['price']);
+}
+```
+
+The objects are serialized with `Operation::Create`, since a row may be inserted: a `Missing`
+property that is required in a `Create` throws, and other `Missing` properties are left out, so
+on update their columns keep their values. `$update` lists the columns to update when the row
+exists; null, the default, updates all the row's columns except `created_at`. Eloquent sets
+`created_at` and `updated_at` when the model uses timestamps.
+
+The query builder's `upsert()` skips casts and mass assignment, so each row is filled into a
+new model first and its raw attributes are sent. The model's casts apply, as do `$fillable` and
+`$guarded`, so the `$uniqueBy` columns must be fillable. The model's default `$attributes` are
+not used, so a column the object leaves out takes its database default on insert.
+
+All rows in one `upsertManyFromObjects()` call must have the same columns, as the query builder
+requires, so a `Missing` property must be `Missing` in all the objects or in none. Otherwise
+it throws `InvalidArgumentException` before running a query. The method doesn't chunk the
+input; a caller with many rows passes them in chunks, since a database limits the number of
+bindings in a query.
+
+### Type checks
+
+The trait's three template types are the classes `createFromObject()`, `updateFromObject()` and
+the upsert methods accept, which PHPStan checks. Without the `@use` tag, all of them accept any
+object. A model that is never updated from an object can pass `never` as the second type, and
+PHPStan then reports any call to `updateFromObject()`:
 
 ```php
 /** @use MapsDataFromObjects<NewContactRequest, never> */
+use MapsDataFromObjects;
+```
+
+A model that is only upserted passes `never` for the first two:
+
+```php
+/** @use MapsDataFromObjects<never, never, ImportedProduct> */
 use MapsDataFromObjects;
 ```
