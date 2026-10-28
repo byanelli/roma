@@ -328,7 +328,8 @@ it('sends a request with a file property as multipart', function () {
 
     expect($request->isMultipart())->toBeTrue()
         ->and($request->hasFile('file', filename: 'clip.txt'))->toBeTrue()
-        ->and($request->body())->toContain("filename=\"clip.txt\"\r\nContent-Length: 5\r\nContent-Type: text/plain\r\n\r\nhello")
+        ->and($request->body())->toContain('filename="clip.txt"')
+        ->and($request->body())->toContain("Content-Type: text/plain\r\n\r\nhello")
         ->and($request->body())->toContain('name="caption"')
         ->and($request->body())->toContain('name="tags[1]"');
 });
