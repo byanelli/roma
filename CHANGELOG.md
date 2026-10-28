@@ -2,7 +2,7 @@
 
 All notable changes to `roma` will be documented in this file.
 
-## Unreleased
+## 0.9.1 - 2026-10-27
 
 - `Eloquent\AsMappedObject::of()` is now `Eloquent\Mapped::to()`, with the same options.
 
