@@ -448,7 +448,8 @@ typed as a class, the property's type must be that class, or the class definitio
 
 `#[MapFromInput]` passes the whole input to its callable instead, and the result is the
 property's value. The property isn't read from the input or validated, so the callable
-decides how lenient to be. It can call the class's private static methods:
+decides how lenient to be. It runs only after the other properties pass validation, so it can
+rely on their keys in the input. It can call the class's private static methods:
 
 ```php
 use BYanelli\Roma\Attributes\MapFromInput;
