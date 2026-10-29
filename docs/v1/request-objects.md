@@ -119,6 +119,44 @@ $contact = Mapper::fromArray(ContactData::class, $payload);
   implement `HandlesFailedValidation`, and [Precognition](/docs/roma/v1/precognition) works
   as it does for `#[Request]`.
 
+## Map only the query string
+
+`#[RequestQuery]` does the same for the query string, such as a search or a list's filters.
+The mapping is always `Operation::None`, and the body is ignored.
+
+```php
+use BYanelli\Roma\Attributes\Delimited;
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Http\Request\Injection\RequestQuery;
+
+readonly class ProductFilters {
+    /**
+     * @param  list<string>  $tags
+     */
+    public function __construct(
+        #[Rule('min:3')]
+        public ?string $search = null,
+        public bool $inStock = false,
+        #[Delimited]
+        public array $tags = [],
+        public int $page = 1,
+    ) {}
+}
+
+class ListProductsController {
+    public function __invoke(
+        #[RequestQuery]
+        ProductFilters $filters,
+    ) {
+        // GET /products?search=lamp&inStock=1&tags=desk,office&page=2
+    }
+}
+```
+
+Query string values are strings and arrays, and they're coerced as they are for `#[Query]`:
+`"2"` maps to `2`, and `"1"`, `"true"`, `"on"` and `"yes"` map to `true`. Errors,
+`HandlesFailedValidation` and Precognition work as they do for `#[RequestBody]`.
+
 ## Share properties with traits
 
 Common properties can be factored into a trait and mixed into any request:

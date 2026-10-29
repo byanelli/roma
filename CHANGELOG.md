@@ -11,7 +11,10 @@ All notable changes to `roma` will be documented in this file.
   `source_prefixed_errors` says. `HandlesFailedValidation` and Precognition work as with
   `#[Request]`. A property that reads another part of the request, such as `#[Query]` or
   `#[Header]`, throws when the class definition is built.
-- Breaking: the `Http\Request\Contracts\RequestMapper` interface has a new `mapBody()` method.
+- `#[RequestQuery]` on a controller parameter maps the request's query string onto the class in
+  the same way, with `Operation::None`. Values are coerced as they are for `#[Query]`.
+- Breaking: the `Http\Request\Contracts\RequestMapper` interface has new `mapBody()` and
+  `mapQuery()` methods.
 - `ContextualBindingException` takes an optional `attribute:` argument, the short name of the
   attribute in its message.
 

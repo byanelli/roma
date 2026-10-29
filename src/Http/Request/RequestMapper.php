@@ -7,6 +7,7 @@ use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ClassMapping;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\Precognition\ClientDataKeys;
 use BYanelli\Roma\Http\Request\Precognition\PrecognitiveValidator;
@@ -74,15 +75,49 @@ readonly class RequestMapper implements Contracts\RequestMapper
     {
         $request = $this->requestResolver->get();
 
-        $input = new ArrayInput(RequestSource::bodyFields($request), new RequestSourcePolicy()->operation($request));
-        $mapping = $this->objectMapper->mapping($className, $input, new ArrayPolicy);
+        return $this->mapArray($className, $request, RequestSource::bodyFields($request), new RequestSourcePolicy()->operation($request));
+    }
+
+    /**
+     * @template T
+     *
+     * @param  class-string<T>  $className
+     * @return T
+     *
+     * @throws \ReflectionException|ValidationException
+     * @throws HttpResponseException the class implements HandlesFailedValidation and validation failed
+     * @throws HttpException a passing precognitive request short-circuits with a 204
+     */
+    public function mapQuery(string $className)
+    {
+        $request = $this->requestResolver->get();
+
+        return $this->mapArray($className, $request, $request->query->all(), Operation::None);
+    }
+
+    /**
+     * Maps one part of the request as Mapper::fromArray() maps an array.
+     *
+     * @template T
+     *
+     * @param  class-string<T>  $className
+     * @param  array<array-key, mixed>  $data
+     * @return T
+     *
+     * @throws \ReflectionException|ValidationException
+     * @throws HttpResponseException the class implements HandlesFailedValidation and validation failed
+     * @throws HttpException a passing precognitive request short-circuits with a 204
+     */
+    private function mapArray(string $className, Request $request, array $data, Operation $operation)
+    {
+        $mapping = $this->objectMapper->mapping($className, new ArrayInput($data, $operation), new ArrayPolicy);
 
         try {
             if ($request->isPrecognitive()) {
                 $this->precognitiveValidator->validate($request, $mapping->validationRules(), bareKeys: true);
             }
 
-            // The body is the only source, so a "data." prefix would tell the client nothing.
+            // The data is the only source, so a "data." prefix would tell the client nothing.
             $this->asHttpValidation(fn () => $this->validateWithLaravelKeys($mapping, fn () => true));
 
             return $this->objectMapper->build($mapping);

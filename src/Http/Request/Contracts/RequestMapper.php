@@ -28,4 +28,17 @@ interface RequestMapper
      * @throws \ReflectionException|ValidationException
      */
     public function mapBody(string $className);
+
+    /**
+     * Maps the query string as Mapper::fromArray() maps an array, with Operation::None. Errors
+     * are keyed and worded as Laravel's validator does.
+     *
+     * @template T
+     *
+     * @param  class-string<T>  $className
+     * @return T
+     *
+     * @throws \ReflectionException|ValidationException
+     */
+    public function mapQuery(string $className);
 }
