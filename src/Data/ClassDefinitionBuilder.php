@@ -6,7 +6,8 @@ use BYanelli\Roma\Attributes\Delimited;
 use BYanelli\Roma\Attributes\Discriminated;
 use BYanelli\Roma\Attributes\IgnoreIf;
 use BYanelli\Roma\Attributes\IgnoreIfEmpty;
-use BYanelli\Roma\Attributes\MapUsing;
+use BYanelli\Roma\Attributes\MapFromInput;
+use BYanelli\Roma\Attributes\MapFromValue;
 use BYanelli\Roma\Attributes\MergeOnUpdate;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\OptionalOnUpdate;
@@ -363,47 +364,55 @@ class ClassDefinitionBuilder
     }
 
     /**
-     * The source of a property whose first #[MapUsing] callable takes the input instead of the
-     * value. A callable typed as some other class must accept the property's value.
+     * The source of a property with #[MapFromInput], whose callable receives the input instead
+     * of the value. A first #[MapFromValue] callable typed as a class must accept the property's value.
      */
     private function inputObjectSource(ReflectionParamOrProperty $prop): ?Source
     {
         $transforms = array_values($prop->attributes->filter(fn (object $attribute) => $attribute instanceof MapTransform)->all());
-        $inputType = $this->policy->inputType();
+        $source = null;
 
         foreach ($transforms as $index => $transform) {
-            if (! $transform instanceof MapUsing || $transform->parameterClass === null) {
-                continue;
-            }
+            if ($transform instanceof MapFromInput) {
+                $this->assertMapFromInputAllowed($prop, $transform, $index);
 
-            if ($transform->takesInput($inputType)) {
-                if ($index > 0) {
-                    throw new RuntimeException(
-                        "Roma property \"{$prop->printableName}\" has a #[MapUsing] callable that takes the input after another map "
-                        .'transform. Put it first, since its result is the property\'s value.'
-                    );
-                }
-
-                if ($this->nested || $prop->attributes->sourceAttribute() !== null || $prop->typeSource !== null) {
-                    throw new RuntimeException(
-                        "Roma property \"{$prop->printableName}\" has a #[MapUsing] callable that takes the input, which sets its value, "
-                        .'so it cannot map from a source or be inside a nested object.'
-                    );
-                }
-
-                return new InputObject($transform->parameterClass);
-            }
-
-            if ($index === 0 && ! $this->typeAccepts($prop, $transform->parameterClass)) {
+                $source = new InputObject($this->policy);
+            } elseif ($index === 0 && $transform instanceof MapFromValue && $transform->parameterClass !== null && ! $this->typeAccepts($prop, $transform->parameterClass)) {
                 throw new RuntimeException(
-                    "Roma property \"{$prop->printableName}\" has a #[MapUsing] callable that takes "
-                    .class_basename($transform->parameterClass).', which is neither the property\'s type nor the input this mapping reads ('
-                    .class_basename($inputType).').'
+                    "Roma property \"{$prop->printableName}\" has a #[MapFromValue] callable that takes "
+                    .class_basename($transform->parameterClass).', which is not the property\'s type. The callable receives the '
+                    .'property\'s value; to receive the input, use #[MapFromInput].'
                 );
             }
         }
 
-        return null;
+        return $source;
+    }
+
+    private function assertMapFromInputAllowed(ReflectionParamOrProperty $prop, MapFromInput $transform, int $index): void
+    {
+        if ($index > 0) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[MapFromInput] after another map transform. Put it first, "
+                .'since its result is the property\'s value.'
+            );
+        }
+
+        if ($this->nested || $prop->attributes->sourceAttribute() !== null || $prop->typeSource !== null) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[MapFromInput], which sets its value from the input, "
+                .'so it cannot map from a source or be inside a nested object.'
+            );
+        }
+
+        $inputType = $this->policy->mapFromInputType();
+
+        if (! $transform->accepts($inputType)) {
+            throw new RuntimeException(
+                "Roma property \"{$prop->printableName}\" has #[MapFromInput] with a callable that takes ".((string) $transform->parameterType)
+                .', but under '.class_basename($this->policy)." it receives {$inputType}. Type the parameter as {$inputType} or leave it untyped."
+            );
+        }
     }
 
     /**

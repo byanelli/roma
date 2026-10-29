@@ -23,6 +23,21 @@ readonly class RequestSourcePolicy implements SourcePolicy
         return Request::class;
     }
 
+    /**
+     * The request.
+     *
+     * @param  Request  $input
+     */
+    public function mapFromInputValue(object $input): Request
+    {
+        return $input;
+    }
+
+    public function mapFromInputType(): string
+    {
+        return Request::class;
+    }
+
     public function defaultSource(): Source
     {
         return new Sources\Input;

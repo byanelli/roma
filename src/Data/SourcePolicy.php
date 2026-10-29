@@ -23,6 +23,18 @@ interface SourcePolicy
     public function inputType(): string;
 
     /**
+     * What a #[MapFromInput] callable receives for `$input`, an object of inputType(): the input
+     * itself, or the data it wraps.
+     */
+    public function mapFromInputValue(object $input): mixed;
+
+    /**
+     * The type of mapFromInputValue()'s result, "array" or a class, which a #[MapFromInput]
+     * callable's parameter must accept.
+     */
+    public function mapFromInputType(): string;
+
+    /**
      * The source of a top-level property with no source attribute.
      */
     public function defaultSource(): Source;

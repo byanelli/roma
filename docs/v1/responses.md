@@ -250,7 +250,7 @@ class LeadResponse extends Response {
 An attribute that implements `BYanelli\Roma\Serialization\SerializeTransform` is applied the
 same way, through `serializeValue($value, $object)`. TypeScript and JSON Schema still describe
 the property's declared type. To change the value the object itself holds, use
-[`#[MapUsing]`](/docs/roma/v1/sources#transforming-values) instead.
+[`#[MapFromValue]`](/docs/roma/v1/sources#transforming-values) instead.
 
 Overriding `toArray()` is the escape hatch for output the properties can't describe. Keys it
 adds are not in the generated TypeScript. When the object is nested in another, the

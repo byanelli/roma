@@ -29,7 +29,7 @@ Fetch it when you need detail beyond this skill.
 
 | Namespace | Contents |
 | --- | --- |
-| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `RequiredOnCreate`, `IgnoreIf`, `IgnoreIfEmpty`, `RejectUnknownKeys`, `Message`, `MapUsing`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
+| `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `RequiredOnCreate`, `IgnoreIf`, `IgnoreIfEmpty`, `RejectUnknownKeys`, `Message`, `MapFromValue`, `MapFromInput`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
 | `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
@@ -207,9 +207,11 @@ an explicit list unless the member list changes often.
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
 - **Custom messages:** `#[Message(required: 'Send a name.')]` sets a property's message for a
   Laravel rule; a message without a rule name covers all of the property's rules.
-- **Transforms:** `#[MapUsing(strtolower(...))]` changes a value after validation; a
-  `static function (Request $request)` callable computes the property from the request
-  instead (not read from input, not validated; must be the first transform; top-level only).
+- **Transforms:** `#[MapFromValue(strtolower(...))]` changes a value after validation;
+  `#[MapFromInput(static function (Request $request) { ... })]` computes the property from the
+  whole input instead: the `Request` for `#[Request]`, the plain `array` for `#[RequestBody]`,
+  `#[RequestQuery]` and `Mapper::fromArray()` (not read from input, not validated; must be the
+  first transform; top-level only; the parameter type is checked when the definition is built).
   `#[SerializeUsing(...)]` changes the serialized value; a user callable with a second
   parameter receives the object. Attributes can be static closures or first-class callables,
   not arrow functions. `#[Limit(200)]` cuts a string with `Str::limit()` (appends `...`

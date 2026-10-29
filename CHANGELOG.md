@@ -15,6 +15,16 @@ All notable changes to `roma` will be documented in this file.
   the same way, with `Operation::None`. Values are coerced as they are for `#[Query]`.
 - Breaking: the `Http\Request\Contracts\RequestMapper` interface has new `mapBody()` and
   `mapQuery()` methods.
+- Breaking: `#[MapUsing]` is replaced by two attributes. `#[MapFromValue(callable)]` passes the
+  property's value through the callable, as `#[MapUsing]` did, and never passes the input,
+  whatever the parameter's type. `#[MapFromInput(callable)]` passes the whole input and sets the
+  property from the result: the `Request` for `#[Request]`, the plain array for
+  `Mapper::fromArray()`, `#[RequestBody]` and `#[RequestQuery]`, the config `Repository` for
+  `Mapper::fromConfig()`, and the client `Response` for an HTTP client response class. The class
+  definition throws when the callable's parameter doesn't accept that input. Replace a
+  `#[MapUsing]` whose callable takes the `Request` with `#[MapFromInput]`, and the others with
+  `#[MapFromValue]`. `SourcePolicy` has new `mapFromInputValue()` and `mapFromInputType()`
+  methods.
 - `ContextualBindingException` takes an optional `attribute:` argument, the short name of the
   attribute in its message.
 

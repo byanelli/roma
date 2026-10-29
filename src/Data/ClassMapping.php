@@ -520,7 +520,7 @@ class ClassMapping
     }
 
     /**
-     * Applies the #[MapUsing] and other MapTransform attributes to the constructed values of
+     * Applies the MapTransform attributes to the constructed values of
      * getConstructorMappedValuesOrNestedClassesAsList().
      *
      * @param  list<mixed>  $values

@@ -88,9 +88,9 @@ readonly class ScrapflyConfig {
   accepted for a `string`, and `null` taking a property's default), validation via `#[Rule]` and `#[RulePerItem]` for array items, `#[RequiredOnCreate]` for one class that serves POST and PUT, `#[IgnoreIfEmpty]` for a `{}` that means not sent, `#[RejectUnknownKeys]` for strict input, nested objects, discriminated unions
   (`#[Discriminated]`), and `#[Guard]` authorization methods. `#[Message]` sets a property's
   messages, and `HandlesFailedValidation` replaces the 422 with a response of your own.
-- **Transforms.** `#[MapUsing(strtolower(...))]` changes a value after validation, and a
-  callable typed `Request` computes a property from the request, and `#[Limit(200)]` cuts a
-  string. `#[SerializeUsing]` changes a value on the way out, optionally with the object.
+- **Transforms.** `#[MapFromValue(strtolower(...))]` changes a value after validation,
+  `#[MapFromInput]` computes a property from the whole input, such as the request, and
+  `#[Limit(200)]` cuts a string. `#[SerializeUsing]` changes a value on the way out, optionally with the object.
 - **Header value objects.** Type a property as `Authorization` to get the scheme +
   credentials (with `->basic()` / `->isBearer()`), or use `#[ContentType]` and the `Method`
   / `Scheme` / `ContentType` metadata enums.

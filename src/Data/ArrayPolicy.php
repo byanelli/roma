@@ -22,6 +22,22 @@ readonly class ArrayPolicy implements SourcePolicy
         return ArrayInput::class;
     }
 
+    /**
+     * The plain array.
+     *
+     * @param  ArrayInput  $input
+     * @return array<array-key, mixed>
+     */
+    public function mapFromInputValue(object $input): array
+    {
+        return $input->data;
+    }
+
+    public function mapFromInputType(): string
+    {
+        return 'array';
+    }
+
     public function defaultSource(): Source
     {
         return new Data;

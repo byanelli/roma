@@ -31,6 +31,21 @@ final readonly class ConfigPolicy implements SourcePolicy
         return Repository::class;
     }
 
+    /**
+     * The config repository.
+     *
+     * @param  Repository  $input
+     */
+    public function mapFromInputValue(object $input): Repository
+    {
+        return $input;
+    }
+
+    public function mapFromInputType(): string
+    {
+        return Repository::class;
+    }
+
     public function defaultSource(): Source
     {
         return new ConfigSource($this->prefix, checksKeys: true);

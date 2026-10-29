@@ -30,6 +30,21 @@ final readonly class ResponsePolicy implements SourcePolicy
         return ResponseInput::class;
     }
 
+    /**
+     * The client response.
+     *
+     * @param  ResponseInput  $input
+     */
+    public function mapFromInputValue(object $input): Response
+    {
+        return $input->response;
+    }
+
+    public function mapFromInputType(): string
+    {
+        return Response::class;
+    }
+
     public function defaultSource(): Source
     {
         return new Sources\Body;

@@ -422,18 +422,18 @@ when the shape itself is present, the same as a nested object's properties.
 
 ## Transforming values
 
-`#[MapUsing]` passes a property's value through a callable after validation, before the
+`#[MapFromValue]` passes a property's value through a callable after validation, before the
 object is constructed. In an attribute the callable is a first-class callable, such as
 `strtolower(...)` or `self::normalize(...)`, or a `static function` closure; PHP doesn't allow
 arrow functions there. Several apply in declaration order:
 
 ```php
-use BYanelli\Roma\Attributes\MapUsing;
+use BYanelli\Roma\Attributes\MapFromValue;
 
 readonly class SignupRequest {
     public function __construct(
-        #[MapUsing(trim(...))]
-        #[MapUsing(strtolower(...))]
+        #[MapFromValue(trim(...))]
+        #[MapFromValue(strtolower(...))]
         public string $email,
     ) {}
 }
@@ -441,17 +441,17 @@ readonly class SignupRequest {
 
 The callable receives the value the property would get, including its default or `null`, but
 not `Missing`, and a nested object arrives constructed. A result the property's type doesn't
-accept throws a `RuntimeException` naming the property.
+accept throws a `RuntimeException` naming the property. When the first callable's parameter is
+typed as a class, the property's type must be that class, or the class definition throws.
 
-### Values computed from the request
+### Values computed from the input
 
-A callable whose parameter is typed as the input being mapped, Laravel's `Request` for a
-request object, receives the request instead, and its result is the property's value. The
-property isn't read from the input or validated, so the callable decides how lenient to be.
-It can call the class's private static methods:
+`#[MapFromInput]` passes the whole input to its callable instead, and the result is the
+property's value. The property isn't read from the input or validated, so the callable
+decides how lenient to be. It can call the class's private static methods:
 
 ```php
-use BYanelli\Roma\Attributes\MapUsing;
+use BYanelli\Roma\Attributes\MapFromInput;
 use Illuminate\Http\Request;
 
 readonly class NewLeadRequest {
@@ -459,12 +459,12 @@ readonly class NewLeadRequest {
         public string $first_name,
         public string $last_name,
 
-        #[MapUsing(static function (Request $request): string {
+        #[MapFromInput(static function (Request $request): string {
             return $request->input('full_name') ?: "{$request->input('first_name')} {$request->input('last_name')}";
         })]
         public string $full_name,
 
-        #[MapUsing(static function (Request $request): bool {
+        #[MapFromInput(static function (Request $request): bool {
             return $request->boolean('is_test') || str_contains($request->input('email', ''), 'test');
         })]
         public bool $is_test,
@@ -472,11 +472,23 @@ readonly class NewLeadRequest {
 }
 ```
 
-Such a callable must be the property's first transform; later ones receive its result. A
-property with one can't have a source attribute, can't be inside a nested object, and is left
-out of TypeScript and JSON Schema. Mapped with `Mapper::fromArray()`, where there is no
-request, the class throws when its definition is built, since the callable's parameter is
-neither the property's type nor the mapping's input.
+The input depends on how the class is mapped:
+
+| Mapped with | The callable receives |
+|---|---|
+| `#[Request]` | `Illuminate\Http\Request` |
+| `Mapper::fromArray()`, `#[RequestBody]`, `#[RequestQuery]` | the plain `array` |
+| `Mapper::fromConfig()` | `Illuminate\Contracts\Config\Repository` |
+| An HTTP client response class | `Illuminate\Http\Client\Response` |
+
+The callable's parameter must accept that input, or be untyped or `mixed`. Otherwise the class
+throws when its definition is built, so a class whose callable takes a `Request` can't be
+mapped with `Mapper::fromArray()`. A class that is mapped both ways can take an `array` and
+use `#[RequestBody]`.
+
+`#[MapFromInput]` must be the property's first transform, and the `#[MapFromValue]` callables
+after it receive its result. A property with it can't have a source attribute, can't be
+inside a nested object, and is left out of TypeScript and JSON Schema.
 
 A non-promoted property works too, and Roma sets it after the constructor runs. PHPStan
 reports a non-promoted `readonly` property that isn't assigned in the constructor, so prefer a

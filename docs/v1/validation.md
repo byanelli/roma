@@ -378,7 +378,7 @@ affects `[]`, including a JSON `{}`.
 
 `#[IgnoreIf]` does the same for any test. Its callable receives the raw input value, before
 coercion, and the key is treated as absent when the callable returns `true`. It is not called
-for an absent key. As with `#[MapUsing]`, the callable is a first-class callable or a static
+for an absent key. As with `#[MapFromValue]`, the callable is a first-class callable or a static
 closure, and the attribute may be repeated: any match ignores the value.
 
 ```php

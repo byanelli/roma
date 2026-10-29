@@ -3,17 +3,15 @@
 namespace BYanelli\Roma\Data\Sources;
 
 use BYanelli\Roma\Data\Source;
+use BYanelli\Roma\Data\SourcePolicy;
 
 /**
- * The input itself, such as the HTTP request, for a property whose #[MapUsing] callable takes
- * the input.
+ * The input itself, as SourcePolicy::mapFromInputValue() gives it, for a property with
+ * #[MapFromInput].
  */
 final readonly class InputObject extends Source
 {
-    /**
-     * @param  class-string  $type  the class of the callable's parameter
-     */
-    public function __construct(private string $type) {}
+    public function __construct(private SourcePolicy $policy) {}
 
     public function getKey(): string
     {
@@ -22,7 +20,7 @@ final readonly class InputObject extends Source
 
     public function inputType(): string
     {
-        return $this->type;
+        return $this->policy->inputType();
     }
 
     public function isSingleValue(): bool
@@ -35,13 +33,8 @@ final readonly class InputObject extends Source
         return true;
     }
 
-    public function isSameAs(Source $other): bool
+    protected function read(object $input): mixed
     {
-        return parent::isSameAs($other) && $other->inputType() === $this->type;
-    }
-
-    protected function read(object $input): object
-    {
-        return $input;
+        return $this->policy->mapFromInputValue($input);
     }
 }
