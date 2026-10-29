@@ -6,13 +6,13 @@ use BYanelli\Roma\Data\ClassMapping;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Http\Request\Precognition\ClientDataKeys;
-use BYanelli\Roma\Http\Request\Precognition\PrecognitiveRuleFilter;
+use BYanelli\Roma\Http\Request\Precognition\PrecognitiveValidator;
 use BYanelli\Roma\Validation\ValidationErrors;
+use BYanelli\Roma\Validation\ValidationRules;
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Validation\Validator;
 use RuntimeException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Throwable;
@@ -22,7 +22,7 @@ readonly class RequestMapper implements Contracts\RequestMapper
     public function __construct(
         private Contracts\RequestResolver $requestResolver,
         private ObjectMapper $objectMapper,
-        private PrecognitiveRuleFilter $precognitiveRuleFilter = new PrecognitiveRuleFilter,
+        private PrecognitiveValidator $precognitiveValidator,
         private ClientDataKeys $clientDataKeys = new ClientDataKeys,
     ) {}
 
@@ -118,12 +118,8 @@ readonly class RequestMapper implements Contracts\RequestMapper
     }
 
     /**
-     * Validate a precognitive request against its form data only, then answer
-     * with a 204 — a precognitive request asks only "would this form data
-     * pass?", so the controller never runs and this method never returns.
-     * Other sources aren't validated, so the object cannot be safely built (and
-     * guards cannot run): answer from validation alone, as FormRequest's
-     * validate-only hook does (see Illuminate\Foundation\Precognition).
+     * A precognitive request asks only whether its form data would pass, so the
+     * other sources are left out and the method never returns.
      *
      * @throws RuntimeException the validator factory did not return a Laravel Validator
      * @throws ValidationException
@@ -136,48 +132,10 @@ readonly class RequestMapper implements Contracts\RequestMapper
         // client posted ("email", not "input.email") — the shape the official
         // laravel-precognition-* helpers map onto form fields. Ordinary
         // validation keeps Roma's source-prefixed keys.
-        $stripPrefixes = ! config('roma.precognition.source_prefixed_errors', false);
-
-        $errors = new ValidationErrors;
-
-        foreach ($mapping->validationRules() as $rules) {
-            if (! $this->clientDataKeys->isClientData($rules->source)) {
-                continue;
-            }
-
-            $attributeNames = $rules->attributeNames();
-            $unnamedKey = $rules->prefixedKey(...);
-
-            if ($stripPrefixes) {
-                $attributeNames = array_map(fn (string $name) => $this->clientDataKeys->stripSourcePrefix($rules->source, $name), $attributeNames);
-                $unnamedKey = fn (string $key) => $key;
-            }
-
-            $validator = $this->objectMapper->makeValidator($rules, $attributeNames, $unnamedKey);
-
-            // As in FormRequest, filtering runs on the validator's expanded
-            // rules — after wildcard expansion against the data — so a client
-            // pattern like "items.0.code" can match an array-member rule. That
-            // needs Laravel's concrete Validator (or a subclass of it), whose
-            // setRules()/getRulesWithoutPlaceholders() the filter relies on.
-            if (! ($validator instanceof Validator)) {
-                throw new RuntimeException(sprintf(
-                    'Precognitive validation requires an instance of %s so its rules can be '
-                    .'narrowed to the requested fields; the configured validator factory returned %s.',
-                    Validator::class,
-                    get_debug_type($validator),
-                ));
-            }
-
-            $validator->setRules(
-                $this->precognitiveRuleFilter->filter($request, $rules->errorPrefix(), $validator->getRulesWithoutPlaceholders()),
-            );
-
-            $errors->add($rules, $validator, $attributeNames, $unnamedKey);
-        }
-
-        $this->asHttpValidation(fn () => $errors->throwIfAny($mapping->getClassName()));
-
-        abort(204, headers: ['Precognition-Success' => 'true']);
+        $this->precognitiveValidator->validate(
+            $request,
+            array_filter($mapping->validationRules(), fn (ValidationRules $rules) => $this->clientDataKeys->isClientData($rules->source)),
+            bareKeys: ! config('roma.precognition.source_prefixed_errors', false),
+        );
     }
 }
