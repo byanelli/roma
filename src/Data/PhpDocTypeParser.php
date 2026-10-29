@@ -132,7 +132,7 @@ class PhpDocTypeParser
         }
 
         if ($node instanceof ArrayShapeNode
-            || ($node instanceof GenericTypeNode && in_array($node->type->name, self::ARRAY_TYPES, true))) {
+            || ($node instanceof GenericTypeNode && in_array((string) $node->type, self::ARRAY_TYPES, true))) {
             return $node;
         }
 
@@ -146,7 +146,7 @@ class PhpDocTypeParser
     {
         return match (true) {
             $node instanceof ArrayShapeNode => $this->shape($node, $obj, $namedType),
-            $node instanceof GenericTypeNode && in_array($node->type->name, self::ARRAY_TYPES, true) => $this->array($node, $obj, $namedType),
+            $node instanceof GenericTypeNode && in_array((string) $node->type, self::ARRAY_TYPES, true) => $this->array($node, $obj, $namedType),
             $node instanceof IdentifierTypeNode && ! in_array($node->name, [...self::ARRAY_TYPES, 'iterable'], true) => $namedType([$this->resolveTypeName($node->name, $obj)]),
             $node instanceof UnionTypeNode && $this->isUnionOfNames($node) => $namedType(array_values(array_map(
                 fn (TypeNode $member) => $this->resolveTypeName((string) $member, $obj),
@@ -174,7 +174,7 @@ class PhpDocTypeParser
      */
     private function array(GenericTypeNode $node, ReflectionParameter|ReflectionProperty $obj, Closure $namedType): Types\Array_
     {
-        $isList = in_array($node->type->name, ['list', 'non-empty-list'], true);
+        $isList = in_array((string) $node->type, ['list', 'non-empty-list'], true);
 
         return match (count($node->genericTypes)) {
             1 => new Types\Array_($this->typeFromNode($node->genericTypes[0], $obj, $namedType), $isList),
