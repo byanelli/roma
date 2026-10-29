@@ -471,9 +471,12 @@ readonly class SearchRequest {
 }
 ```
 
-An empty string is not `null`. Laravel's `ConvertEmptyStringsToNull` middleware, which a
-Laravel app runs by default, turns `""` in the request input into `null` before Roma sees it,
-so `?page=` takes the default too.
+An empty string is `null` for a property whose type has no `string`, such as `int`, `bool`, an
+enum, a date, an array or a nested object, and in the arrays and shapes of those types. Laravel's
+`ConvertEmptyStringsToNull` middleware does the same to request input, and Roma does it for
+any input, so `?page=` takes the default whether the middleware runs or not, and so does
+`Mapper::fromArray()` with `['page' => '']`. A `string` property, or a `mixed` or untyped one,
+keeps the `""`. `#[IgnoreIf]` and `#[IgnoreIfEmpty]` still receive the `""`.
 
 To keep the old strict behavior, add `#[RejectNull]` to the property, or to a class to cover
 all its properties and those of its subclasses. A `null` then fails with the message of the

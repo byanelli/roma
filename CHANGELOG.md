@@ -27,6 +27,14 @@ All notable changes to `roma` will be documented in this file.
   methods.
 - `ContextualBindingException` takes an optional `attribute:` argument, the short name of the
   attribute in its message.
+- Fixed: an empty string for a property whose type has no `string`, such as `?int`, threw a
+  `TypeError` when Laravel's `ConvertEmptyStringsToNull` middleware hadn't run, as with
+  `Mapper::fromArray()`. Roma now reads `""` as `null` for such a property, and for the members
+  of its arrays and shapes, before validation, so a nullable property gets `null`, a property
+  with a default takes the default, and a required one fails as required. A `string`, `mixed`
+  or untyped property keeps the `""`, and `#[IgnoreIf]` and `#[IgnoreIfEmpty]` still receive it.
+  This changes two behaviors: `""` for a `bool` is `null`, where the docs said `false`, and
+  `""` for a `#[Delimited]` array is `null` instead of `[]`.
 
 ## 0.9.1 - 2026-10-27
 

@@ -46,7 +46,7 @@ it('reads true values as Request::boolean() does', function (mixed $value) {
 it('reads any other scalar as false', function (mixed $value) {
     expect(mapBool(['flag' => $value, 'flags' => [$value]]))
         ->toEqual(new BoolFlag(false, [false]));
-})->with([false, 0, 2, -1, 0.5, 'false', '0', 'no', 'off', 'False', 'NO', 'Y', 'y', 't', 'maybe', '2', ' ', '']);
+})->with([false, 0, 2, -1, 0.5, 'false', '0', 'no', 'off', 'False', 'NO', 'Y', 'y', 't', 'maybe', '2', ' ']);
 
 it('rejects a value that is not a scalar', function (mixed $value) {
     expect(boolErrors(['flag' => true, 'flags' => [$value]]))
@@ -57,9 +57,8 @@ it('rejects a null for a bool that is not nullable', function () {
     expect(boolErrors(['flag' => null]))->toBe(['data.flag' => ['The data.flag field is required.']]);
 });
 
-// Laravel's ConvertEmptyStringsToNull makes a blank request value null, which is still required.
-it('reads a blank string as false, even for a required boolean', function () {
-    expect(mapBool(['flag' => ''])->flag)->toBeFalse();
+it('reads an empty string as null, which a required boolean rejects', function () {
+    expect(boolErrors(['flag' => '']))->toBe(['data.flag' => ['The data.flag field is required.']]);
 });
 
 readonly class BoolQueryRequest
@@ -84,12 +83,15 @@ it('coerces query string booleans', function (string $query, bool $expected) {
     '?flag=Y' => ['Y', false],
 ]);
 
-it('reads an empty query string boolean as false', function (string $key) {
+it('reads an empty query string boolean as null', function () {
     /** @var TestCase $this */
-    $this->setRequest(query: [$key => '']);
+    $this->setRequest(query: ['flag' => '', 'maybe' => '']);
 
-    expect($this->mapRequest(BoolQueryRequest::class)->{$key})->toBeFalse();
-})->with(['flag', 'maybe']);
+    $request = $this->mapRequest(BoolQueryRequest::class);
+
+    expect($request->flag)->toBeFalse()
+        ->and($request->maybe)->toBeNull();
+});
 
 it('rejects an array for a query string boolean', function () {
     /** @var TestCase $this */

@@ -51,7 +51,9 @@ class ClassMapping
     ) {
         $this->data = $data;
 
+        // #[IgnoreIf] and #[IgnoreIfEmpty] test the raw value, so they run first.
         $this->removeIgnoredValues();
+        $this->convertEmptyStrings();
         $this->removeDefaultedNulls();
         $this->castData();
     }
@@ -397,6 +399,52 @@ class ClassMapping
         } catch (\ValueError|ItemNotFoundException $e) {
             throw new CoercionException("Invalid enum value for $class: $val", previous: $e);
         }
+    }
+
+    /**
+     * Replaces an empty string with null where the type has no string member, as Laravel's
+     * ConvertEmptyStringsToNull middleware does, so a mapping is the same with or without it.
+     */
+    private function convertEmptyStrings(): void
+    {
+        foreach ($this->class->properties as $property) {
+            $path = $property->fullKey();
+
+            if ($property->isVirtual || $property->role == Role::ValidationOnly || $property->source?->isInjected() || ! $path->existsIn($this->data)) {
+                continue;
+            }
+
+            $path->setIn($this->data, $this->emptyStringsToNull($property->type, $path->getFrom($this->data)));
+        }
+    }
+
+    /**
+     * A nested object's mapping converts its own properties.
+     */
+    private function emptyStringsToNull(Type $type, mixed $value): mixed
+    {
+        return match (true) {
+            $type instanceof Types\String_, $type instanceof Types\Mixed_ => $value,
+            $value === '' => null,
+            $type instanceof Types\Array_ && is_array($value) => array_map(fn (mixed $member) => $this->emptyStringsToNull($type->memberType, $member), $value),
+            $type instanceof Types\Shape && is_array($value) => $this->shapeEmptyStringsToNull($type, $value),
+            default => $value,
+        };
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $value
+     * @return array<array-key, mixed>
+     */
+    private function shapeEmptyStringsToNull(Types\Shape $type, array $value): array
+    {
+        foreach ($type->items as $item) {
+            if (array_key_exists($item->key, $value)) {
+                $value[$item->key] = $this->emptyStringsToNull($item->type, $value[$item->key]);
+            }
+        }
+
+        return $value;
     }
 
     /**

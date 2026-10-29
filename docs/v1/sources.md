@@ -328,8 +328,8 @@ with the format.
 
 A `bool` reads a value as Laravel's `Request::boolean()` does: `true`, `1`, and the strings
 `"1"`, `"true"`, `"on"` and `"yes"` in any case are true, and any other scalar, including
-`"0"`, `"no"`, `"Y"` and `""`, is false. An array or an object fails validation with Laravel's
-boolean message, and a `null` is handled as for any other type (see
+`"0"`, `"no"` and `"Y"`, is false. An array or an object fails validation with Laravel's
+boolean message, and a `null` or `""` is handled as for any other type (see
 [`null` and defaults](/docs/roma/v1/validation#null-and-defaults)).
 
 A `string` accepts a JSON number and maps it to its PHP string form, so `35201` becomes
@@ -381,7 +381,8 @@ class ExportRequest {
 ```
 
 `#[Delimited]` splits on `,` unless you pass another delimiter, trims the items, drops empty
-ones, and passes an array value through. See
+ones, and passes an array value through. An empty string is `null`, as for any array, so the
+property takes its default or `null`. See
 [Lists, durations and sizes](/docs/roma/v1/config-objects#lists-durations-and-sizes) for the
 formats that intervals and sizes accept.
 

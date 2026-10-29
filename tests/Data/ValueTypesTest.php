@@ -120,7 +120,7 @@ it('maps a number in the #[Unit]', function () {
 });
 
 it('rejects a value that is not a duration', function () {
-    expect(valueErrors(IntervalHolder::class, ['timeout' => '90', 'retryAfter' => 'soon', 'ttl' => '']))->toBe([
+    expect(valueErrors(IntervalHolder::class, ['timeout' => '90', 'retryAfter' => 'soon', 'ttl' => 'later']))->toBe([
         'data.timeout' => ['The data.timeout field must be a duration such as "90 seconds".'],
         'data.retryAfter' => ['The data.retryAfter field must be a number of seconds or a duration such as "90 seconds".'],
         'data.ttl' => ['The data.ttl field must be a number of minutes or a duration such as "90 seconds".'],
