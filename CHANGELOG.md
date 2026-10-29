@@ -2,7 +2,7 @@
 
 All notable changes to `roma` will be documented in this file.
 
-## Unreleased
+## 0.9.2 - 2026-10-29
 
 - `#[RequestBody]` on a controller parameter maps the request's JSON or form body onto the
   class as `Mapper::fromArray()` maps an array, without the `_method` and `_token` form fields.
