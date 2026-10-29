@@ -51,17 +51,32 @@ class Request implements ContextualAttribute
      */
     public static function resolve(self $attribute, Container $container, ReflectionParameter $parameter): mixed
     {
-        $type = $parameter->getType();
-
-        ($type instanceof ReflectionNamedType) ||
-            throw new ContextualBindingException("the parameter \${$parameter->getName()} must be type-hinted with a class");
-
-        class_exists($className = $type->getName()) ||
-            throw new ContextualBindingException("$className does not exist");
-
         /** @var RequestMapper $mapper */
         $mapper = $container->make(RequestMapper::class);
 
-        return $mapper->mapRequest($className);
+        return $mapper->mapRequest(self::parameterClass($parameter, 'Request'));
+    }
+
+    /**
+     * The class the parameter is type-hinted with.
+     *
+     * @internal
+     *
+     * @param  string  $attribute  the short name of the attribute on the parameter, for the error message
+     * @return class-string
+     *
+     * @throws ContextualBindingException
+     */
+    public static function parameterClass(ReflectionParameter $parameter, string $attribute): string
+    {
+        $type = $parameter->getType();
+
+        ($type instanceof ReflectionNamedType) ||
+            throw new ContextualBindingException("the parameter \${$parameter->getName()} must be type-hinted with a class", attribute: $attribute);
+
+        class_exists($className = $type->getName()) ||
+            throw new ContextualBindingException("$className does not exist", attribute: $attribute);
+
+        return $className;
     }
 }

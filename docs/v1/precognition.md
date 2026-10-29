@@ -30,6 +30,10 @@ route parameters, and request metadata are skipped, and because those values go
 unvalidated, the request object is never constructed and `#[Guard]` methods never run.
 Everything runs as normal on the real submission.
 
+A [`#[RequestBody]`](/docs/roma/v1/request-objects#map-only-the-body) parameter has only
+body fields, so all of its rules are validated, and its errors are always keyed by the bare
+field name.
+
 ## Responses and error keys
 
 A failing precognitive request returns the usual `422`, with its form-data errors keyed by

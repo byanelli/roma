@@ -36,6 +36,6 @@ final readonly class Body extends RequestSource
      */
     protected function read(object $request): array
     {
-        return $this->body($request);
+        return self::body($request);
     }
 }

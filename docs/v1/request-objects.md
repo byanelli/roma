@@ -76,6 +76,49 @@ class CreateContactController {
 }
 ```
 
+## Map only the body
+
+`#[RequestBody]` on a controller parameter maps the request's JSON or form body onto the class
+as a plain array, the way `Mapper::fromArray()` does. Use it instead of `#[Request]` for a class
+that has no request dependency: one that also describes a queued job's payload, a tool's
+arguments or a stored value, and is mapped from an array there.
+
+```php
+use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Facades\Mapper;
+use BYanelli\Roma\Http\Request\Injection\RequestBody;
+
+readonly class ContactData {
+    public function __construct(
+        public string $name,
+        #[Rule('email')]
+        public string $email,
+    ) {}
+}
+
+class CreateContactController {
+    public function __invoke(
+        #[RequestBody]
+        ContactData $contact,
+    ) {
+        // ...
+    }
+}
+
+// Elsewhere, from an array:
+$contact = Mapper::fromArray(ContactData::class, $payload);
+```
+
+- The body is the only source. The query string is ignored, and a property with `#[Query]`,
+  `#[Header]`, `#[Path]`, `#[Cookie]` or a request accessor throws when the class definition is
+  built. The `_method` and `_token` fields of Laravel's forms are left out of the data.
+- POST is a `Create`, and PUT and PATCH are an `Update`, as with `#[Request]`, so
+  `#[RequiredOnCreate]` and `#[OptionalOnUpdate]` apply.
+- A failure is a `422` with errors keyed and worded as Laravel's validator does them, such as
+  `email` and `config.to_emails.0`, whatever `source_prefixed_errors` says. The class can
+  implement `HandlesFailedValidation`, and [Precognition](/docs/roma/v1/precognition) works
+  as it does for `#[Request]`.
+
 ## Share properties with traits
 
 Common properties can be factored into a trait and mixed into any request:

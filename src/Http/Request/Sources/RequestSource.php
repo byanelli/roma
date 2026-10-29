@@ -22,18 +22,28 @@ abstract readonly class RequestSource extends Source
      *
      * @return array<array-key, mixed>
      */
-    protected function body(Request $request): array
+    protected static function body(Request $request): array
     {
         return $request->isJson() ? $request->json()->all() : $request->request->all();
     }
 
     /**
-     * The keys of the body, without the `_method` and `_token` fields of Laravel's forms.
+     * The body without the `_method` and `_token` fields of Laravel's forms.
+     *
+     * @return array<array-key, mixed>
+     */
+    public static function bodyFields(Request $request): array
+    {
+        return array_diff_key(static::body($request), array_flip(['_method', '_token']));
+    }
+
+    /**
+     * The keys of bodyFields().
      *
      * @return list<array-key>
      */
     protected function bodyKeys(Request $request): array
     {
-        return array_values(array_diff(array_keys($this->body($request)), ['_method', '_token']));
+        return array_keys(static::bodyFields($request));
     }
 }

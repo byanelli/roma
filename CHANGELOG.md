@@ -2,6 +2,19 @@
 
 All notable changes to `roma` will be documented in this file.
 
+## Unreleased
+
+- `#[RequestBody]` on a controller parameter maps the request's JSON or form body onto the
+  class as `Mapper::fromArray()` maps an array, without the `_method` and `_token` form fields.
+  POST is a `Create`, and PUT and PATCH are an `Update`. Errors are keyed and worded as
+  Laravel's validator does, such as `email` and `config.to_emails.0`, whatever
+  `source_prefixed_errors` says. `HandlesFailedValidation` and Precognition work as with
+  `#[Request]`. A property that reads another part of the request, such as `#[Query]` or
+  `#[Header]`, throws when the class definition is built.
+- Breaking: the `Http\Request\Contracts\RequestMapper` interface has a new `mapBody()` method.
+- `ContextualBindingException` takes an optional `attribute:` argument, the short name of the
+  attribute in its message.
+
 ## 0.9.1 - 2026-10-27
 
 - `Eloquent\AsMappedObject::of()` is now `Eloquent\Mapped::to()`, with the same options.

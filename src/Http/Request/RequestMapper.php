@@ -2,13 +2,18 @@
 
 namespace BYanelli\Roma\Http\Request;
 
+use BYanelli\Roma\Data\ArrayInput;
+use BYanelli\Roma\Data\ArrayPolicy;
 use BYanelli\Roma\Data\ClassMapping;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Data\Source;
 use BYanelli\Roma\Http\Request\Precognition\ClientDataKeys;
 use BYanelli\Roma\Http\Request\Precognition\PrecognitiveValidator;
+use BYanelli\Roma\Http\Request\Sources\RequestSource;
 use BYanelli\Roma\Validation\ValidationErrors;
 use BYanelli\Roma\Validation\ValidationRules;
+use Closure;
 use Illuminate\Contracts\Support\Responsable;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
@@ -56,6 +61,37 @@ readonly class RequestMapper implements Contracts\RequestMapper
     }
 
     /**
+     * @template T
+     *
+     * @param  class-string<T>  $className
+     * @return T
+     *
+     * @throws \ReflectionException|ValidationException
+     * @throws HttpResponseException the class implements HandlesFailedValidation and validation failed
+     * @throws HttpException a passing precognitive request short-circuits with a 204
+     */
+    public function mapBody(string $className)
+    {
+        $request = $this->requestResolver->get();
+
+        $input = new ArrayInput(RequestSource::bodyFields($request), new RequestSourcePolicy()->operation($request));
+        $mapping = $this->objectMapper->mapping($className, $input, new ArrayPolicy);
+
+        try {
+            if ($request->isPrecognitive()) {
+                $this->precognitiveValidator->validate($request, $mapping->validationRules(), bareKeys: true);
+            }
+
+            // The body is the only source, so a "data." prefix would tell the client nothing.
+            $this->asHttpValidation(fn () => $this->validateWithLaravelKeys($mapping, fn () => true));
+
+            return $this->objectMapper->build($mapping);
+        } catch (ValidationException $e) {
+            throw $this->failedValidation($className, $e, $request);
+        }
+    }
+
+    /**
      * With `roma.source_prefixed_errors` off, input, query, body and file errors are keyed and
      * worded as Laravel's validator words them: "file_name", "The file name field is required."
      *
@@ -69,10 +105,23 @@ readonly class RequestMapper implements Contracts\RequestMapper
             return;
         }
 
+        $this->validateWithLaravelKeys($mapping, $this->clientDataKeys->isClientData(...));
+    }
+
+    /**
+     * The errors of the sources that pass `$unprefixed` are keyed and worded as Laravel's
+     * validator words them, and the others keep their source prefix.
+     *
+     * @param  Closure(Source): bool  $unprefixed
+     *
+     * @throws MappingValidationException
+     */
+    private function validateWithLaravelKeys(ClassMapping $mapping, Closure $unprefixed): void
+    {
         $errors = new ValidationErrors;
 
         foreach ($mapping->validationRules() as $rules) {
-            if ($this->clientDataKeys->isClientData($rules->source)) {
+            if ($unprefixed($rules->source)) {
                 $errors->add($rules, $this->objectMapper->makeValidator($rules, [], null), [], fn (string $key) => $key);
 
                 continue;
