@@ -76,12 +76,15 @@ it('uses a message without a rule name for any of the property\'s rules', functi
 it('applies a Laravel rule name to the rule object Roma validates it with', function () {
     expect(messageErrors(['name' => 'Ada', 'count' => 1, 'active' => ['x']]))->toBe(['data.active' => ['Send yes or no.']])
         ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'size' => 'm']))->toBe(['data.size' => ['Pick a size.']])
-        ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'address' => []]))->toBe(['data.address.city' => ['Send the city.']]);
+        ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'address' => []]))->toBe(['data.address.city' => ['Send the city.']])
+        ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'address' => ['city' => null]]))->toBe(['data.address.city' => ['Send the city.']]);
 });
 
 it('applies a nested property\'s message to the elements of a list', function () {
     expect(messageErrors(['name' => 'Ada', 'count' => 1, 'addresses' => [['city' => 'Rome'], []]]))
-        ->toBe(['data.addresses.1.city' => ['Send the city.']]);
+        ->toBe(['data.addresses.1.city' => ['Send the city.']])
+        ->and(messageErrors(['name' => 'Ada', 'count' => 1, 'addresses' => [['city' => null]]]))
+        ->toBe(['data.addresses.0.city' => ['Send the city.']]);
 });
 
 it('leaves the messages of other properties alone', function () {

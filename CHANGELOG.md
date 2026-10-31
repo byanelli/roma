@@ -8,6 +8,10 @@ All notable changes to `roma` will be documented in this file.
   `array{limit: ?int}`, failed as required when its value was `null`. It now maps to `null`.
   The key is still required unless the item is optional (`limit?:`), and a list of shapes and a
   nullable nested shape behave the same way.
+- Fixed: `null` for a required item of an array shape or member of a nested object that isn't
+  nullable, such as `page` in `array{page: int}`, reported both "field is required" and the
+  type's message, such as "must be an integer". It now reports only "field is required", as a
+  top-level property does. This includes lists of shapes and of objects.
 
 ## 0.9.2 - 2026-10-29
 

@@ -82,6 +82,27 @@ it('still requires a property without a default', function () {
         ->toBe(['data.count' => ['The data.count field is required.']]);
 });
 
+readonly class NullWithoutDefaultParent
+{
+    /**
+     * @param  list<NullWithoutDefault>  $children
+     */
+    public function __construct(public NullWithoutDefault $child, public array $children = []) {}
+}
+
+it('still requires a member without a default of a nested object', function () {
+    expect(nullDefaultErrors(NullWithoutDefaultParent::class, ['child' => ['count' => null], 'children' => [['count' => null]]]))
+        ->toBe([
+            'data.child.count' => ['The data.child.count field is required.'],
+            'data.children.0.count' => ['The data.children.0.count field is required.'],
+        ])
+        ->and(nullDefaultErrors(NullWithoutDefaultParent::class, ['child' => ['count' => 'x'], 'children' => [['count' => 'x']]]))
+        ->toBe([
+            'data.child.count' => ['The data.child.count field must be an integer.'],
+            'data.children.0.count' => ['The data.children.0.count field must be an integer.'],
+        ]);
+});
+
 readonly class NullDefaultSources
 {
     public function __construct(

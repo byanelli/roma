@@ -213,10 +213,24 @@ it('rejects null for a shape item that is not nullable', function () {
         'nested' => ['inner' => ['x' => null], 'page' => 1],
     ]);
 
-    expect(array_map(fn (array $messages) => $messages[0], $errors))->toEqual([
-        'data.union.page' => 'The data.union.page field is required.',
-        'data.list.0.page' => 'The data.list.0.page field is required.',
-        'data.nested.inner.x' => 'The data.nested.inner.x field is required.',
+    expect($errors)->toEqual([
+        'data.union.page' => ['The data.union.page field is required.'],
+        'data.list.0.page' => ['The data.list.0.page field is required.'],
+        'data.nested.inner.x' => ['The data.nested.inner.x field is required.'],
+    ]);
+});
+
+it('reports the type of a shape item that is not null', function () {
+    expect(keyedErrors(KeyedNullableItems::class, [
+        'union' => ['limit' => null, 'page' => 'x'],
+        'short' => ['limit' => null, 'page' => 1],
+        'optional' => ['page' => 1],
+        'list' => [['limit' => null, 'page' => 'x']],
+        'nested' => ['inner' => ['x' => 'x'], 'page' => 1],
+    ]))->toEqual([
+        'data.union.page' => ['The data.union.page field must be an integer.'],
+        'data.list.0.page' => ['The data.list.0.page field must be an integer.'],
+        'data.nested.inner.x' => ['The data.nested.inner.x field must be an integer.'],
     ]);
 });
 

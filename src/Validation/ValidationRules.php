@@ -372,11 +372,10 @@ readonly class ValidationRules
     }
 
     /**
-     * The presence rules at the start of each value's rule list: "nullable"
-     * (allow an explicit null) and the requiredness rule. A required member of
-     * a nested object or shape becomes a RequiredWithinObject rule keyed on
-     * that object, so it is only required when the object is actually present —
-     * an absent or null object doesn't trip its members.
+     * The presence rules at the start of each value's rule list: "nullable" and
+     * the requiredness rule. A required member of a nested object or shape becomes
+     * a RequiredWithinObject rule keyed on that object, so it is only required
+     * when the object is present. An absent or null object requires none of its members.
      *
      * @param  ?string  $shapeKey  a shape item's key; a required nullable item may then be null,
      *                             but its key must be present
@@ -386,7 +385,9 @@ readonly class ValidationRules
     {
         $rules = [];
 
-        if ($nullable) {
+        // RequiredWithinObject rejects a null member that isn't nullable. With "nullable", Laravel
+        // skips the member's other rules for null, as it does after "required" fails.
+        if ($nullable || ($required && $object !== null)) {
             $rules[] = 'nullable';
         }
 
