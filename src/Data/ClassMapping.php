@@ -140,6 +140,10 @@ class ClassMapping
         return filter_var($val, FILTER_VALIDATE_BOOLEAN);
     }
 
+    /**
+     * Accepts the strings Laravel's integer rule accepts, so "1e3", "007" and a number beyond
+     * PHP_INT_MAX stay strings and fail validation.
+     */
     private function toInteger(mixed $val): int
     {
         if (is_int($val)) {
@@ -150,9 +154,8 @@ class ClassMapping
             throw new CoercionException('Expected integer, got '.get_debug_type($val));
         }
 
-        return (is_numeric($val) && ! str_contains($val, '.'))
-            ? intval($val)
-            : throw new CoercionException("Invalid integer: $val");
+        return filter_var($val, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE)
+            ?? throw new CoercionException("Invalid integer: $val");
     }
 
     private function toFloat(mixed $val): float
@@ -391,7 +394,7 @@ class ClassMapping
                 $backingType = new \ReflectionEnum($class)->getBackingType()?->getName();
 
                 return $backingType == 'int'
-                    ? $class::from(intval($val))
+                    ? $class::from($this->toInteger($val))
                     : $class::from($val);
             }
 

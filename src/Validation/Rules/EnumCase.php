@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Validation\Rules;
 
 use Illuminate\Validation\Rules\Enum;
+use ReflectionEnum;
 use UnitEnum;
 
 use function Illuminate\Support\enum_value;
@@ -23,8 +24,19 @@ class EnumCase extends Enum
 
     public function passes($attribute, $value): bool
     {
-        // tryFrom() converts NAN to a string for a string-backed enum, which PHP warns about.
-        return ! (is_float($value) && ! is_finite($value)) && parent::passes($attribute, $value);
+        return match (true) {
+            // tryFrom() converts NAN to a string for a string-backed enum, which PHP warns about.
+            is_float($value) && ! is_finite($value) => false,
+            // tryFrom() converts "1e3", "1.9" and 1.0 to an int, but the cast to the enum doesn't.
+            $this->isIntBacked() && is_string($value) => parent::passes($attribute, filter_var($value, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE)),
+            $this->isIntBacked() && is_float($value) => false,
+            default => parent::passes($attribute, $value),
+        };
+    }
+
+    private function isIntBacked(): bool
+    {
+        return enum_exists($this->type) && new ReflectionEnum($this->type)->getBackingType()?->getName() === 'int';
     }
 
     /**

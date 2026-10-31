@@ -35,6 +35,13 @@ All notable changes to `roma` will be documented in this file.
   "must be a number", in arrays, shapes and nested objects as well. `NAN` also threw for an `int`,
   `string`, `bool` or string-backed enum property; a non-finite float now fails with that type's
   message. A `mixed` property still accepts one.
+- Fixed: a numeric string that isn't an integer mapped to a different int for an `int`
+  property, such as `"1e3"` to `1000`, `"1e999"` to `0`, `"007"` to `7` and a number beyond
+  `PHP_INT_MAX` to `PHP_INT_MAX`. It now fails with "must be an integer", as Laravel's `integer`
+  rule fails it. Strings such as `"12"`, `"-3"`, `"+4"` and `" 12 "` still map. The same
+  applies to an int-backed enum, which mapped `"1.9"` to the case for `1`, `"1e3"` to the case for
+  `1000` and `"abc"` to the case for `0`, and threw `TypeError` for a float such as `1.0`. These
+  now fail with the enum's message.
 
 ## 0.9.2 - 2026-10-29
 
