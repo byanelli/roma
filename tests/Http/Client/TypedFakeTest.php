@@ -11,6 +11,7 @@ use BYanelli\Roma\Http\Attributes\Status;
 use BYanelli\Roma\Http\Client\Attributes\Get;
 use BYanelli\Roma\Http\Client\Attributes\Post;
 use BYanelli\Roma\Http\Client\Attributes\Responses;
+use BYanelli\Roma\Http\Client\TypedFactory;
 use BYanelli\Roma\Http\Client\TypedPendingRequest;
 use GuzzleHttp\Psr7\Response as PsrResponse;
 use Illuminate\Http\Client\Request;
@@ -214,6 +215,31 @@ it('asserts sent requests by class and by a callback typed with the class', func
     expect(RomaHttp::sent(FakeScrape::class))->toEqual([new FakeScrape('https://a.test', renderJs: true)])
         ->and(fn () => RomaHttp::assertSent(FakeCreateNote::class))->toThrow(AssertionFailedError::class, 'An expected FakeCreateNote request was not sent.')
         ->and(fn () => RomaHttp::assertNotSent(FakeScrape::class))->toThrow(AssertionFailedError::class, 'An unexpected FakeScrape request was sent.');
+});
+
+it('sends a request and lists it through the facade', function () {
+    RomaHttp::fake([FakeScrape::class => fakeResult()]);
+
+    expect(RomaHttp::sendRequest(new FakeScrape('https://a.test'), [FakeResult::class], 'https://api.test/scrape'))->toEqual(fakeResult())
+        ->and(RomaHttp::sent(FakeScrape::class))->toEqual([new FakeScrape('https://a.test')]);
+});
+
+it('forwards sendRequest() and sent() to an instance swapped into the facade', function () {
+    RomaHttp::swap(new class(app()) extends TypedFactory
+    {
+        public function sendRequest(object $request, array $responses = [], ?string $url = null): object
+        {
+            return new FakeFallback;
+        }
+
+        public function sent(string $class): array
+        {
+            return [new FakeScrape('https://swapped.test')];
+        }
+    });
+
+    expect(RomaHttp::sendRequest(new FakeScrape('https://a.test')))->toEqual(new FakeFallback)
+        ->and(RomaHttp::sent(FakeScrape::class))->toEqual([new FakeScrape('https://swapped.test')]);
 });
 
 it('passes a callback typed with Laravel\'s request to Http::assertSent()', function () {

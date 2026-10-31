@@ -5,16 +5,15 @@ namespace BYanelli\Roma\Facades;
 use BYanelli\Roma\Http\Client\Contracts\TypedFactory;
 use BYanelli\Roma\Http\Client\TypedPendingRequest;
 use Illuminate\Support\Facades\Facade;
+use RuntimeException;
 
 /**
- * @method static ($responses is non-empty-array ? T : object) sendRequest<T of object>(object $request, array<class-string<T>> $responses = [], ?string $url = null)
  * @method static TypedPendingRequest withResponses(class-string ...$classes)
  * @method static TypedPendingRequest newRequest()
  * @method static \BYanelli\Roma\Http\Client\TypedFactory fake(array<string, mixed>|null $stubs = null)
  * @method static \GuzzleHttp\Promise\PromiseInterface response(object $object, int|null $status = null, array<string, string> $headers = [])
  * @method static void assertSent(class-string|callable $callback)
  * @method static void assertNotSent(class-string|callable $callback)
- * @method static list<T> sent<T of object>(class-string<T> $class)
  * @method static void assertNothingSent()
  * @method static void assertSentCount(int $count)
  * @method static \BYanelli\Roma\Http\Client\TypedFactory preventStrayRequests(bool $prevent = true)
@@ -63,6 +62,45 @@ use Illuminate\Support\Facades\Facade;
  */
 class RomaHttp extends Facade
 {
+    /**
+     * Sends a request object and maps the response onto one of `$responses`, the request class's
+     * #[Responses], or those given to withResponses().
+     *
+     * @template T of object
+     *
+     * @param  array<class-string<T>>  $responses
+     * @param  ?string  $url  replaces the URL from the request class
+     * @return ($responses is non-empty-array ? T : object)
+     */
+    public static function sendRequest(object $request, array $responses = [], ?string $url = null): object
+    {
+        return self::factory()->sendRequest($request, $responses, $url);
+    }
+
+    /**
+     * The request objects of a class that were sent, in order.
+     *
+     * @template T of object
+     *
+     * @param  class-string<T>  $class
+     * @return list<T>
+     */
+    public static function sent(string $class): array
+    {
+        return self::factory()->sent($class);
+    }
+
+    /**
+     * The facade root, which may be an instance passed to swap(). The type is only in PHPDoc,
+     * since swap() accepts any object.
+     *
+     * @return \BYanelli\Roma\Http\Client\TypedFactory
+     */
+    private static function factory(): object
+    {
+        return static::getFacadeRoot() ?? throw new RuntimeException('The RomaHttp facade has no root.');
+    }
+
     protected static function getFacadeAccessor(): string
     {
         return TypedFactory::class;

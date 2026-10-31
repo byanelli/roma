@@ -13,6 +13,10 @@ All notable changes to `roma` will be documented in this file.
   it repeats. A failure throws `MappingValidationException`, keyed by the input keys without a
   source prefix.
 - `SourcePolicy::mapFromInputType()` may return null to accept any `#[MapFromInput]` callable.
+- Fixed: PhpStorm read the generic return types of `Mapper::fromArray()`, `Mapper::validate()`,
+  `RomaHttp::sendRequest()` and `RomaHttp::sent()` as a class named `T` in the facade's
+  namespace. They are now static methods with `@template` docblocks that call the facade root,
+  so `swap()` and `RomaHttp::fake()` still apply.
 - Fixed: a nullable item in an array shape, such as `limit` in `array{limit: int|null}` or
   `array{limit: ?int}`, failed as required when its value was `null`. It now maps to `null`.
   The key is still required unless the item is optional (`limit?:`), and a list of shapes and a

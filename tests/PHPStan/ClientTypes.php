@@ -26,6 +26,8 @@ assertType(TypedNotFound::class.'|'.TypedVideo::class, $http->baseUrl('https://a
 assertType(Response::class, $http->sendRequest(new TypedGetVideo, [Response::class]));
 assertType('object', $http->sendRequest(new TypedGetVideo));
 assertType(TypedVideo::class, RomaHttp::sendRequest(new TypedGetVideo, [TypedVideo::class]));
+assertType(TypedNotFound::class.'|'.TypedVideo::class, RomaHttp::sendRequest(new TypedGetVideo, [TypedVideo::class, TypedNotFound::class], 'https://api.test/videos'));
+assertType('object', RomaHttp::sendRequest(new TypedGetVideo));
 assertType(TypedPendingRequest::class, RomaHttp::baseUrl('https://api.test'));
 assertType('list<'.TypedGetVideo::class.'>', RomaHttp::sent(TypedGetVideo::class));
 assertType('GuzzleHttp\Promise\PromiseInterface', RomaHttp::response(new TypedVideo));

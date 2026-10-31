@@ -57,7 +57,7 @@ use Illuminate\Http\Client\Factory;
 interface TypedFactory
 {
     /**
-     * Sends a request object and maps the response onto one of , the request class's
+     * Sends a request object and maps the response onto one of `$responses`, the request class's
      * #[Responses], or those given to withResponses().
      *
      * @template T of object
