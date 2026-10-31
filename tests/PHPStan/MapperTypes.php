@@ -25,3 +25,4 @@ assertType(MappedSettings::class, Mapper::validate(new MappedSettings('dark')));
 assertType(MappedSettings::class, app(ObjectMapper::class)->validate(new MappedSettings('dark'), Operation::Update));
 assertType(MappedSettings::class, Mapper::validate(new MappedSettings('dark'), Operation::Update));
 assertType(MappedSettings::class, Mapper::fromArray(data: [], class: MappedSettings::class));
+assertType(MappedSettings::class, Mapper::markValidated(new MappedSettings('dark')));

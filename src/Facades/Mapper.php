@@ -7,6 +7,10 @@ use BYanelli\Roma\Config\ConfigValidationException;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Data\Operation;
+use BYanelli\Roma\Data\ValidatedObjects;
+use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+use BYanelli\Roma\Eloquent\UnvalidatedObjectException;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Facade;
 use RuntimeException;
 
@@ -62,9 +66,36 @@ class Mapper extends Facade
      */
     public static function fromConfig(string $class, ?string $prefix = null): object
     {
-        $app = static::getFacadeApplication() ?? throw new RuntimeException('The Mapper facade has no application.');
+        return self::app()->make(ConfigMapper::class)->map($class, $prefix);
+    }
 
-        return $app->make(ConfigMapper::class)->map($class, $prefix);
+    /**
+     * Makes the MapsDataFromObjects methods throw UnvalidatedObjectException for an object that
+     * Roma didn't map or validate, as in `Mapper::requireValidation(! app()->isProduction())`.
+     * Off by default.
+     *
+     * @see MapsDataFromObjects
+     * @see UnvalidatedObjectException
+     */
+    public static function requireValidation(bool $require = true): void
+    {
+        self::validatedObjects()->require($require);
+    }
+
+    /**
+     * Records an object as validated under `$operation` without checking it, for test fixtures.
+     * Prefer validate(), which also checks the fixture.
+     *
+     * @template T of object
+     *
+     * @param  T  $object
+     * @return T
+     */
+    public static function markValidated(object $object, Operation $operation = Operation::None): object
+    {
+        self::validatedObjects()->record($object, $operation);
+
+        return $object;
     }
 
     /**
@@ -76,6 +107,19 @@ class Mapper extends Facade
     private static function mapper(): object
     {
         return static::getFacadeRoot() ?? throw new RuntimeException('The Mapper facade has no root.');
+    }
+
+    /**
+     * Resolved from the container, not through the facade root, so it is the same after swap().
+     */
+    private static function validatedObjects(): ValidatedObjects
+    {
+        return self::app()->make(ValidatedObjects::class);
+    }
+
+    private static function app(): Application
+    {
+        return static::getFacadeApplication() ?? throw new RuntimeException('The Mapper facade has no application.');
     }
 
     protected static function getFacadeAccessor(): string

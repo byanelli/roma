@@ -36,10 +36,10 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
 | `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
-| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`, `validate()`), `Serializer`, `RomaHttp` |
+| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`, `validate()`, `requireValidation()`, `markValidated()`), `Serializer`, `RomaHttp` |
 | `BYanelli\Roma\JsonSchema` | `ClassSchema` |
 | `BYanelli\Roma\Config` | `ConfigObject`, `ConfigKey`, `ConfigValidationException` |
-| `BYanelli\Roma\Eloquent` | `Mapped`, `StringBacked`, `InvalidAttributeValue` |
+| `BYanelli\Roma\Eloquent` | `Mapped`, `StringBacked`, `InvalidAttributeValue`, `MapsDataFromObjects`, `UnvalidatedObjectException` |
 | `BYanelli\Roma\Http\Client` | `Contracts\TypedFactory`, `TypedPendingRequest`; `Attributes\{Get, Head, Post, Put, Patch, Delete, Url, AsForm, AsMultipart, Responses}`; `Exceptions\{MalformedResponseException, UnmatchedResponseException}` |
 
 ## Defining and injecting a request
@@ -355,6 +355,15 @@ protected function casts(): array
 - Object caching is off, so reading never rewrites the stored value; assign a new object to
   change it. In a `$casts` property write `Mapped::class.':'.Settings::class`, with
   options `,default-when-null` / `,null-when-invalid`.
+- `use MapsDataFromObjects` on a model adds `createFromObject()`, `updateFromObject()`,
+  `upsertFromObject()` and `upsertManyFromObjects()`, which store a mapped object (serialized
+  with `Profile::storage()`; `Missing` properties are left out). With
+  `Mapper::requireValidation(! app()->isProduction())` in a service provider, they throw
+  `UnvalidatedObjectException` for an object Roma didn't map or pass through `Mapper::validate()`,
+  and create and upsert throw for an object validated under `Update`, or under `None` when its
+  class or a nested class has `#[RequiredOnCreate]` (map with `Operation::Create`). Clones and unserialized objects
+  aren't validated. In tests, prefer `Mapper::validate()` for fixtures;
+  `Mapper::markValidated($object)` records one without checking it.
 
 ## HTTP client
 

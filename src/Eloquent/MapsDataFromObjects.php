@@ -4,7 +4,9 @@ namespace BYanelli\Roma\Eloquent;
 
 use BYanelli\Roma\Data\KeyPath;
 use BYanelli\Roma\Data\Operation;
+use BYanelli\Roma\Data\ValidatedObjects;
 use BYanelli\Roma\Facades\Serializer;
+use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use InvalidArgumentException;
@@ -13,7 +15,9 @@ use InvalidArgumentException;
  * Creates, updates and upserts models from mapped objects, serialized with Profile::storage().
  * All methods fill a model, so its $fillable, $guarded and casts apply. A model lists the classes
  * it accepts with `@use MapsDataFromObjects<CreateRequest, UpdateRequest, UpsertRequest>`;
- * `never` for one of them makes PHPStan reject calls to that method.
+ * `never` for one of them makes PHPStan reject calls to that method. After
+ * Mapper::requireValidation(), all methods throw UnvalidatedObjectException for an object Roma
+ * didn't validate.
  *
  * @template TCreateFrom of object = object
  * @template TUpdateFrom of object = object
@@ -30,9 +34,12 @@ trait MapsDataFromObjects
      * @param  TCreateFrom  $data
      *
      * @throws InvalidArgumentException
+     * @throws UnvalidatedObjectException
      */
     public static function createFromObject(object $data): static
     {
+        static::ensureValidated($data, __FUNCTION__, Operation::Create);
+
         return static::query()->create(Serializer::toArray($data, operation: Operation::Create));
     }
 
@@ -43,9 +50,12 @@ trait MapsDataFromObjects
      * @param  TUpdateFrom  $data
      *
      * @throws InvalidArgumentException
+     * @throws UnvalidatedObjectException
      */
     public function updateFromObject(object $data): bool
     {
+        static::ensureValidated($data, __FUNCTION__, Operation::Update);
+
         $attributes = Serializer::toArray($data, operation: Operation::Update);
 
         foreach (Serializer::mergePaths($data) as $path) {
@@ -66,10 +76,11 @@ trait MapsDataFromObjects
      *
      * @throws InvalidArgumentException
      * @throws QueryException
+     * @throws UnvalidatedObjectException
      */
     public static function upsertFromObject(object $data, array $uniqueBy, ?array $update = null): int
     {
-        return static::upsertManyFromObjects([$data], $uniqueBy, $update);
+        return static::upsertObjects([$data], $uniqueBy, $update, __FUNCTION__);
     }
 
     /**
@@ -82,13 +93,31 @@ trait MapsDataFromObjects
      *
      * @throws InvalidArgumentException
      * @throws QueryException
+     * @throws UnvalidatedObjectException
      */
     public static function upsertManyFromObjects(iterable $data, array $uniqueBy, ?array $update = null): int
+    {
+        return static::upsertObjects($data, $uniqueBy, $update, __FUNCTION__);
+    }
+
+    /**
+     * @param  iterable<object>  $data
+     * @param  list<string>  $uniqueBy
+     * @param  ?list<string>  $update
+     * @param  string  $method  the public method called, for UnvalidatedObjectException
+     *
+     * @throws InvalidArgumentException
+     * @throws QueryException
+     * @throws UnvalidatedObjectException
+     */
+    private static function upsertObjects(iterable $data, array $uniqueBy, ?array $update, string $method): int
     {
         $query = static::query();
         $rows = [];
 
         foreach ($data as $object) {
+            static::ensureValidated($object, $method, Operation::Create);
+
             $row = static::upsertRow($query->newModelInstance(), $object);
 
             if ($rows !== [] && array_keys($row) !== array_keys($rows[0])) {
@@ -109,6 +138,41 @@ trait MapsDataFromObjects
         }
 
         return $query->upsert($rows, $uniqueBy, $update);
+    }
+
+    /**
+     * Does nothing unless Mapper::requireValidation() is on. A method that may insert a row needs
+     * the object's #[OptionalOnUpdate] and #[RequiredOnCreate] properties checked as required.
+     *
+     * @throws UnvalidatedObjectException
+     * @throws \ReflectionException
+     */
+    private static function ensureValidated(object $data, string $method, Operation $operation): void
+    {
+        $validatedObjects = Container::getInstance()->make(ValidatedObjects::class);
+
+        if (! $validatedObjects->isRequired()) {
+            return;
+        }
+
+        $validatedFor = $validatedObjects->operationOf($data);
+        $method = static::class."::{$method}()";
+
+        if ($validatedFor === null) {
+            throw UnvalidatedObjectException::notValidated($data, $method);
+        }
+
+        if ($operation === Operation::Update) {
+            return;
+        }
+
+        if ($validatedFor === Operation::Update) {
+            throw UnvalidatedObjectException::validatedForUpdate($data, $method);
+        }
+
+        if ($validatedFor === Operation::None && $validatedObjects->hasRequiredOnCreate($data::class)) {
+            throw UnvalidatedObjectException::validatedWithoutOperation($data, $method);
+        }
     }
 
     /**

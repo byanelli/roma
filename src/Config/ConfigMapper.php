@@ -5,7 +5,9 @@ namespace BYanelli\Roma\Config;
 use BYanelli\Roma\Data\ClassDefinitionBuilder;
 use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
+use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\SensitiveValues;
+use BYanelli\Roma\Data\ValidatedObjects;
 use Illuminate\Contracts\Config\Repository;
 use ReflectionClass;
 use RuntimeException;
@@ -19,6 +21,7 @@ final readonly class ConfigMapper
     public function __construct(
         private ObjectMapper $mapper,
         private Repository $config,
+        private ValidatedObjects $validatedObjects,
     ) {}
 
     /**
@@ -60,7 +63,7 @@ final readonly class ConfigMapper
     /**
      * A lazy proxy that maps the object on first access, so the config is read and validated
      * then. PHP leaves a proxy whose initializer threw uninitialized, so the next access maps
-     * it again.
+     * it again. The proxy is recorded as validated along with the mapped object.
      *
      * @template T of object
      *
@@ -72,6 +75,11 @@ final readonly class ConfigMapper
      */
     public function lazy(string $className, ?string $prefix = null): object
     {
-        return new ReflectionClass($className)->newLazyProxy(fn () => $this->map($className, $prefix));
+        return new ReflectionClass($className)->newLazyProxy(function (object $proxy) use ($className, $prefix): object {
+            $object = $this->map($className, $prefix);
+            $this->validatedObjects->record($proxy, Operation::None);
+
+            return $object;
+        });
     }
 }

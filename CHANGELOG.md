@@ -2,6 +2,21 @@
 
 All notable changes to `roma` will be documented in this file.
 
+## Unreleased
+
+- `Mapper::requireValidation()` makes the `MapsDataFromObjects` methods throw
+  `UnvalidatedObjectException` for an object that Roma didn't map or validate, such as one built
+  with `new` and never passed to `Mapper::validate()`. It is off by default; turn it on in a
+  service provider with `Mapper::requireValidation(! app()->isProduction())`. An object validated
+  for an `Update` is accepted only by `updateFromObject()`, since an `Update` doesn't require
+  `#[OptionalOnUpdate]` properties. The same applies to an object validated with
+  `Operation::None` whose class, or a class nested in it, has a `#[RequiredOnCreate]` property,
+  since only a `Create` requires those. Clones and unserialized objects aren't validated. Roma records
+  validated objects in a `WeakMap`, so entries are removed when their objects are garbage
+  collected.
+- `Mapper::markValidated($object, $operation)` records an object as validated without checking
+  it, for test fixtures. `Mapper::validate()` is preferred, since it also checks the fixture.
+
 ## 0.9.3 - 2026-10-30
 
 - `Mapper::validate($object, $operation)` validates an object constructed with `new` against

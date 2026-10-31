@@ -316,6 +316,9 @@ source prefix, and worded as Laravel's validator words them: `title`, `location.
 `#[Key('location.city')]`, `company_name` under `#[SnakeCaseKeys]`, and `items.1.code` with
 "The items.1.code field must not be greater than 3 characters." `#[Message]` applies.
 
+`Mapper::requireValidation()` makes the `MapsDataFromObjects` methods reject objects that Roma
+didn't map or validate. See [Requiring validated objects](/docs/roma/v1/eloquent-casts#requiring-validated-objects).
+
 ## Nullable and optional
 
 A non-nullable property with no default is **required**. Give it a default to make it

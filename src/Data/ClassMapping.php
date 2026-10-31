@@ -731,6 +731,11 @@ class ClassMapping
         return $this->class->class;
     }
 
+    public function getOperation(): Operation
+    {
+        return $this->operation;
+    }
+
     /**
      * The rules for each source the class maps from, in the order the sources are first used.
      *

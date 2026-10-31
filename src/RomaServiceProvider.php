@@ -7,6 +7,7 @@ use BYanelli\Roma\Config\ConfigObject;
 use BYanelli\Roma\Config\ConfigValidateCommand;
 use BYanelli\Roma\Console\RomaCacheCommand;
 use BYanelli\Roma\Console\RomaClearCommand;
+use BYanelli\Roma\Data\ValidatedObjects;
 use BYanelli\Roma\Discovery\RomaCache;
 use BYanelli\Roma\Http\Client\Contracts\TypedFactory as TypedFactoryContract;
 use BYanelli\Roma\Http\Client\TypedFactory;
@@ -33,6 +34,7 @@ class RomaServiceProvider extends PackageServiceProvider
         $this->app->singleton(Serializer::class);
         $this->app->singleton(TypedFactoryContract::class, TypedFactory::class);
         $this->app->singleton(RomaCache::class);
+        $this->app->singleton(ValidatedObjects::class);
     }
 
     /**

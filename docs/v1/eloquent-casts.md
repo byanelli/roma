@@ -292,3 +292,54 @@ A model that is only upserted passes `never` for the first two:
 /** @use MapsDataFromObjects<never, never, ImportedProduct> */
 use MapsDataFromObjects;
 ```
+
+### Requiring validated objects
+
+The trait stores any object it is given, including one built with `new` that was never checked
+against its rules. `Mapper::requireValidation()` makes the four methods throw
+`UnvalidatedObjectException` for an object Roma didn't validate. It is off by default. As with
+Eloquent's `Model::preventLazyLoading()`, turn it on in a service provider's `boot()` method,
+usually outside production:
+
+```php
+use BYanelli\Roma\Facades\Mapper;
+
+public function boot(): void
+{
+    Mapper::requireValidation(! $this->app->isProduction());
+}
+```
+
+An object is validated when Roma built it by mapping, as a request object, a `#[RequestBody]`
+or `#[RequestQuery]` parameter, a config object, an HTTP client response or the result of
+`Mapper::fromArray()`, or when it passed [`Mapper::validate()`](/docs/roma/v1/validation#validate-a-constructed-object).
+Only the top-level object is recorded, so a nested object stored on its own throws.
+`Mapper::requireValidation(false)` turns the check off again.
+
+Roma records the `Operation` each object was validated under. `updateFromObject()` accepts
+objects validated under any operation. `createFromObject()` and the upsert methods may insert a
+row, so they accept:
+
+* an object validated with `Operation::Create`;
+* an object validated with `Operation::None`, such as one from `Mapper::fromArray()` with no
+  operation or from a GET request, if neither its class nor a class nested in it has a
+  `#[RequiredOnCreate]` property. Only a `Create` requires those, so under `None` an empty
+  string passes for one, as does a `Missing` one in a nested object. To store such an object,
+  map it with `Operation::Create` or pass it to `Mapper::validate($object, Operation::Create)`.
+
+They throw for an object validated with `Operation::Update`, such as a PUT or PATCH request
+object, since an `Update` doesn't require `#[OptionalOnUpdate]` properties either.
+
+In a test that builds a fixture with `new`, pass it to `Mapper::validate()`, which also checks
+it against its rules. `Mapper::markValidated($object, $operation)` records an object as
+validated without checking it, and returns it.
+
+The check compares objects by identity, so it is reliable for immutable objects, such as
+readonly classes. A change to a mutable object after validation isn't detected. A clone,
+including one made with `clone($object, [...])`, and an unserialized object, such as one passed
+to a queued job, are new objects and aren't validated until they are passed to
+`Mapper::validate()`.
+
+The validated objects are recorded in a `WeakMap`, which drops an entry when its object is
+garbage collected, so the record doesn't grow in a long-running Octane worker. The setting from
+`requireValidation()` applies to all requests the worker handles.

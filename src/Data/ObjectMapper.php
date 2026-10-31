@@ -88,6 +88,7 @@ readonly class ObjectMapper
         $errors->throwIfAny($object::class);
 
         $this->runGuards($object);
+        $this->validatedObjects()->record($object, $operation);
 
         return $object;
     }
@@ -136,7 +137,7 @@ readonly class ObjectMapper
     }
 
     /**
-     * Construct the object from a validated mapping and run its guards.
+     * Construct the object from a validated mapping, run its guards and record it as validated.
      *
      * @throws \ReflectionException
      */
@@ -145,6 +146,7 @@ readonly class ObjectMapper
         $instance = $this->construct($mapping);
 
         $this->runGuards($instance);
+        $this->validatedObjects()->record($instance, $mapping->getOperation());
 
         return $instance;
     }
@@ -188,7 +190,7 @@ readonly class ObjectMapper
     /**
      * @throws \ReflectionException
      */
-    private function construct(ClassMapping $mapping): mixed
+    private function construct(ClassMapping $mapping): object
     {
         $className = $mapping->getClassName();
         $constructorValues = $mapping->transformConstructorValues(array_values($this->constructNestedClasses(
@@ -205,6 +207,11 @@ readonly class ObjectMapper
         }
 
         return $instance;
+    }
+
+    private function validatedObjects(): ValidatedObjects
+    {
+        return $this->container->make(ValidatedObjects::class);
     }
 
     /**
