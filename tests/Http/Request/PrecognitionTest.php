@@ -63,6 +63,18 @@ readonly class PrecognitiveDottedRequest
     ) {}
 }
 
+#[RomaRequest]
+readonly class PrecognitivePipeRequest
+{
+    public function __construct(
+        #[Rule('string|max:5')]
+        public string $name,
+
+        #[Rule('email')]
+        public string $email,
+    ) {}
+}
+
 beforeEach(function () {
     /** @var TestCase $this */
     $this->app->instance(PrecognitionLog::class, new PrecognitionLog);
@@ -274,4 +286,20 @@ it('keys precognitive errors by source-prefixed names when configured to', funct
     $response->assertUnprocessable();
 
     $this->assertArrayHasKey('input.email', $response->json('errors'));
+});
+
+it('validates the rules in a pipe-delimited #[Rule] for a listed field', function () {
+    /** @var TestCase $this */
+    Route::post('/pipe', fn (PrecognitivePipeRequest $request) => response()->json(['ran' => true]))
+        ->middleware(HandlePrecognitiveRequests::class);
+
+    $response = $this->withPrecognition()
+        ->withHeader('Precognition-Validate-Only', 'name')
+        ->postJson('/pipe', ['name' => 'abcdef']);
+
+    $response->assertUnprocessable();
+
+    expect($response->json('errors'))->toBe([
+        'name' => ['The name field must not be greater than 5 characters.'],
+    ]);
 });

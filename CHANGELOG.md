@@ -24,6 +24,10 @@ All notable changes to `roma` will be documented in this file.
 - Fixed: in the JSON Schema of a nullable enum, as a property, an array shape item or a member
   of a nested object, `enum` didn't include `null`, so a validator rejected `null` although
   `type` allowed it. The same applies to a nullable property with an `in:` rule.
+- Fixed: a pipe-delimited string in `#[Rule]` or `#[RulePerItem]`, such as
+  `#[Rule('string|max:10')]`, threw `BadMethodCallException`. It is now split into separate
+  rules, and the JSON Schema includes their keywords. A string that starts with a `regex` or
+  `not_regex` rule is kept whole, since its pattern may contain `|`.
 
 ## 0.9.2 - 2026-10-29
 

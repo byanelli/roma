@@ -11,7 +11,8 @@ group: Requests
 # Validation
 
 Attach validation rules with the `#[Rule]` attribute. Pass a single rule string, a
-pipe-delimited string, or a list:
+pipe-delimited string, a list, or several arguments, each in any of these forms. Rule objects
+and closures may be mixed with strings:
 
 ```php
 use BYanelli\Roma\Attributes\Rule;
@@ -22,7 +23,22 @@ readonly class CreateContactRequest {
 
     #[Rule(['email', 'unique:contacts', 'max:255'])]
     public string $email;
+
+    #[Rule('string|min:3|max:20', new NotReserved)]
+    public string $handle;
 }
+```
+
+Roma splits a pipe-delimited string on `|`, as Laravel splits a field's rule string, and drops
+empty segments. A string in a list is split too. The exception is a string that starts with a
+`regex` or `not_regex` rule. Its pattern may contain `|`, so Roma passes the whole string as one
+rule, as Laravel does with a regex rule in an array. Put other rules in a separate argument,
+even when the pattern has no `|`:
+
+```php
+#[Rule('string|max:10', 'regex:/^(red|green)$/')]   // works
+#[Rule('string|max:10|regex:/^(red|green)$/')]      // the pattern is split
+#[Rule('regex:/^[a-z]+$/|max:10')]                  // one regex rule with an invalid pattern
 ```
 
 Type coercion and enum/nested-object validation are applied automatically on top of your

@@ -9,6 +9,7 @@ use BYanelli\Roma\Attributes\Key;
 use BYanelli\Roma\Attributes\Optional;
 use BYanelli\Roma\Attributes\Present;
 use BYanelli\Roma\Attributes\Rule;
+use BYanelli\Roma\Attributes\RulePerItem;
 use BYanelli\Roma\Http\Attributes\Query;
 use BYanelli\Roma\JsonSchema\ClassSchema;
 use BYanelli\Roma\Missing;
@@ -182,6 +183,29 @@ class SchemaRules
         public string $letter,
         #[Rule('required')]
         public string $nickname = '',
+    ) {}
+}
+
+readonly class SchemaPipeRules
+{
+    /**
+     * @param  list<string>  $emails
+     */
+    public function __construct(
+        #[Rule('string|min:2|max:10')]
+        public string $name,
+
+        #[Rule('integer|between:1,5')]
+        public int $rating,
+
+        #[Rule('required|in:draft,published')]
+        public string $status,
+
+        #[Rule('alpha|max:3', 'regex:/^(a|b)+$/')]
+        public string $letters,
+
+        #[RulePerItem('email|max:50')]
+        public array $emails = [],
     ) {}
 }
 
@@ -451,6 +475,16 @@ it('adds keywords for the rules that have one and skips the rest', function () {
         'letter' => ['enum' => ['a', 'b'], 'type' => 'string'],
         'nickname' => ['default' => '', 'type' => 'string'],
     ])->and($object['required'])->toContain('nickname');
+});
+
+it('adds keywords for the rules in a pipe-delimited string', function () {
+    expect(ClassSchema::object(SchemaPipeRules::class)->toArray()['properties'])->toBe([
+        'name' => ['minLength' => 2, 'maxLength' => 10, 'type' => 'string'],
+        'rating' => ['minimum' => 1, 'maximum' => 5, 'type' => 'integer'],
+        'status' => ['enum' => ['draft', 'published'], 'type' => 'string'],
+        'letters' => ['maxLength' => 3, 'pattern' => '^(a|b)+$', 'type' => 'string'],
+        'emails' => ['default' => [], 'items' => ['maxLength' => 50, 'format' => 'email', 'type' => 'string'], 'type' => 'array'],
+    ]);
 });
 
 it('throws for a class that contains itself', function (string $class) {

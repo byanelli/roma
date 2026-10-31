@@ -202,6 +202,10 @@ readonly class ValidatedLimited
         #[Limit(10, end: '')]
         #[Rule('max:4')]
         public string $tag = 'ab',
+
+        #[Limit(5, end: '')]
+        #[Rule('string|max:10')]
+        public string $title = 'abc',
     ) {}
 }
 
@@ -447,6 +451,13 @@ describe('#[Limit]', function () {
         expect(objectErrors(new ValidatedLimited('abc', name: 'abcdefghijkl', tag: 'abcde')))->toBe([
             'name' => ['The name field must not be greater than 5 characters.'],
             'tag' => ['The tag field must not be greater than 4 characters.'],
+        ]);
+    });
+
+    it('lowers a max in a pipe-delimited rule', function () {
+        expect(objectErrors(new ValidatedLimited('abc', title: 'abcde')))->toBe([]);
+        expect(objectErrors(new ValidatedLimited('abc', title: 'abcdefghij')))->toBe([
+            'title' => ['The title field must not be greater than 5 characters.'],
         ]);
     });
 });

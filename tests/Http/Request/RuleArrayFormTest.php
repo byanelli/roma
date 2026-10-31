@@ -18,6 +18,14 @@ readonly class MultiRuleRequest
     ) {}
 }
 
+readonly class PipeRuleRequest
+{
+    public function __construct(
+        #[Rule('string|max:10')]
+        public string $name,
+    ) {}
+}
+
 it('applies all rules in an array-form #[Rule]', function () {
     /** @var TestCase $this */
     $this->setRequest(
@@ -47,4 +55,24 @@ it('passes a value that satisfies an array-form #[Rule]', function () {
     $request = $this->mapRequest(MultiRuleRequest::class);
 
     expect($request->url)->toBe('https://example.com/path');
+});
+
+it('applies the rules in a pipe-delimited #[Rule]', function () {
+    /** @var TestCase $this */
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'abcdefghijk'],
+    );
+
+    expect(fn () => $this->mapRequest(PipeRuleRequest::class))->toThrow(
+        ValidationException::class,
+        'The input.name field must not be greater than 10 characters.',
+    );
+
+    $this->setRequest(
+        headers: ['Content-Type' => 'application/json'],
+        json: ['name' => 'abcdefghij'],
+    );
+
+    expect($this->mapRequest(PipeRuleRequest::class)->name)->toBe('abcdefghij');
 });
