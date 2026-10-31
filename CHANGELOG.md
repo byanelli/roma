@@ -2,7 +2,7 @@
 
 All notable changes to `roma` will be documented in this file.
 
-## Unreleased
+## 0.9.4 - 2026-10-30
 
 - `Mapper::requireValidation()` makes the `MapsDataFromObjects` methods throw
   `UnvalidatedObjectException` for an object that Roma didn't map or validate, such as one built
