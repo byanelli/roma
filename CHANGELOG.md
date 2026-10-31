@@ -2,7 +2,7 @@
 
 All notable changes to `roma` will be documented in this file.
 
-## Unreleased
+## 0.9.3 - 2026-10-30
 
 - `Mapper::validate($object, $operation)` validates an object constructed with `new` against
   its rules and runs its guards, then returns the same instance, so it works in a pipe:
