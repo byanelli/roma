@@ -32,8 +32,13 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
     /**
      * @param  KeyPath  $object  the containing object in the validated data, where a '*' segment
      *                           matches the array index in the validated attribute
+     * @param  ?string  $nullableKey  the member's key in the object when the member may be null,
+     *                                so that a null value passes if the key is present
      */
-    public function __construct(private readonly KeyPath $object) {}
+    public function __construct(
+        private readonly KeyPath $object,
+        private readonly ?string $nullableKey = null,
+    ) {}
 
     /**
      * @param  array<array-key, mixed>  $data
@@ -47,9 +52,15 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        $object = $this->containingObject($attribute);
+
         // The containing object is absent, null, or not an array (which its own
         // "array" rule reports), so nothing is required.
-        if (! is_array($this->containingObject($attribute))) {
+        if (! is_array($object)) {
+            return;
+        }
+
+        if ($value === null && $this->nullableKey !== null && array_key_exists($this->nullableKey, $object)) {
             return;
         }
 

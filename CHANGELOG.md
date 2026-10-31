@@ -2,6 +2,13 @@
 
 All notable changes to `roma` will be documented in this file.
 
+## Unreleased
+
+- Fixed: a nullable item in an array shape, such as `limit` in `array{limit: int|null}` or
+  `array{limit: ?int}`, failed as required when its value was `null`. It now maps to `null`.
+  The key is still required unless the item is optional (`limit?:`), and a list of shapes and a
+  nullable nested shape behave the same way.
+
 ## 0.9.2 - 2026-10-29
 
 - `#[RequestBody]` on a controller parameter maps the request's JSON or form body onto the

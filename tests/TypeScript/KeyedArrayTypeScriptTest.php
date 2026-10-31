@@ -70,3 +70,26 @@ it('emits interfaces for classes inside maps and shapes of a response', function
         TS)
         ->toContain('export interface TsKeyedAddress {');
 });
+
+readonly class TsNullableShapeRequest
+{
+    /**
+     * @param  array{limit: int|null, page?: ?int, inner: array{x: int}|null}  $window
+     * @param  list<array{limit: int|null}>  $windows
+     */
+    public function __construct(
+        public array $window,
+        public array $windows,
+    ) {}
+}
+
+it('emits a nullable shape item as a union with null', function () {
+    $ts = new TypeScriptGenerator([TsNullableShapeRequest::class])->generate();
+
+    expect($ts)->toContain(<<<'TS'
+        export interface TsNullableShapeRequestBody {
+          window: { limit: number | null; page?: number | null; inner: { x: number } | null };
+          windows: { limit: number | null }[];
+        }
+        TS);
+});

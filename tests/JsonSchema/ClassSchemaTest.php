@@ -277,6 +277,30 @@ it('maps arrays, maps, shapes and nested objects', function () {
     ]);
 });
 
+readonly class SchemaNullableShapeItems
+{
+    /**
+     * @param  array{limit: int|null, page?: ?int, inner: array{x: int}|null}  $window
+     */
+    public function __construct(public array $window) {}
+}
+
+it('allows null for a nullable shape item and keeps its key required', function () {
+    expect(schemaProperties(SchemaNullableShapeItems::class)['window'])->toBe([
+        'properties' => [
+            'limit' => ['type' => ['integer', 'null']],
+            'page' => ['type' => ['integer', 'null']],
+            'inner' => [
+                'properties' => ['x' => ['type' => 'integer']],
+                'type' => ['object', 'null'],
+                'required' => ['x'],
+            ],
+        ],
+        'type' => 'object',
+        'required' => ['limit', 'inner'],
+    ]);
+});
+
 it('marks required, nullable and default values', function () {
     $object = ClassSchema::object(SchemaPresence::class)->toArray();
 

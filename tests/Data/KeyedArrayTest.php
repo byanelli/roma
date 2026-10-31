@@ -142,6 +142,84 @@ it('does not require the keys of an absent nullable shape', function () {
     expect($shapes->profile)->toBeNull();
 });
 
+readonly class KeyedNullableItems
+{
+    /**
+     * @param  array{limit: int|null, page: int}  $union
+     * @param  array{limit: ?int, page: int}  $short
+     * @param  array{limit?: int|null, page: int}  $optional
+     * @param  list<array{limit: int|null, page: int}>  $list
+     * @param  array{inner: array{x: int}|null, page: int}  $nested
+     */
+    public function __construct(
+        public array $union,
+        public array $short,
+        public array $optional,
+        public array $list,
+        public array $nested,
+    ) {}
+}
+
+it('maps null for a nullable shape item', function () {
+    $items = mapKeyed(KeyedNullableItems::class, [
+        'union' => ['limit' => null, 'page' => 1],
+        'short' => ['limit' => '', 'page' => 1],
+        'optional' => ['limit' => null, 'page' => 1],
+        'list' => [['limit' => null, 'page' => 1], ['limit' => '5', 'page' => 2]],
+        'nested' => ['inner' => null, 'page' => 1],
+    ]);
+
+    expect($items->union)->toBe(['limit' => null, 'page' => 1])
+        ->and($items->short)->toBe(['limit' => null, 'page' => 1])
+        ->and($items->optional)->toBe(['limit' => null, 'page' => 1])
+        ->and($items->list)->toBe([['limit' => null, 'page' => 1], ['limit' => 5, 'page' => 2]])
+        ->and($items->nested)->toBe(['inner' => null, 'page' => 1]);
+});
+
+it('requires the key of a nullable shape item that is not optional', function () {
+    expect(keyedErrors(KeyedNullableItems::class, [
+        'union' => ['page' => 1],
+        'short' => ['page' => 1],
+        'optional' => ['page' => 1],
+        'list' => [['page' => 1]],
+        'nested' => ['page' => 1],
+    ]))->toEqual([
+        'data.union.limit' => ['The data.union.limit field is required.'],
+        'data.short.limit' => ['The data.short.limit field is required.'],
+        'data.list.0.limit' => ['The data.list.0.limit field is required.'],
+        'data.nested.inner' => ['The data.nested.inner field is required.'],
+    ]);
+});
+
+it('leaves out an absent optional nullable shape item', function () {
+    $items = mapKeyed(KeyedNullableItems::class, [
+        'union' => ['limit' => 1, 'page' => 1],
+        'short' => ['limit' => 1, 'page' => 1],
+        'optional' => ['page' => 1],
+        'list' => [['limit' => 1, 'page' => 1]],
+        'nested' => ['inner' => ['x' => 1], 'page' => 1],
+    ]);
+
+    expect($items->optional)->toBe(['page' => 1])
+        ->and($items->nested)->toBe(['inner' => ['x' => 1], 'page' => 1]);
+});
+
+it('rejects null for a shape item that is not nullable', function () {
+    $errors = keyedErrors(KeyedNullableItems::class, [
+        'union' => ['limit' => null, 'page' => null],
+        'short' => ['limit' => null, 'page' => 1],
+        'optional' => ['page' => 1],
+        'list' => [['limit' => null, 'page' => null]],
+        'nested' => ['inner' => ['x' => null], 'page' => 1],
+    ]);
+
+    expect(array_map(fn (array $messages) => $messages[0], $errors))->toEqual([
+        'data.union.page' => 'The data.union.page field is required.',
+        'data.list.0.page' => 'The data.list.0.page field is required.',
+        'data.nested.inner.x' => 'The data.nested.inner.x field is required.',
+    ]);
+});
+
 readonly class KeyedPriceTable
 {
     /**
@@ -212,4 +290,25 @@ it('reports request errors for maps and shapes under the input prefix', function
     expect(fn () => $this->mapRequest(KeyedHttpRequest::class))
         ->toThrow(fn (ValidationException $e) => expect(array_keys($e->errors()))
             ->toEqualCanonicalizing(['input.limits.daily', 'input.range.min']));
+});
+
+readonly class KeyedNullableHttpRequest
+{
+    /**
+     * @param  array{limit: int|null, page: int}  $window
+     */
+    public function __construct(public array $window) {}
+}
+
+it('maps a null shape item from a request and requires its key', function () {
+    /** @var TestCase $this */
+    $this->setRequest(headers: ['Content-Type' => 'application/json'], json: ['window' => ['limit' => null, 'page' => 1]]);
+
+    expect($this->mapRequest(KeyedNullableHttpRequest::class)->window)->toBe(['limit' => null, 'page' => 1]);
+
+    $this->setRequest(headers: ['Content-Type' => 'application/json'], json: ['window' => ['page' => 1]]);
+
+    expect(fn () => $this->mapRequest(KeyedNullableHttpRequest::class))
+        ->toThrow(fn (ValidationException $e) => expect($e->errors())
+            ->toBe(['input.window.limit' => ['The input.window.limit field is required.']]));
 });

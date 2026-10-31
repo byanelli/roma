@@ -378,9 +378,11 @@ readonly class ValidationRules
      * that object, so it is only required when the object is actually present —
      * an absent or null object doesn't trip its members.
      *
+     * @param  ?string  $shapeKey  a shape item's key; a required nullable item may then be null,
+     *                             but its key must be present
      * @return list<mixed>
      */
-    private function leadingRules(bool $nullable, bool $required, ?KeyPath $object): array
+    private function leadingRules(bool $nullable, bool $required, ?KeyPath $object, ?string $shapeKey = null): array
     {
         $rules = [];
 
@@ -390,7 +392,7 @@ readonly class ValidationRules
 
         if ($required) {
             $rules[] = $object !== null
-                ? new RequiredWithinObject($object)
+                ? new RequiredWithinObject($object, $nullable ? $shapeKey : null)
                 : 'required';
         }
 
@@ -627,7 +629,7 @@ readonly class ValidationRules
                 $item->type,
                 $path->append($item->key),
                 "$name.$item->key",
-                $this->leadingRules($item->nullable, ! $item->optional, $path),
+                $this->leadingRules($item->nullable, ! $item->optional, $path, $item->key),
             )];
         }
 
