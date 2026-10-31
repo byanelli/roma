@@ -301,6 +301,53 @@ it('allows null for a nullable shape item and keeps its key required', function 
     ]);
 });
 
+readonly class SchemaNullableEnumMember
+{
+    public function __construct(public ?SchemaColor $color, public SchemaColor $tint) {}
+}
+
+readonly class SchemaNullableEnums
+{
+    /**
+     * @param  array{color: ?SchemaColor, priority: SchemaPriority|null}  $shape
+     * @param  ?list<SchemaColor>  $colors
+     */
+    public function __construct(
+        public ?SchemaPriority $priority,
+        public ?SchemaSize $size,
+        public array $shape,
+        public SchemaNullableEnumMember $member,
+        public ?array $colors,
+        #[Rule('in:a,b')]
+        public ?string $letter,
+    ) {}
+}
+
+it('adds null to the enum of a nullable value', function () {
+    expect(schemaProperties(SchemaNullableEnums::class))->toBe([
+        'priority' => ['enum' => [1, 2, null], 'type' => ['integer', 'null']],
+        'size' => ['enum' => ['Small', 'Large', null], 'type' => ['string', 'null']],
+        'shape' => [
+            'properties' => [
+                'color' => ['enum' => ['red', 'green', null], 'type' => ['string', 'null']],
+                'priority' => ['enum' => [1, 2, null], 'type' => ['integer', 'null']],
+            ],
+            'type' => 'object',
+            'required' => ['color', 'priority'],
+        ],
+        'member' => [
+            'properties' => [
+                'color' => ['enum' => ['red', 'green', null], 'type' => ['string', 'null']],
+                'tint' => ['enum' => ['red', 'green'], 'type' => 'string'],
+            ],
+            'type' => 'object',
+            'required' => ['tint'],
+        ],
+        'colors' => ['items' => ['enum' => ['red', 'green'], 'type' => 'string'], 'type' => ['array', 'null']],
+        'letter' => ['enum' => ['a', 'b', null], 'type' => ['string', 'null']],
+    ]);
+});
+
 it('marks required, nullable and default values', function () {
     $object = ClassSchema::object(SchemaPresence::class)->toArray();
 
@@ -312,7 +359,7 @@ it('marks required, nullable and default values', function () {
             'defaulted' => ['default' => 'x', 'type' => 'string'],
             'optional' => ['default' => 'y', 'type' => 'string'],
             'missing' => ['default' => 0, 'type' => 'integer'],
-            'color' => ['enum' => ['red', 'green'], 'type' => ['string', 'null']],
+            'color' => ['enum' => ['red', 'green', null], 'type' => ['string', 'null']],
             'tint' => ['default' => 'green', 'enum' => ['red', 'green'], 'type' => 'string'],
             'size' => ['default' => 'Large', 'enum' => ['Small', 'Large'], 'type' => 'string'],
             'ids' => ['default' => [1, 2], 'items' => ['type' => 'integer'], 'type' => 'array'],

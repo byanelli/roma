@@ -143,7 +143,7 @@ final readonly class ClassSchema
         $this->applyDefault($schema, $property->default);
 
         if ($property->nullable) {
-            $schema->nullable();
+            $this->allowNull($schema);
         }
 
         if ($property->isRequired) {
@@ -283,7 +283,7 @@ final readonly class ClassSchema
             $schema = $this->typeOf($item->type, $ancestors);
 
             if ($item->nullable) {
-                $schema->nullable();
+                $this->allowNull($schema);
             }
 
             if (! $item->optional) {
@@ -315,6 +315,20 @@ final readonly class ClassSchema
         $description = $type->contract !== null ? Description::ofClass($type->contract) : null;
 
         return $description !== null ? $union->description($description) : $union;
+    }
+
+    /**
+     * Adds null to the type and to the enum, which a validator checks against null as well.
+     */
+    private function allowNull(Schema\Type $schema): void
+    {
+        $schema->nullable();
+
+        $enum = (fn () => $this->enum)->call($schema);
+
+        if (is_array($enum) && ! in_array(null, $enum, true)) {
+            $schema->enum([...$enum, null]);
+        }
     }
 
     private function applyDefault(Schema\Type $schema, mixed $default): void

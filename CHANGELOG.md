@@ -12,6 +12,9 @@ All notable changes to `roma` will be documented in this file.
   nullable, such as `page` in `array{page: int}`, reported both "field is required" and the
   type's message, such as "must be an integer". It now reports only "field is required", as a
   top-level property does. This includes lists of shapes and of objects.
+- Fixed: in the JSON Schema of a nullable enum, as a property, an array shape item or a member
+  of a nested object, `enum` didn't include `null`, so a validator rejected `null` although
+  `type` allowed it. The same applies to a nullable property with an `in:` rule.
 
 ## 0.9.2 - 2026-10-29
 
