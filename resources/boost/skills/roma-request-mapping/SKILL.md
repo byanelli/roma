@@ -36,7 +36,7 @@ Fetch it when you need detail beyond this skill.
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
 | `BYanelli\Roma\Http\Enums`, `BYanelli\Roma\Http\Values` | `Method`, `ContentType`, `Scheme`, `AuthScheme`; `Authorization`, `BasicCredentials` |
 | `BYanelli\Roma\Serialization` | `IsArrayable`, `Profile`, `Serialized` |
-| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`), `Serializer`, `RomaHttp` |
+| `BYanelli\Roma\Facades` | `Mapper` (`fromArray()`, `fromConfig()`, `validate()`), `Serializer`, `RomaHttp` |
 | `BYanelli\Roma\JsonSchema` | `ClassSchema` |
 | `BYanelli\Roma\Config` | `ConfigObject`, `ConfigKey`, `ConfigValidationException` |
 | `BYanelli\Roma\Eloquent` | `Mapped`, `StringBacked`, `InvalidAttributeValue` |
@@ -221,6 +221,14 @@ an explicit list unless the member list changes often.
   `FormRequest::failedValidation()`. It also receives a guard's `ValidationException`.
 - **Class-level constraints:** apply `#[Ajax]`, `#[ContentType(...)]`, etc. at the class
   level to require them of all requests.
+- **Constructed objects:** `new JobPosting(...) |> Mapper::validate(...)` (or
+  `Mapper::validate($object, Operation::Update)`) checks an object built with `new` against its
+  rules without coercion, runs its guards and returns the same instance. Arrays are checked
+  strictly (`"5"` fails in a `list<int>`; dates, enums and value objects must be instances).
+  `#[MapFromValue]`/`#[MapFromInput]` properties, `#[RejectUnknownKeys]` and class-level
+  constraints are skipped; `#[Limit(n)]` adds `max` (n plus the end's length); source attributes
+  are allowed. An object that contains itself fails at the repeated key. Throws
+  `MappingValidationException` keyed by bare input keys (`items.1.code`).
 
 ### Error-key contract (important)
 

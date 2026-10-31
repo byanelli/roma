@@ -4,6 +4,15 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `Mapper::validate($object, $operation)` validates an object constructed with `new` against
+  its rules and runs its guards, then returns the same instance, so it works in a pipe:
+  `new JobPosting(...) |> Mapper::validate(...)`. Values are checked as they are, and arrays
+  are checked for what PHP doesn't check, such as a string in a `list<int>` or a `list<Status>`.
+  Properties with `#[MapFromValue]` or `#[MapFromInput]` are skipped, and `#[Limit]` adds a
+  `max` of the longest string it returns. An object that contains itself fails at the key where
+  it repeats. A failure throws `MappingValidationException`, keyed by the input keys without a
+  source prefix.
+- `SourcePolicy::mapFromInputType()` may return null to accept any `#[MapFromInput]` callable.
 - Fixed: a nullable item in an array shape, such as `limit` in `array{limit: int|null}` or
   `array{limit: ?int}`, failed as required when its value was `null`. It now maps to `null`.
   The key is still required unless the item is optional (`limit?:`), and a list of shapes and a

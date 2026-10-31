@@ -486,7 +486,8 @@ The input depends on how the class is mapped:
 The callable's parameter must accept that input, or be untyped or `mixed`. Otherwise the class
 throws when its definition is built, so a class whose callable takes a `Request` can't be
 mapped with `Mapper::fromArray()`. A class that is mapped both ways can take an `array` and
-use `#[RequestBody]`.
+use `#[RequestBody]`. [`Mapper::validate()`](/docs/roma/v1/validation#validate-a-constructed-object)
+doesn't call the callable or validate the property, so it accepts any parameter type.
 
 `#[MapFromInput]` must be the property's first transform, and the `#[MapFromValue]` callables
 after it receive its result. A property with it can't have a source attribute, can't be

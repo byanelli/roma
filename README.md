@@ -115,6 +115,9 @@ readonly class ScrapflyConfig {
   and the HTTP client sends them and redacts them from its exception messages.
 - **Plain arrays too.** `Mapper::fromArray(Settings::class, $array)` maps and validates an
   array, such as tool input or a stored value, onto the same classes.
+- **Objects you construct.** `new JobPosting(...) |> Mapper::validate(...)` checks an object
+  built with `new` against its rules, so PHPStan checks the constructor call and Roma still
+  checks `max:255` and number ranges.
 - **Eloquent casts.** `'settings' => Mapped::to(Settings::class)` stores an attribute as a
   JSON object, mapped and validated when it is read or set from an array. A value object that implements
   `StringBacked` (`parse()` and `toString()`) is stored as a string instead, such as a postcode.

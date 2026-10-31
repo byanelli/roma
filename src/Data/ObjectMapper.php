@@ -3,6 +3,7 @@
 namespace BYanelli\Roma\Data;
 
 use BYanelli\Roma\Data\Attributes\GuardAttribute;
+use BYanelli\Roma\Data\Sources\Data;
 use BYanelli\Roma\Validation\ValidationErrors;
 use BYanelli\Roma\Validation\ValidationRules;
 use Closure;
@@ -55,6 +56,40 @@ readonly class ObjectMapper
     public function fromArray(string $className, array $data, Operation $operation = Operation::None): object
     {
         return $this->map($className, new ArrayInput($data, $operation), new ArrayPolicy);
+    }
+
+    /**
+     * Validates an object constructed directly, such as with `new`, against its rules, then runs
+     * its guards. Properties with #[MapFromValue] or #[MapFromInput] aren't validated, and the
+     * error keys are the input keys without a source prefix. An object that contains itself fails
+     * at the key where it repeats. `$operation` decides whether the #[RequiredOnCreate] and
+     * #[OptionalOnUpdate] properties are required.
+     *
+     * @template T of object
+     *
+     * @param  T  $object
+     * @return T
+     *
+     * @throws \ReflectionException|MappingValidationException
+     */
+    public function validate(object $object, Operation $operation = Operation::None): object
+    {
+        $class = new ClassDefinitionBuilder(new ObjectPolicy)->buildClassDefinition($object::class);
+        $data = new ObjectData($class, $object);
+        $rules = new ValidationRules($class, new Data, $data->data, $operation, nativeValues: true);
+
+        $errors = new ValidationErrors;
+        $errors->add($rules, $this->makeValidator($rules, [], null), [], fn (string $key) => $key);
+
+        foreach ($data->cycles as $path) {
+            $errors->replace($rules, $path->toKey(), "The {$path->toKey()} field refers to an object that contains it.");
+        }
+
+        $errors->throwIfAny($object::class);
+
+        $this->runGuards($object);
+
+        return $object;
     }
 
     /**

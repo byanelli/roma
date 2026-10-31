@@ -30,9 +30,9 @@ interface SourcePolicy
 
     /**
      * The type of mapFromInputValue()'s result, "array" or a class, which a #[MapFromInput]
-     * callable's parameter must accept.
+     * callable's parameter must accept, or null to accept any callable.
      */
-    public function mapFromInputType(): string;
+    public function mapFromInputType(): ?string;
 
     /**
      * The source of a top-level property with no source attribute.

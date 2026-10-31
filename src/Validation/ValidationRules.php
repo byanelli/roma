@@ -2,9 +2,12 @@
 
 namespace BYanelli\Roma\Validation;
 
+use BYanelli\Roma\Attributes\Limit;
+use BYanelli\Roma\Attributes\MapFromValue;
 use BYanelli\Roma\Attributes\Message;
 use BYanelli\Roma\Attributes\RejectUnknownKeys;
 use BYanelli\Roma\Data\KeyPath;
+use BYanelli\Roma\Data\ObjectData;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\Property;
 use BYanelli\Roma\Data\Source;
@@ -16,11 +19,13 @@ use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\DiscriminatorIn;
 use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
+use BYanelli\Roma\Validation\Rules\NativeInstance;
 use BYanelli\Roma\Validation\Rules\ObjectValue;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use BYanelli\Roma\Validation\Rules\UnknownKey;
 use BYanelli\Roma\Validation\Rules\ValidInterval;
+use DateTimeInterface;
 
 /**
  * The rules for the data of one source, keyed relative to the source: "email",
@@ -91,12 +96,20 @@ readonly class ValidationRules
      * data, so an array that contains either gets rules per element. A single-value source's
      * value is validated under the source's key as one segment, e.g. "request.ip". `$operation`
      * decides whether the #[RequiredOnCreate] and #[OptionalOnUpdate] properties are required. `$checkedKeys` are the source's
-     * top-level keys that #[RejectUnknownKeys] checks, or null for all of them.
+     * top-level keys that #[RejectUnknownKeys] checks, or null for all of them. With `$nativeValues`,
+     * `$data` is a constructed object's ObjectData, so values such as dates are already objects and
+     * there are no unknown keys.
      *
      * @param  ?list<array-key>  $checkedKeys
      */
-    public function __construct(Class_ $class, public Source $source, mixed $data, private Operation $operation = Operation::None, ?array $checkedKeys = [])
-    {
+    public function __construct(
+        Class_ $class,
+        public Source $source,
+        mixed $data,
+        private Operation $operation = Operation::None,
+        ?array $checkedKeys = [],
+        private bool $nativeValues = false,
+    ) {
         $dataDependent = [];
         $this->findDataDependent($class, [], $dataDependent);
         $this->dataDependent = $dataDependent;
@@ -114,14 +127,14 @@ readonly class ValidationRules
         $groups = [];
 
         foreach ($class->properties as $index => $property) {
-            if ($property->isVirtual || $property->source?->isInjected() || $property->source?->getKey() !== $source->getKey()) {
+            if (! $this->validates($class, $property) || $property->source?->isInjected() || $property->source?->getKey() !== $source->getKey()) {
                 continue;
             }
 
             $groups[$index] = $this->entryFromProperty($property, $base);
         }
 
-        if ($class->rejectUnknownKeys !== null && ! $single) {
+        if ($class->rejectUnknownKeys !== null && ! $single && ! $this->nativeValues) {
             $groups[count($class->properties)] = $this->unknownKeyEntries(
                 $this->unknownKeys($this->data, $this->topLevelKeyTree($class), new KeyPath, $checkedKeys),
                 $class->rejectUnknownKeys,
@@ -268,7 +281,7 @@ readonly class ValidationRules
      */
     private function objectUnknownKeyEntries(Class_ $class, KeyPath $path, ?string $discriminator): array
     {
-        if ($class->rejectUnknownKeys === null) {
+        if ($class->rejectUnknownKeys === null || $this->nativeValues) {
             return [];
         }
 
@@ -348,10 +361,59 @@ readonly class ValidationRules
     }
 
     /**
+     * Whether the property gets rules. A virtual (computed) property is not an input, so it
+     * would otherwise validate as required. A constructed object's #[MapFromValue] callables have
+     * already run, and its rules describe the value before them.
+     */
+    private function validates(Class_ $class, Property $property): bool
+    {
+        if ($property->isVirtual) {
+            return false;
+        }
+
+        return ! $this->nativeValues || (ObjectData::isReadable($class, $property) && ! $property->hasAttribute(MapFromValue::class));
+    }
+
+    /**
+     * The property's own rules. For a constructed object, #[Limit] adds a "max" of the longest
+     * string Str::limit() returns, the limit plus the end's length. A larger "max:n" rule is
+     * lowered to it instead, so a long value gets one message.
+     *
+     * @return list<mixed>
+     */
+    private function declaredRules(Property $property): array
+    {
+        $limit = $this->nativeValues ? $property->attribute(Limit::class) : null;
+
+        if ($limit === null) {
+            return array_values($property->rules);
+        }
+
+        $max = $limit->limit + mb_strlen($limit->end);
+        $found = false;
+        $rules = [];
+
+        foreach ($property->rules as $rule) {
+            if (is_string($rule) && preg_match('/^max:(\d+)$/', $rule, $matches) === 1) {
+                $rule = 'max:'.min((int) $matches[1], $max);
+                $found = true;
+            }
+
+            $rules[] = $rule;
+        }
+
+        return $found ? $rules : [...$rules, "max:{$max}"];
+    }
+
+    /**
      * @return list<mixed>
      */
     private function getTypeValidationRules(Type $type): array
     {
+        if ($this->nativeValues && ($rules = $this->nativeTypeRules($type)) !== null) {
+            return $rules;
+        }
+
         return match (true) {
             $type instanceof Types\Boolean => [new ScalarBoolean],
             $type instanceof Types\Integer => ['integer'],
@@ -368,6 +430,27 @@ readonly class ValidationRules
             $type instanceof Types\Shape => ['array'],
             $type instanceof Types\Enum => [new EnumCase($type->class)],
             default => [],
+        };
+    }
+
+    /**
+     * The type rules for a constructed object's value, or null where they are the input's. The
+     * strict rules reject a numeric string in an array, which PHP doesn't check. A nested object
+     * is an array in ObjectData.
+     *
+     * @return ?list<mixed>
+     */
+    private function nativeTypeRules(Type $type): ?array
+    {
+        return match (true) {
+            $type instanceof Types\Boolean => ['boolean:strict'],
+            $type instanceof Types\Integer => ['integer:strict'],
+            $type instanceof Types\Float_ => ['numeric:strict'],
+            $type instanceof Types\Date => [new NativeInstance($type->class ?? DateTimeInterface::class)],
+            $type instanceof Types\Interval => [new NativeInstance($type->class)],
+            $type instanceof Types\Enum => [new NativeInstance($type->class)],
+            $type instanceof Class_, $type instanceof Types\Union => ['array'],
+            default => null,
         };
     }
 
@@ -410,7 +493,7 @@ readonly class ValidationRules
             $property->type,
             $base->concat($property->keyPath),
             $property->errorKey,
-            [...$this->leadingRules($property->nullable, $property->isRequiredFor($this->operation), null), ...$property->rules],
+            [...$this->leadingRules($property->nullable, $property->isRequiredFor($this->operation), null), ...$this->declaredRules($property)],
             $property->itemRules,
         ));
     }
@@ -457,7 +540,7 @@ readonly class ValidationRules
         if ($type instanceof Class_ && $this->validatesAsString($type->class)) {
             return [[
                 'path' => $path,
-                'rules' => [...$rules, 'string', ...$this->stringValueRules($type->class)],
+                'rules' => [...$rules, ...($this->nativeValues ? [new NativeInstance($type->class)] : ['string', ...$this->stringValueRules($type->class)])],
                 'name' => $name,
             ]];
         }
@@ -600,9 +683,7 @@ readonly class ValidationRules
         $entries = [];
 
         foreach ($class->properties as $member) {
-            // A virtual (computed) property is not an input, so it gets no
-            // rules — otherwise it would validate as required.
-            if ($member->isVirtual) {
+            if (! $this->validates($class, $member)) {
                 continue;
             }
 
@@ -610,7 +691,7 @@ readonly class ValidationRules
                 $member->type,
                 $path->concat($member->keyPath),
                 "$name.{$member->keyPath->toKey()}",
-                [...$this->leadingRules($member->nullable, $member->isRequiredFor($this->operation), $path), ...$member->rules],
+                [...$this->leadingRules($member->nullable, $member->isRequiredFor($this->operation), $path), ...$this->declaredRules($member)],
                 $member->itemRules,
             ))];
         }

@@ -14,9 +14,16 @@ use Illuminate\Contracts\Validation\Validator;
 final class ValidationErrors
 {
     /**
-     * @var list<array{order: list<int>, name: string, messages: list<string>}>
+     * @var list<array{order: list<int>, name: string, messages: list<string>, replaces?: true}>
      */
     private array $errors = [];
+
+    /**
+     * The names whose validator errors are left out, with those of the keys inside them.
+     *
+     * @var list<string>
+     */
+    private array $replaced = [];
 
     /**
      * @param  array<string, string>  $attributeNames  keyed by rule key
@@ -38,13 +45,28 @@ final class ValidationErrors
     }
 
     /**
+     * An error found before validation, under the rule key `$key` as its name. The validator's
+     * errors for the key and the keys inside it are left out.
+     */
+    public function replace(ValidationRules $rules, string $key, string $message): void
+    {
+        $this->errors[] = [
+            'order' => [...$rules->order($key), count($this->errors)],
+            'name' => $key,
+            'messages' => [$message],
+            'replaces' => true,
+        ];
+        $this->replaced[] = $key;
+    }
+
+    /**
      * Two keys with the same name merge their messages.
      *
      * @return array<string, list<string>>
      */
     public function toArray(): array
     {
-        $errors = $this->errors;
+        $errors = array_values(array_filter($this->errors, fn (array $error) => isset($error['replaces']) || ! $this->isReplaced($error['name'])));
 
         usort($errors, fn (array $a, array $b) => $a['order'] <=> $b['order']);
 
@@ -57,6 +79,11 @@ final class ValidationErrors
         return $messages;
     }
 
+    private function isReplaced(string $name): bool
+    {
+        return array_any($this->replaced, fn (string $key) => $name === $key || str_starts_with($name, "{$key}."));
+    }
+
     /**
      * @param  class-string  $className
      *
@@ -64,7 +91,7 @@ final class ValidationErrors
      */
     public function throwIfAny(string $className): void
     {
-        if ($this->errors !== []) {
+        if ($this->toArray() !== []) {
             throw new MappingValidationException($className, $this->toArray());
         }
     }

@@ -407,7 +407,7 @@ class ClassDefinitionBuilder
 
         $inputType = $this->policy->mapFromInputType();
 
-        if (! $transform->accepts($inputType)) {
+        if ($inputType !== null && ! $transform->accepts($inputType)) {
             throw new RuntimeException(
                 "Roma property \"{$prop->printableName}\" has #[MapFromInput] with a callable that takes ".((string) $transform->parameterType)
                 .', but under '.class_basename($this->policy)." it receives {$inputType}. Type the parameter as {$inputType} or leave it untyped."

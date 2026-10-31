@@ -11,6 +11,7 @@ use RuntimeException;
 
 /**
  * @method static T fromArray<T of object>(class-string<T> $class, array<array-key, mixed> $data, Operation $operation = Operation::None)
+ * @method static T validate<T of object>(T $object, Operation $operation = Operation::None)
  *
  * @see ObjectMapper
  */

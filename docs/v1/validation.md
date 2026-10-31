@@ -255,6 +255,51 @@ name.
 
 Request mapping converts it to Laravel's `ValidationException`, so a request still gets a 422.
 
+## Validate a constructed object
+
+When your code builds an object from data it already has, such as the items of a job feed,
+construct it with `new` so that PHPStan checks the constructor call, and pass it to
+`Mapper::validate()` to check its rules. It returns the same instance, so it works in a pipe:
+
+```php
+use BYanelli\Roma\Facades\Mapper;
+
+$job = new JobPosting(
+    title: $item->title,
+    salary: $item->salary,
+    postedAt: CarbonImmutable::parse($item->date),
+) |> Mapper::validate(...);
+```
+
+The object's values are checked as they are, without coercion:
+
+* `#[Rule]` and `#[RulePerItem]` rules, with the type's rules. A rule such as `between:0,100`
+  compares the number on an `int` or `float` property and the length on a `string`.
+* The contents of arrays, which PHP doesn't check. The integer, float and boolean checks are
+  strict, so `"5"` fails in a `list<int>`. A date, interval, enum or string-parsed value object
+  such as `Authorization` must be an instance of its class, so a string fails in a
+  `list<Status>` or for `at` in `array{at: CarbonImmutable}`.
+* Nested objects, lists of objects and the members of discriminated unions.
+* Required properties. A `Missing` value fails as absent. The second argument decides whether
+  the `#[RequiredOnCreate]` and `#[OptionalOnUpdate]` properties are required:
+  `Mapper::validate($contact, Operation::Update)`.
+
+Properties with `#[MapFromValue]` or `#[MapFromInput]` are skipped, since their rules apply to
+the value before the callable runs. Other transforms don't skip a property, and `#[Limit(5)]`
+adds a `max` of the longest string it returns, 8 characters with the default `...` end.
+`#[RejectUnknownKeys]` and class-level constraints such as `#[Ajax]` don't apply. Source
+attributes such as `#[Query]` and `#[Header]` are allowed, so a request class can be validated
+too. After validation passes, the guards run.
+
+An object that contains itself, such as a node whose `parent` is the node, fails at the key
+where the object repeats, with "The parent field refers to an object that contains it." The
+same instance at two keys that don't contain each other is validated at both.
+
+A failure throws `MappingValidationException`. Its errors are keyed by the input keys, without a
+source prefix, and worded as Laravel's validator words them: `title`, `location.city` for
+`#[Key('location.city')]`, `company_name` under `#[SnakeCaseKeys]`, and `items.1.code` with
+"The items.1.code field must not be greater than 3 characters." `#[Message]` applies.
+
 ## Nullable and optional
 
 A non-nullable property with no default is **required**. Give it a default to make it
