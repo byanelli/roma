@@ -21,6 +21,12 @@ class EnumCase extends Enum
         parent::__construct($type);
     }
 
+    public function passes($attribute, $value): bool
+    {
+        // tryFrom() converts NAN to a string for a string-backed enum, which PHP warns about.
+        return ! (is_float($value) && ! is_finite($value)) && parent::passes($attribute, $value);
+    }
+
     /**
      * @return list<string>
      */

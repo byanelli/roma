@@ -28,6 +28,13 @@ All notable changes to `roma` will be documented in this file.
   `#[Rule('string|max:10')]`, threw `BadMethodCallException`. It is now split into separate
   rules, and the JSON Schema includes their keywords. A string that starts with a `regex` or
   `not_regex` rule is kept whole, since its pattern may contain `|`.
+- Fixed: `NAN` for a `float` property with a size rule, such as `between`, threw
+  `ErrorException` from `Mapper::fromArray()`, `Mapper::validate()` and request mapping, and
+  `INF` and `-INF` threw `NumberFormatException`. `NAN`, `INF`, `-INF` and a numeric string too
+  large for a float, such as `"1e999"` in a query string or `1e999` in a JSON body, now fail with
+  "must be a number", in arrays, shapes and nested objects as well. `NAN` also threw for an `int`,
+  `string`, `bool` or string-backed enum property; a non-finite float now fails with that type's
+  message. A `mixed` property still accepts one.
 
 ## 0.9.2 - 2026-10-29
 

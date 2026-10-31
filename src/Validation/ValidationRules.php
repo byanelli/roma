@@ -18,6 +18,7 @@ use BYanelli\Roma\Data\Values\HasValidationRules;
 use BYanelli\Roma\Data\Values\ParsesStringValue;
 use BYanelli\Roma\Validation\Rules\DiscriminatorIn;
 use BYanelli\Roma\Validation\Rules\EnumCase;
+use BYanelli\Roma\Validation\Rules\FiniteNumber;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\NativeInstance;
 use BYanelli\Roma\Validation\Rules\ObjectValue;
@@ -93,8 +94,9 @@ readonly class ValidationRules
     /**
      * `$data` is the coerced data of `$source`. The rules for a union depend on its
      * discriminator, and the rules for a class that contains itself are only as deep as the
-     * data, so an array that contains either gets rules per element. A single-value source's
-     * value is validated under the source's key as one segment, e.g. "request.ip". `$operation`
+     * data, so an array that contains either gets rules per element, as does an array that
+     * contains a non-finite float. A single-value source's value is validated under the
+     * source's key as one segment, e.g. "request.ip". `$operation`
      * decides whether the #[RequiredOnCreate] and #[OptionalOnUpdate] properties are required. `$checkedKeys` are the source's
      * top-level keys that #[RejectUnknownKeys] checks, or null for all of them. With `$nativeValues`,
      * `$data` is a constructed object's ObjectData, so values such as dates are already objects and
@@ -416,8 +418,8 @@ readonly class ValidationRules
 
         return match (true) {
             $type instanceof Types\Boolean => [new ScalarBoolean],
-            $type instanceof Types\Integer => ['integer'],
-            $type instanceof Types\Float_ => ['numeric'],
+            $type instanceof Types\Integer => [new FiniteNumber('validation.integer'), 'integer'],
+            $type instanceof Types\Float_ => [new FiniteNumber, 'numeric'],
             $type instanceof Types\Date => [$type->format !== null ? "date_format:{$type->format}" : 'date'],
             $type instanceof Types\Interval => [new ValidInterval($type->unit)],
             $type instanceof Types\String_ => ['string'],
@@ -445,7 +447,7 @@ readonly class ValidationRules
         return match (true) {
             $type instanceof Types\Boolean => ['boolean:strict'],
             $type instanceof Types\Integer => ['integer:strict'],
-            $type instanceof Types\Float_ => ['numeric:strict'],
+            $type instanceof Types\Float_ => [new FiniteNumber, 'numeric:strict'],
             $type instanceof Types\Date => [new NativeInstance($type->class ?? DateTimeInterface::class)],
             $type instanceof Types\Interval => [new NativeInstance($type->class)],
             $type instanceof Types\Enum => [new NativeInstance($type->class)],
@@ -540,16 +542,14 @@ readonly class ValidationRules
         if ($type instanceof Class_ && $this->validatesAsString($type->class)) {
             return [[
                 'path' => $path,
-                'rules' => [...$rules, ...($this->nativeValues ? [new NativeInstance($type->class)] : ['string', ...$this->stringValueRules($type->class)])],
+                'rules' => $this->withTypeRules($path, $rules, $this->nativeValues ? [new NativeInstance($type->class)] : ['string', ...$this->stringValueRules($type->class)]),
                 'name' => $name,
             ]];
         }
 
-        $typeRules = $this->getTypeValidationRules($type);
-
         $entry = [
             'path' => $path,
-            'rules' => [...$rules, ...$typeRules],
+            'rules' => $this->withTypeRules($path, $rules, $this->getTypeValidationRules($type)),
             'name' => $name,
         ];
 
@@ -558,10 +558,38 @@ readonly class ValidationRules
             $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $path, $name)],
             $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $path, $name)],
             $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $path, $name)],
-            $type instanceof Types\Array_ && $this->dependsOnData($type->memberType) => [$entry, ...$this->elementEntries($type, $path, $name, $itemRules)],
+            $type instanceof Types\Array_ && ($this->dependsOnData($type->memberType) || $this->containsNonFinite($path->getFrom($this->data))) => [$entry, ...$this->elementEntries($type, $path, $name, $itemRules)],
             $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, $path->append('*'), "$name.*", $itemRules)],
             default => [$entry],
         };
+    }
+
+    /**
+     * Laravel's size rules convert a number to a string or a BigNumber, which fails for NAN and
+     * INF, so a non-finite float is checked against its type first, and its checks stop there.
+     *
+     * @param  list<mixed>  $rules
+     * @param  list<mixed>  $typeRules
+     * @return list<mixed>
+     */
+    private function withTypeRules(KeyPath $path, array $rules, array $typeRules): array
+    {
+        $value = $path->getFrom($this->data);
+
+        return is_float($value) && ! is_finite($value)
+            ? ['bail', ...$typeRules, ...$rules]
+            : [...$rules, ...$typeRules];
+    }
+
+    /**
+     * Whether `$value` is an array that contains NAN, INF or -INF at any depth.
+     */
+    private function containsNonFinite(mixed $value): bool
+    {
+        return is_array($value) && array_any(
+            $value,
+            fn (mixed $item) => (is_float($item) && ! is_finite($item)) || $this->containsNonFinite($item),
+        );
     }
 
     /**

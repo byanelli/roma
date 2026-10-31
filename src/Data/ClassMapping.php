@@ -529,6 +529,12 @@ class ClassMapping
 
     private function castValue(Type $type, mixed $rawValue): mixed
     {
+        // NAN and INF are invalid for any type but mixed, and PHP warns when it converts NAN to
+        // a string, an int or a bool.
+        if (is_float($rawValue) && ! is_finite($rawValue) && ! $type instanceof Types\Mixed_) {
+            throw new CoercionException('Expected a finite number');
+        }
+
         return match (true) {
             $type instanceof Types\Boolean => $this->toBoolean($rawValue),
             $type instanceof Types\Integer => $this->toInteger($rawValue),

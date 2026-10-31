@@ -4,6 +4,7 @@ namespace BYanelli\Roma\Attributes;
 
 use Attribute;
 use BYanelli\Roma\Validation\Rules\EnumCase;
+use BYanelli\Roma\Validation\Rules\FiniteNumber;
 use BYanelli\Roma\Validation\Rules\ObjectValue;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
@@ -21,12 +22,15 @@ final readonly class Message
     /**
      * Roma checks these rules with rule objects, whose messages Laravel looks up by the snake
      * case of the class name. "object" is Roma's own rule, which rejects a list for an object.
+     * FiniteNumber rejects NAN and INF, which pass Laravel's numeric and integer rules.
      */
     private const array RULE_OBJECTS = [
         'required' => RequiredWithinObject::class,
         'boolean' => ScalarBoolean::class,
         'enum' => EnumCase::class,
         'object' => ObjectValue::class,
+        'numeric' => FiniteNumber::class,
+        'integer' => FiniteNumber::class,
     ];
 
     /**
