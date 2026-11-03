@@ -9,7 +9,7 @@ use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Attributes\SnakeCaseKeys;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Eloquent\Mapped;
-use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+use BYanelli\Roma\Eloquent\StoredFromObjects;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Missing;
 use Illuminate\Database\Eloquent\Model;
@@ -42,8 +42,8 @@ readonly class MappedContactData
  */
 class MappedContact extends Model
 {
-    /** @use MapsDataFromObjects<MappedContactData, MappedContactData> */
-    use MapsDataFromObjects;
+    /** @use StoredFromObjects<MappedContactData, MappedContactData> */
+    use StoredFromObjects;
 
     public $timestamps = false;
 
@@ -109,8 +109,8 @@ readonly class MergeOnStringData
  */
 class MergeAccount extends Model
 {
-    /** @use MapsDataFromObjects<object, object> */
-    use MapsDataFromObjects;
+    /** @use StoredFromObjects<object, object> */
+    use StoredFromObjects;
 
     public $timestamps = false;
 
@@ -162,8 +162,8 @@ readonly class UpsertListingData
  */
 class UpsertListing extends Model
 {
-    /** @use MapsDataFromObjects<never, never, UpsertListingData> */
-    use MapsDataFromObjects;
+    /** @use StoredFromObjects<never, never, UpsertListingData> */
+    use StoredFromObjects;
 
     protected $fillable = ['sku', 'title', 'status', 'tags', 'note'];
 

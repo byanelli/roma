@@ -14,10 +14,10 @@ use InvalidArgumentException;
 /**
  * Creates, updates and upserts models from mapped objects, serialized with Profile::storage().
  * All methods fill a model, so its $fillable, $guarded and casts apply. A model lists the classes
- * it accepts with `@use MapsDataFromObjects<CreateRequest, UpdateRequest, UpsertRequest>`;
+ * it accepts with `@use StoredFromObjects<CreateRequest, UpdateRequest, UpsertRequest>`;
  * `never` for one of them makes PHPStan reject calls to that method. After
- * Mapper::requireValidation(), all methods throw UnvalidatedObjectException for an object Roma
- * didn't validate.
+ * Mapper::preventStoringUnvalidatedObjects(), all methods throw UnvalidatedObjectException for an
+ * object Roma didn't validate.
  *
  * @template TCreateFrom of object = object
  * @template TUpdateFrom of object = object
@@ -25,7 +25,7 @@ use InvalidArgumentException;
  *
  * @phpstan-require-extends Model
  */
-trait MapsDataFromObjects
+trait StoredFromObjects
 {
     /**
      * Missing properties are left out, so their columns take their database defaults. A Missing
@@ -141,7 +141,7 @@ trait MapsDataFromObjects
     }
 
     /**
-     * Does nothing unless Mapper::requireValidation() is on. A method that may insert a row needs
+     * Does nothing unless Mapper::preventStoringUnvalidatedObjects() is on. A method that may insert a row needs
      * the object's #[OptionalOnUpdate] and #[RequiredOnCreate] properties checked as required.
      *
      * @throws UnvalidatedObjectException
@@ -151,7 +151,7 @@ trait MapsDataFromObjects
     {
         $validatedObjects = Container::getInstance()->make(ValidatedObjects::class);
 
-        if (! $validatedObjects->isRequired()) {
+        if (! $validatedObjects->preventsStoring()) {
             return;
         }
 

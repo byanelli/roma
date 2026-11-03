@@ -123,7 +123,8 @@ readonly class ScrapflyConfig {
   `StringBacked` (`parse()` and `toString()`) is stored as a string instead, such as a postcode.
 - **Models from objects.** `Contact::createFromObject($request)`, `updateFromObject()` and
   `upsertManyFromObjects()` store a mapped object in a model. With
-  `Mapper::requireValidation()` on, they throw for an object that Roma didn't map or validate.
+  `Mapper::preventStoringUnvalidatedObjects()` on, they throw for an object that Roma didn't map
+  or validate.
 - **TypeScript generation.** `php artisan roma:typescript` emits interfaces for your
   requests and responses — one source of truth for your frontend (great with Inertia).
 - **JSON Schema.** `ClassSchema::properties(SearchInput::class)` builds Laravel `JsonSchema`

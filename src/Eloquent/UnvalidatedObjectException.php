@@ -5,8 +5,9 @@ namespace BYanelli\Roma\Eloquent;
 use RuntimeException;
 
 /**
- * An object passed to a MapsDataFromObjects method that Roma didn't validate, or didn't validate
- * for a Create when the method may insert a row. Thrown only after Mapper::requireValidation().
+ * An object passed to a StoredFromObjects method that Roma didn't validate, or didn't validate
+ * for a Create when the method may insert a row. Thrown only after
+ * Mapper::preventStoringUnvalidatedObjects().
  */
 class UnvalidatedObjectException extends RuntimeException
 {

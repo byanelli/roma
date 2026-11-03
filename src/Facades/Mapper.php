@@ -8,7 +8,7 @@ use BYanelli\Roma\Data\MappingValidationException;
 use BYanelli\Roma\Data\ObjectMapper;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\ValidatedObjects;
-use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+use BYanelli\Roma\Eloquent\StoredFromObjects;
 use BYanelli\Roma\Eloquent\UnvalidatedObjectException;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Facade;
@@ -70,16 +70,16 @@ class Mapper extends Facade
     }
 
     /**
-     * Makes the MapsDataFromObjects methods throw UnvalidatedObjectException for an object that
-     * Roma didn't map or validate, as in `Mapper::requireValidation(! app()->isProduction())`.
-     * Off by default.
+     * Makes the StoredFromObjects methods throw UnvalidatedObjectException for an object that
+     * Roma didn't map or validate, as in
+     * `Mapper::preventStoringUnvalidatedObjects(! app()->isProduction())`. Off by default.
      *
-     * @see MapsDataFromObjects
+     * @see StoredFromObjects
      * @see UnvalidatedObjectException
      */
-    public static function requireValidation(bool $require = true): void
+    public static function preventStoringUnvalidatedObjects(bool $prevent = true): void
     {
-        self::validatedObjects()->require($require);
+        self::validatedObjects()->preventStoring($prevent);
     }
 
     /**

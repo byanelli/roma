@@ -2,7 +2,7 @@
 
 namespace BYanelli\Roma\Tests\PHPStan;
 
-use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+use BYanelli\Roma\Eloquent\StoredFromObjects;
 use Illuminate\Database\Eloquent\Model;
 
 use function PHPStan\Testing\assertType;
@@ -12,13 +12,13 @@ use function PHPStan\Testing\assertType;
 // Without @use generics, the methods accept any object.
 final class MappedModel extends Model
 {
-    use MapsDataFromObjects;
+    use StoredFromObjects;
 }
 
 final class TypedMappedModel extends Model
 {
-    /** @use MapsDataFromObjects<MappedModelData, MappedModelUpdate, MappedModelUpsert> */
-    use MapsDataFromObjects;
+    /** @use StoredFromObjects<MappedModelData, MappedModelUpdate, MappedModelUpsert> */
+    use StoredFromObjects;
 }
 
 final readonly class MappedModelData

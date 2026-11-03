@@ -2,6 +2,12 @@
 
 All notable changes to `roma` will be documented in this file.
 
+## Unreleased
+
+- Breaking: `Eloquent\MapsDataFromObjects` is now `Eloquent\StoredFromObjects`, and
+  `Mapper::requireValidation()` is now `Mapper::preventStoringUnvalidatedObjects()`, with the same
+  behavior.
+
 ## 0.9.4 - 2026-10-30
 
 - `Mapper::requireValidation()` makes the `MapsDataFromObjects` methods throw

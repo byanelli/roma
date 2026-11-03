@@ -12,7 +12,7 @@ use WeakMap;
 
 /**
  * The objects Roma has built by mapping or passed through Mapper::validate(), with the Operation
- * each was validated under. A singleton, so the flag set by Mapper::requireValidation() in a
+ * each was validated under. A singleton, so the flag set by Mapper::preventStoringUnvalidatedObjects() in a
  * service provider applies to all requests in an Octane worker. Entries are removed when their
  * objects are garbage collected.
  */
@@ -23,7 +23,7 @@ final class ValidatedObjects
      */
     private WeakMap $objects;
 
-    private bool $required = false;
+    private bool $preventStoring = false;
 
     /**
      * @var array<class-string, bool>
@@ -55,14 +55,14 @@ final class ValidatedObjects
         return $this->objects[$object] ?? null;
     }
 
-    public function require(bool $require = true): void
+    public function preventStoring(bool $prevent = true): void
     {
-        $this->required = $require;
+        $this->preventStoring = $prevent;
     }
 
-    public function isRequired(): bool
+    public function preventsStoring(): bool
     {
-        return $this->required;
+        return $this->preventStoring;
     }
 
     /**

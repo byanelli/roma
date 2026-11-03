@@ -8,7 +8,7 @@ use BYanelli\Roma\Attributes\RequiredOnCreate;
 use BYanelli\Roma\Config\ConfigObject;
 use BYanelli\Roma\Data\Operation;
 use BYanelli\Roma\Data\ValidatedObjects;
-use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+use BYanelli\Roma\Eloquent\StoredFromObjects;
 use BYanelli\Roma\Eloquent\UnvalidatedObjectException;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Http\Request\Injection\Request;
@@ -138,8 +138,8 @@ readonly class CheckedContactConfig
  */
 class CheckedContact extends Model
 {
-    /** @use MapsDataFromObjects<object, object, object> */
-    use MapsDataFromObjects;
+    /** @use StoredFromObjects<object, object, object> */
+    use StoredFromObjects;
 
     public $timestamps = false;
 
@@ -176,7 +176,7 @@ it('stores an object Roma did not validate by default', function () {
 });
 
 it('stores objects from fromArray() and validate()', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     CheckedContact::createFromObject(Mapper::fromArray(CheckedContactData::class, ['name' => 'Ada', 'email' => 'ada@example.com']));
     CheckedContact::upsertFromObject(Mapper::validate(new CheckedContactData('Bob', 'bob@example.com'), Operation::Create), ['email']);
@@ -186,7 +186,7 @@ it('stores objects from fromArray() and validate()', function () {
 
 it('stores objects mapped from a #[RequestBody] parameter and a #[Request] class', function () {
     /** @var TestCase $this */
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     $this->postJson('/checked/body', ['name' => 'Ada', 'email' => 'ada@example.com'])->assertCreated();
     $this->postJson('/checked/request', ['name' => 'Bob', 'email' => 'bob@example.com'])->assertCreated();
@@ -195,7 +195,7 @@ it('stores objects mapped from a #[RequestBody] parameter and a #[Request] class
 });
 
 it('stores a config object, injected or from Mapper::fromConfig()', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
     config(['services.checked_contact' => ['name' => 'Ada', 'email' => 'ada@example.com']]);
 
     CheckedContact::createFromObject(app(CheckedContactConfig::class));
@@ -205,7 +205,7 @@ it('stores a config object, injected or from Mapper::fromConfig()', function () 
 });
 
 it('throws for an object Roma did not validate', function (Closure $store, string $method) {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
     $contact = storedContact();
 
     expect(fn () => $store($contact, uncheckedContact()))->toThrow(
@@ -221,7 +221,7 @@ it('throws for an object Roma did not validate', function (Closure $store, strin
 ]);
 
 it('throws for one unvalidated object among validated ones in upsertManyFromObjects()', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     expect(fn () => CheckedContact::upsertManyFromObjects([
         Mapper::fromArray(CheckedContactData::class, ['name' => 'Ada', 'email' => 'ada@example.com']),
@@ -232,7 +232,7 @@ it('throws for one unvalidated object among validated ones in upsertManyFromObje
 });
 
 it('stores an object validated for an Update only with updateFromObject()', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
     $data = Mapper::fromArray(CheckedContactData::class, ['name' => 'Grace'], Operation::Update);
 
     expect(storedContact()->updateFromObject($data))->toBeTrue()
@@ -246,13 +246,13 @@ it('stores an object validated for an Update only with updateFromObject()', func
 });
 
 it('stores an object validated for a Create with updateFromObject()', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     expect(storedContact()->updateFromObject(Mapper::validate(new CheckedContactData('Grace', 'grace@example.com'), Operation::Create)))->toBeTrue();
 });
 
 it('stores an object passed to markValidated()', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     expect(CheckedContact::createFromObject(Mapper::markValidated(uncheckedContact()))->exists)->toBeTrue()
         ->and(fn () => CheckedContact::createFromObject(Mapper::markValidated(uncheckedContact(), Operation::Update)))
@@ -260,26 +260,26 @@ it('stores an object passed to markValidated()', function () {
 });
 
 it('does not treat a clone of a validated object as validated', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
     $data = Mapper::validate(uncheckedContact());
 
     expect(fn () => CheckedContact::createFromObject(clone $data))->toThrow(UnvalidatedObjectException::class, 'since it was not validated');
 });
 
 it('can be turned off again', function () {
-    Mapper::requireValidation();
-    Mapper::requireValidation(false);
+    Mapper::preventStoringUnvalidatedObjects();
+    Mapper::preventStoringUnvalidatedObjects(false);
 
     expect(CheckedContact::createFromObject(uncheckedContact())->exists)->toBeTrue();
 });
 
 it('is off in a new application, so it does not carry over between tests', function () {
     /** @var TestCase $this */
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     $this->refreshApplication();
 
-    expect(app(ValidatedObjects::class)->isRequired())->toBeFalse();
+    expect(app(ValidatedObjects::class)->preventsStoring())->toBeFalse();
 });
 
 it('removes an object from the map once it is garbage collected', function () {
@@ -297,7 +297,7 @@ it('removes an object from the map once it is garbage collected', function () {
 });
 
 it('stores an object validated with Operation::None when its class has no #[RequiredOnCreate] property', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     CheckedContact::createFromObject(Mapper::validate(uncheckedContact()));
     CheckedContact::upsertFromObject(Mapper::validate(new CheckedContactData('Bob', 'bob@example.com')), ['email']);
@@ -306,7 +306,7 @@ it('stores an object validated with Operation::None when its class has no #[Requ
 });
 
 it('stores an object validated with Operation::None only with updateFromObject() when its class has #[RequiredOnCreate] properties', function (Closure $data) {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
     $data = $data();
 
     expect(storedContact()->updateFromObject($data))->toBeTrue()
@@ -328,7 +328,7 @@ it('stores an object validated with Operation::None only with updateFromObject()
 ]);
 
 it('stores an object with #[RequiredOnCreate] properties validated with Operation::Create', function () {
-    Mapper::requireValidation();
+    Mapper::preventStoringUnvalidatedObjects();
 
     CheckedContact::createFromObject(Mapper::fromArray(CheckedSignupData::class, ['name' => 'Ada', 'email' => 'ada@example.com'], Operation::Create));
     CheckedContact::upsertFromObject(Mapper::validate(new CheckedSignupData('Bob', 'bob@example.com'), Operation::Create), ['email']);

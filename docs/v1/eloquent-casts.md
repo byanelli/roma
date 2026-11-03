@@ -182,19 +182,19 @@ usually readonly, so assign a new object to change the attribute.
 
 ## Creating and updating models
 
-The `MapsDataFromObjects` trait creates and updates a model from a mapped object, such as a
+The `StoredFromObjects` trait creates and updates a model from a mapped object, such as a
 request object. Both methods serialize the object with `Serializer::toArray()`, which uses
 `Profile::storage()`, and fill the model with the result, so the model's `$fillable` and
 `$guarded` apply. The object's keys are the column names, so `#[SnakeCaseKeys]` on the class
 gives snake_case columns.
 
 ```php
-use BYanelli\Roma\Eloquent\MapsDataFromObjects;
+use BYanelli\Roma\Eloquent\StoredFromObjects;
 
 class Contact extends Model
 {
-    /** @use MapsDataFromObjects<ContactRequest, ContactRequest> */
-    use MapsDataFromObjects;
+    /** @use StoredFromObjects<ContactRequest, ContactRequest> */
+    use StoredFromObjects;
 
     protected $fillable = ['name', 'email', 'phone'];
 }
@@ -282,21 +282,21 @@ object. A model that is never updated from an object can pass `never` as the sec
 PHPStan then reports any call to `updateFromObject()`:
 
 ```php
-/** @use MapsDataFromObjects<NewContactRequest, never> */
-use MapsDataFromObjects;
+/** @use StoredFromObjects<NewContactRequest, never> */
+use StoredFromObjects;
 ```
 
 A model that is only upserted passes `never` for the first two:
 
 ```php
-/** @use MapsDataFromObjects<never, never, ImportedProduct> */
-use MapsDataFromObjects;
+/** @use StoredFromObjects<never, never, ImportedProduct> */
+use StoredFromObjects;
 ```
 
-### Requiring validated objects
+### Storing only validated objects
 
 The trait stores any object it is given, including one built with `new` that was never checked
-against its rules. `Mapper::requireValidation()` makes the four methods throw
+against its rules. `Mapper::preventStoringUnvalidatedObjects()` makes the four methods throw
 `UnvalidatedObjectException` for an object Roma didn't validate. It is off by default. As with
 Eloquent's `Model::preventLazyLoading()`, turn it on in a service provider's `boot()` method,
 usually outside production:
@@ -306,7 +306,7 @@ use BYanelli\Roma\Facades\Mapper;
 
 public function boot(): void
 {
-    Mapper::requireValidation(! $this->app->isProduction());
+    Mapper::preventStoringUnvalidatedObjects(! $this->app->isProduction());
 }
 ```
 
@@ -314,7 +314,7 @@ An object is validated when Roma built it by mapping, as a request object, a `#[
 or `#[RequestQuery]` parameter, a config object, an HTTP client response or the result of
 `Mapper::fromArray()`, or when it passed [`Mapper::validate()`](/docs/roma/v1/validation#validate-a-constructed-object).
 Only the top-level object is recorded, so a nested object stored on its own throws.
-`Mapper::requireValidation(false)` turns the check off again.
+`Mapper::preventStoringUnvalidatedObjects(false)` turns the check off again.
 
 Roma records the `Operation` each object was validated under. `updateFromObject()` accepts
 objects validated under any operation. `createFromObject()` and the upsert methods may insert a
@@ -342,4 +342,4 @@ to a queued job, are new objects and aren't validated until they are passed to
 
 The validated objects are recorded in a `WeakMap`, which drops an entry when its object is
 garbage collected, so the record doesn't grow in a long-running Octane worker. The setting from
-`requireValidation()` applies to all requests the worker handles.
+`preventStoringUnvalidatedObjects()` applies to all requests the worker handles.
