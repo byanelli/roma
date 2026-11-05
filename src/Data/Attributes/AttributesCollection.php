@@ -44,6 +44,7 @@ final class AttributesCollection extends Collection
         DestinationAttribute::class,
         ExplicitKeyAttribute::class,
         KeyAttribute::class,
+        PropertyCheckedAttribute::class,
         RejectNull::class,
         RejectNumbers::class,
         MapTransform::class,
@@ -219,6 +220,12 @@ final class AttributesCollection extends Collection
 
     public function assertCombinable(): void
     {
+        foreach ($this->items as $attribute) {
+            if ($attribute instanceof PropertyCheckedAttribute) {
+                $attribute->assertAllowedOnProperty($this->property->printableName);
+            }
+        }
+
         $this->assertNoEmptyKey();
         $this->assertAtMostOne(SourceAttribute::class, 'source');
         $this->assertAtMostOne(DestinationAttribute::class, 'destination');

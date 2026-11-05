@@ -9,6 +9,10 @@ All notable changes to `roma` will be documented in this file.
   with that path in its published config must change it. Fixed: backed enums generate an
   `export const`, which TypeScript rejects in a declaration file (TS1254, hidden by
   `skipLibCheck`) and which didn't exist at runtime.
+- Breaking: a code, range or `'default'` in a `#[Status]` on a property or parameter throws when
+  the class definition is built and when serializing. It was ignored. `#[Status]` without a code
+  stays valid on a property. `Data\Attributes\PropertyCheckedAttribute` is the interface for an
+  attribute with this kind of check.
 
 ## 0.9.5 - 2026-11-03
 

@@ -185,6 +185,8 @@ on the top-level class: a nested object with either throws when it is serialized
 definition is built. The `#[Status]` property must be typed `int`; for a status that is
 usually the same, give it a default such as `201` rather than making it nullable, or put
 `#[Status(201)]` on the class, which applies when the class has no `#[Status]` property. A
+code has meaning only on the class, so `#[Status(201)]` on a property throws when it is
+serialized or its definition is built. A
 class mapped from a request can't have `#[Status]`, since a request has no status. Without
 either, the response defaults to 200. For values computed at
 runtime, override the public `responseStatus()` or `responseHeaders()` methods. Both receive

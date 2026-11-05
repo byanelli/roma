@@ -244,8 +244,8 @@ keyed and worded as Laravel's validator does (`file_name`, "The file name field 
 Extend `Response`, declare typed properties, return it — Roma serializes to JSON
 (recursively; enums → `{name,value}` / name, dates → ISO-8601). A property has no implicit
 default: unset throws unless marked `#[Optional]` (omit) or given a default. Lift a property
-out of the body with `#[Status]` (a non-nullable `int` → HTTP status; never on a request
-class) or `#[Header('Name')]`, on the top-level class only (in a nested object they throw). Use
+out of the body with `#[Status]` (a non-nullable `int` → HTTP status; no code on a property,
+since a code goes on the class; never on a request class) or `#[Header('Name')]`, on the top-level class only (in a nested object they throw). Use
 `IsResponsable` / `IsArrayable` traits when the class can't extend `Response`. Nested plain
 objects don't need the traits. For runtime values, override the public
 `responseStatus(Serialized $serialized)` / `responseHeaders(Serialized $serialized)`, or

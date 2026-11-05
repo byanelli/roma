@@ -377,6 +377,19 @@ it('reads a response header in any case', function () {
     expect(RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientVideoWithMeta::class])->remaining)->toBe(3);
 });
 
+it('rejects a code in a #[Status] property of a response class', function () {
+    Http::fake(['api.test/*' => Http::response([], 200)]);
+
+    expect(fn () => RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientResponseWithStatusCode::class]))
+        ->toThrow(RuntimeException::class, 'has #[Status(404)], but a code has meaning only on a class');
+});
+
+it('maps a #[Status] property with a default on a response class', function () {
+    Http::fake(['api.test/*' => Http::response([], 201)]);
+
+    expect(RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientResponseWithBareStatus::class])->status)->toBe(201);
+});
+
 it('returns Laravel\'s response for Response::class', function () {
     Http::fake(['api.test/*' => Http::response('<xml/>')]);
 
@@ -479,6 +492,22 @@ final readonly class ClientExtraPath
     public function __construct(
         #[Path]
         public string $slug,
+    ) {}
+}
+
+final readonly class ClientResponseWithStatusCode
+{
+    public function __construct(
+        #[Status(404)]
+        public int $status,
+    ) {}
+}
+
+final readonly class ClientResponseWithBareStatus
+{
+    public function __construct(
+        #[Status]
+        public int $status = 200,
     ) {}
 }
 

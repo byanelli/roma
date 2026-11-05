@@ -186,7 +186,8 @@ threw. Below 400 Laravel throws nothing, so it is a new `RequestException`, or R
 
 A class-level `#[Status]` gives the statuses a response class goes with: a code (`404`), a
 range (`'4xx'`) or `'default'`. A class can have several. A class without one goes with
-`2xx`.
+`2xx`. On a property, `#[Status]` takes no argument, and one throws when the definition is
+built.
 
 ```php
 use BYanelli\Roma\Http\Attributes\Status;

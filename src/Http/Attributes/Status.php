@@ -3,10 +3,12 @@
 namespace BYanelli\Roma\Http\Attributes;
 
 use Attribute;
+use BYanelli\Roma\Data\Attributes\PropertyCheckedAttribute;
 use BYanelli\Roma\Serialization\Destination;
 use BYanelli\Roma\Serialization\DestinationAttribute;
 use InvalidArgumentException;
 use ReflectionClass;
+use RuntimeException;
 
 /**
  * On a property, marks the int property whose value is the HTTP status code: written as the
@@ -18,7 +20,7 @@ use ReflectionClass;
  * class is matched to responses with it.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER | Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
-readonly class Status implements DestinationAttribute
+readonly class Status implements DestinationAttribute, PropertyCheckedAttribute
 {
     /**
      * A code ("404"), a range ("4xx") or "default", or null on a property.
@@ -56,6 +58,20 @@ readonly class Status implements DestinationAttribute
         }
 
         return $statuses;
+    }
+
+    public function assertAllowedOnProperty(string $printableName): void
+    {
+        if ($this->pattern === null) {
+            return;
+        }
+
+        $given = ctype_digit($this->pattern) ? $this->pattern : "'{$this->pattern}'";
+
+        throw new RuntimeException(
+            "Roma property \"{$printableName}\" has #[Status({$given})], but a code has meaning only on a class. "
+            .'Remove the code, or move the attribute to the class.'
+        );
     }
 
     public function isDefault(): bool
