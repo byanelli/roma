@@ -504,14 +504,21 @@ class Serializer
 
     /**
      * A value written inside another property's value would replace it, or be replaced by it.
+     * Header names are compared as the header source reads them, since a response's header bag
+     * also ignores case and separators.
      *
      * @param  list<PropertyPlan>  $plan
      */
     private function assertDistinctPaths(array $plan): void
     {
-        foreach ([Destination::Body, Destination::Query] as $destination) {
+        foreach ([Destination::Body, Destination::Query, Destination::Header] as $destination) {
             $properties = array_values(array_filter($plan, fn (PropertyPlan $property) => $property->destination === $destination));
-            $conflict = KeyPath::firstConflict(array_map(fn (PropertyPlan $property) => $property->path, $properties));
+            $conflict = KeyPath::firstConflict(array_map(
+                fn (PropertyPlan $property) => $destination === Destination::Header
+                    ? new KeyPath([$property->attributes->source()?->normalizeKey($property->path->toKey()) ?? $property->path->toKey()])
+                    : $property->path,
+                $properties,
+            ));
 
             if ($conflict !== null) {
                 [$first, $second] = [$properties[$conflict[0]], $properties[$conflict[1]]];

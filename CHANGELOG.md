@@ -36,6 +36,9 @@ All notable changes to `roma` will be documented in this file.
   header gives its first value, and a header whose value is null is absent. An app that changes
   `$request->headers` in middleware and relied on `#[Header]` reading the original value must read
   it from `$request->server`.
+- Breaking: `#[Header]` properties whose names differ only by case or by a hyphen and an underscore
+  throw when serializing, like other properties written to one key. Responses used to send the last
+  value silently, since Symfony's header bag treats those names as one.
 
 ## 0.9.5 - 2026-11-03
 

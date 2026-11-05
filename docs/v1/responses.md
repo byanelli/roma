@@ -180,7 +180,9 @@ class CreatedResponse extends Response {
 }
 ```
 
-A property can have only one of `#[Status]` and `#[Header]`, and both can only be declared
+Two `#[Header]` properties throw when they differ only by case, or by a hyphen and an underscore,
+as `X-Flag`, `x-flag` and `X_Flag` do, since a response would send only the last. A property can
+have only one of `#[Status]` and `#[Header]`, and both can only be declared
 on the top-level class: a nested object with either throws when it is serialized or its
 definition is built. The `#[Status]` property must be typed `int`; for a status that is
 usually the same, give it a default such as `201` rather than making it nullable, or put
