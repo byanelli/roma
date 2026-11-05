@@ -2,7 +2,7 @@
 
 All notable changes to `roma` will be documented in this file.
 
-## Unreleased
+## 0.9.6 - 2026-11-04
 
 - `Mapper::preventStoringUnvalidatedObjects()` also applies to setting an object on a `Mapped`
   attribute, which throws `UnvalidatedObjectException` for an object Roma didn't validate, or
