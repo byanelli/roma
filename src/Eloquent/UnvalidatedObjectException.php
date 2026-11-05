@@ -5,14 +5,14 @@ namespace BYanelli\Roma\Eloquent;
 use RuntimeException;
 
 /**
- * An object passed to a StoredFromObjects method that Roma didn't validate, or didn't validate
- * for a Create when the method may insert a row. Thrown only after
+ * An object passed to a StoredFromObjects method or set on a Mapped attribute that Roma didn't
+ * validate, or didn't validate for a Create when the row or attribute needs one. Thrown only after
  * Mapper::preventStoringUnvalidatedObjects().
  */
 class UnvalidatedObjectException extends RuntimeException
 {
     /**
-     * @param  string  $method  such as "App\Models\Contact::createFromObject()"
+     * @param  string  $method  such as "App\Models\Contact::createFromObject()" or "App\Models\Contact::$settings"
      */
     public static function notValidated(object $object, string $method): self
     {
@@ -24,7 +24,7 @@ class UnvalidatedObjectException extends RuntimeException
     }
 
     /**
-     * @param  string  $method  such as "App\Models\Contact::createFromObject()"
+     * @param  string  $method  such as "App\Models\Contact::createFromObject()" or "App\Models\Contact::$settings"
      */
     public static function validatedForUpdate(object $object, string $method): self
     {

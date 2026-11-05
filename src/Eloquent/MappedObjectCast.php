@@ -3,9 +3,12 @@
 namespace BYanelli\Roma\Eloquent;
 
 use BYanelli\Roma\Data\MappingValidationException;
+use BYanelli\Roma\Data\Operation;
+use BYanelli\Roma\Data\ValidatedObjects;
 use BYanelli\Roma\Facades\Mapper;
 use BYanelli\Roma\Facades\Serializer;
 use BYanelli\Roma\Serialization\Profile;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use Illuminate\Contracts\Database\Eloquent\SerializesCastableAttributes;
 use Illuminate\Database\Eloquent\Model;
@@ -13,8 +16,9 @@ use InvalidArgumentException;
 
 /**
  * Casts a JSON object column to a class with Mapper::fromArray(), and stores the class with
- * Profile::storage(). The model's toArray() and toJson() leave out sensitive values. Created by
- * Mapped.
+ * Profile::storage(). The model's toArray() and toJson() leave out sensitive values. After
+ * Mapper::preventStoringUnvalidatedObjects(), setting an object Roma didn't validate throws
+ * UnvalidatedObjectException. Created by Mapped.
  *
  * @internal
  *
@@ -68,6 +72,7 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
      * @param  T|array<array-key, mixed>|null  $value
      *
      * @throws MappingValidationException
+     * @throws UnvalidatedObjectException
      */
     public function set(Model $model, string $key, mixed $value, array $attributes): ?string
     {
@@ -81,10 +86,10 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
 
         if (is_array($value)) {
             $value = Mapper::fromArray($this->class, $value);
-        }
-
-        if (! $value instanceof $this->class) {
+        } elseif (! $value instanceof $this->class) {
             throw $this->unacceptable($model, $key, get_debug_type($value));
+        } else {
+            $this->ensureValidated($value, $model, $key);
         }
 
         return json_encode(Serializer::toArray($value, Profile::storage()), JSON_THROW_ON_ERROR);
@@ -108,6 +113,32 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
     private function isNonEmptyJsonList(string $json, array $data): bool
     {
         return $data !== [] && array_is_list($data) && str_starts_with(ltrim($json), '[');
+    }
+
+    /**
+     * The attribute is read with Operation::None, so an object validated for a Create or None reads
+     * back. An Update lets required properties be Missing.
+     *
+     * @throws UnvalidatedObjectException
+     */
+    private function ensureValidated(object $value, Model $model, string $key): void
+    {
+        $validatedObjects = Container::getInstance()->make(ValidatedObjects::class);
+
+        if (! $validatedObjects->preventsStoring()) {
+            return;
+        }
+
+        $operation = $validatedObjects->operationOf($value);
+        $attribute = $model::class.'::$'.$key;
+
+        if ($operation === null) {
+            throw UnvalidatedObjectException::notValidated($value, $attribute);
+        }
+
+        if ($operation === Operation::Update) {
+            throw UnvalidatedObjectException::validatedForUpdate($value, $attribute);
+        }
     }
 
     private function unacceptable(Model $model, string $key, string $given): InvalidArgumentException

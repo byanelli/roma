@@ -89,9 +89,8 @@ readonly class ObjectMapper
 
         foreach ($data->objects as $validated) {
             $this->runGuards($validated);
+            $this->validatedObjects()->record($validated, $operation);
         }
-
-        $this->validatedObjects()->record($object, $operation);
 
         return $object;
     }
@@ -141,17 +140,13 @@ readonly class ObjectMapper
 
     /**
      * Construct the object from a validated mapping, running its guards and those of the objects
-     * nested in it, children first, and record it as validated.
+     * nested in it, children first, and record them all as validated.
      *
      * @throws \ReflectionException
      */
     public function build(ClassMapping $mapping): mixed
     {
-        $instance = $this->construct($mapping);
-
-        $this->validatedObjects()->record($instance, $mapping->getOperation());
-
-        return $instance;
+        return $this->construct($mapping, $mapping->getOperation());
     }
 
     /**
@@ -179,12 +174,12 @@ readonly class ObjectMapper
      * @param  array<array-key, mixed>  $values
      * @return array<array-key, mixed>
      */
-    private function constructNestedClasses(array $values): array
+    private function constructNestedClasses(array $values, Operation $operation): array
     {
         return collect($values)
             ->map(fn ($v) => match (true) {
-                $v instanceof ClassMapping => $this->construct($v),
-                is_array($v) => $this->constructNestedClasses($v),
+                $v instanceof ClassMapping => $this->construct($v, $operation),
+                is_array($v) => $this->constructNestedClasses($v, $operation),
                 default => $v,
             })
             ->all();
@@ -193,14 +188,16 @@ readonly class ObjectMapper
     /**
      * @throws \ReflectionException
      */
-    private function construct(ClassMapping $mapping): object
+    private function construct(ClassMapping $mapping, Operation $operation): object
     {
         $className = $mapping->getClassName();
         $constructorValues = $mapping->transformConstructorValues(array_values($this->constructNestedClasses(
-            $mapping->getConstructorMappedValuesOrNestedClassesAsList()
+            $mapping->getConstructorMappedValuesOrNestedClassesAsList(),
+            $operation,
         )));
         $classPropertyValues = $mapping->transformClassPropertyValues($this->constructNestedClasses(
-            $mapping->getClassPropertiesMappedValuesOrNestedClassesAsMap()
+            $mapping->getClassPropertiesMappedValuesOrNestedClassesAsMap(),
+            $operation,
         ));
 
         $instance = new $className(...$constructorValues);
@@ -210,6 +207,7 @@ readonly class ObjectMapper
         }
 
         $this->runGuards($instance);
+        $this->validatedObjects()->record($instance, $operation);
 
         return $instance;
     }

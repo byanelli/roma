@@ -70,8 +70,8 @@ class Mapper extends Facade
     }
 
     /**
-     * Makes the StoredFromObjects methods throw UnvalidatedObjectException for an object that
-     * Roma didn't map or validate, as in
+     * Makes the StoredFromObjects methods, and setting an object on a Mapped attribute, throw
+     * UnvalidatedObjectException for an object that Roma didn't map or validate, as in
      * `Mapper::preventStoringUnvalidatedObjects(! app()->isProduction())`. Off by default.
      *
      * @see StoredFromObjects

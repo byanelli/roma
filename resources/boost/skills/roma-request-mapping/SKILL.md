@@ -376,8 +376,9 @@ protected function casts(): array
   `Mapper::preventStoringUnvalidatedObjects(! app()->isProduction())` in a service provider, they
   throw `UnvalidatedObjectException` for an object Roma didn't map or pass through `Mapper::validate()`,
   and create and upsert throw for an object validated under `Update`, or under `None` when its
-  class or a nested class has `#[RequiredOnCreate]` (map with `Operation::Create`). Clones and unserialized objects
-  aren't validated. In tests, prefer `Mapper::validate()` for fixtures;
+  class or a nested class has `#[RequiredOnCreate]` (map with `Operation::Create`). Setting an object
+  on a `Mapped` attribute throws too, for one not validated or validated under `Update`. Objects nested
+  in a validated object count as validated. Clones and unserialized objects aren't validated. In tests, prefer `Mapper::validate()` for fixtures;
   `Mapper::markValidated($object)` records one without checking it.
 
 ## HTTP client

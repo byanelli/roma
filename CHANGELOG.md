@@ -4,6 +4,12 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `Mapper::preventStoringUnvalidatedObjects()` also applies to setting an object on a `Mapped`
+  attribute, which throws `UnvalidatedObjectException` for an object Roma didn't validate, or
+  validated under `Update`. An object that breaks its rules could be stored and then throw on every
+  read. Arrays and `StringBacked` objects aren't affected. Objects nested in a mapped or validated
+  object are now recorded as validated with it, so `$details->config = $request->config` is accepted.
+  A nested object stored on its own through `StoredFromObjects` used to throw.
 - Breaking: `#[Guard]` methods run on nested objects, including those in lists, maps, shapes and
   discriminated unions, when the parent is mapped or passed to `Mapper::validate()`. Children run
   before their parents, and a guard that throws stops the rest. Only the guards of the class being

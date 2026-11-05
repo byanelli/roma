@@ -302,9 +302,12 @@ use StoredFromObjects;
 
 ### Storing only validated objects
 
-The trait stores any object it is given, including one built with `new` that was never checked
-against its rules. `Mapper::preventStoringUnvalidatedObjects()` makes the four methods throw
-`UnvalidatedObjectException` for an object Roma didn't validate. It is off by default. As with
+The trait and the `Mapped` cast store any object they are given, including one built with `new`
+that was never checked against its rules. An object that breaks its rules is then stored, and every
+later read of a `Mapped` attribute throws `InvalidAttributeValue`.
+`Mapper::preventStoringUnvalidatedObjects()` makes the four methods, and setting an object on a
+`Mapped` attribute, throw `UnvalidatedObjectException` for an object Roma didn't validate. It is off
+by default. As with
 Eloquent's `Model::preventLazyLoading()`, turn it on in a service provider's `boot()` method,
 usually outside production:
 
@@ -320,7 +323,9 @@ public function boot(): void
 An object is validated when Roma built it by mapping, as a request object, a `#[RequestBody]`
 or `#[RequestQuery]` parameter, a config object, an HTTP client response or the result of
 `Mapper::fromArray()`, or when it passed [`Mapper::validate()`](/docs/roma/v1/validation#validate-a-constructed-object).
-Only the top-level object is recorded, so a nested object stored on its own throws.
+Objects nested in it are recorded too, including those in lists, maps, shapes and unions, under
+the same `Operation`, so `$details->config = $request->config` is accepted. The object in a
+`#[MapFromValue]` property of a constructed object isn't, since validation skips that property.
 `Mapper::preventStoringUnvalidatedObjects(false)` turns the check off again.
 
 Roma records the `Operation` each object was validated under. `updateFromObject()` accepts
@@ -340,6 +345,12 @@ object, since an `Update` doesn't require `#[OptionalOnUpdate]` properties eithe
 In a test that builds a fixture with `new`, pass it to `Mapper::validate()`, which also checks
 it against its rules. `Mapper::markValidated($object, $operation)` records an object as
 validated without checking it, and returns it.
+
+A `Mapped` attribute reads with `Operation::None`, so setting an object accepts one validated under
+`Create` or `None`, and throws for one validated under `Update`, whose `#[OptionalOnUpdate]`
+properties may be `Missing`. An array set on the attribute is mapped as usual, so it needs no
+record, and neither does a `StringBacked` object, since `parse()` and `toString()` define its value.
+With `createFromObject()` and `updateFromObject()`, nested objects reach the cast as arrays.
 
 The check compares objects by identity, so it is reliable for immutable objects, such as
 readonly classes. A change to a mutable object after validation isn't detected. A clone,
