@@ -4,6 +4,9 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- `#[Server('KEY')]` maps a server variable, as `$request->server('KEY')` returns it. The key is
+  required, exact and case-sensitive, and a dot in it doesn't nest. Errors are keyed `server.KEY`.
+  Which variables exist depends on the web server.
 - Breaking: `roma:typescript` writes a `.ts` file, by default `resources/js/roma.ts`. It fails
   when the output path, from `roma.typescript.output` or `--output`, ends in `.d.ts`, so an app
   with that path in its published config must change it. Fixed: backed enums generate an

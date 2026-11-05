@@ -194,6 +194,33 @@ readonly class PreferencesRequest {
 }
 ```
 
+## Server variables
+
+Bind to a server variable with `#[Server]`, which reads what `$request->server($key)` returns.
+The key is required, case-sensitive and exact, and a dot in it doesn't nest:
+
+```php
+use BYanelli\Roma\Http\Attributes\Server;
+
+readonly class TraceRequest {
+    public function __construct(
+        #[Server('REQUEST_TIME_FLOAT')]
+        public float $startedAt,
+
+        #[Server('SERVER_NAME')]
+        public ?string $serverName = null,
+    ) {}
+}
+```
+
+Which variables exist depends on the web server, and under Octane they don't come from `$_SERVER`,
+so a property usually needs a nullable type or a default. A missing required variable fails
+validation under a `server.` key, such as `server.REQUEST_TIME_FLOAT`.
+
+Use [`#[Header]`](/docs/roma/v1/headers-and-metadata#headers) for headers instead of keys such as
+`HTTP_X_FLAG`. Those keys have names the server may have rewritten, don't include changes made in
+middleware, and aren't present on all servers.
+
 ## Files
 
 Type-hint a property as `Illuminate\Http\UploadedFile` and the upload is mapped:

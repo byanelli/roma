@@ -14,7 +14,7 @@ and DTO in one.
   default, since a request class is almost always used only as a request); `#[Request]`
   also works on the controller parameter.
 - Bind a property to a specific source with `#[Body]`, `#[Query]`, `#[Header]`,
-  `#[Path]`, or `#[Cookie]`; the default is the merged input bag.
+  `#[Path]`, `#[Cookie]`, or `#[Server]`; the default is the merged input bag.
 - Prefer the provided header value objects over hand-parsing: type a property as
   `Authorization` (scheme + credentials, with `->basic()` / `->isBearer()`), or use
   `#[ContentType]` and the `Method` / `Scheme` / `ContentType` metadata enums.

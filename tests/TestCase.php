@@ -30,13 +30,14 @@ class TestCase extends Orchestra
         ?array $json = null,
         array $routeParams = [],
         array $cookies = [],
+        array $serverVariables = [],
     ): void {
         $server = collect($headers)->mapWithKeys(function ($value, $key) {
             $key = (($key != 'Content-Type') ? 'HTTP_' : '')
                 .str_replace('-', '_', strtoupper($key));
 
             return [$key => $value];
-        })->toArray();
+        })->merge($serverVariables)->toArray();
 
         $request = ($json != null)
             ? new Request(query: $query, cookies: $cookies, files: $files, server: $server, content: json_encode($json))

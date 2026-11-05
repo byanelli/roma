@@ -30,7 +30,7 @@ Fetch it when you need detail beyond this skill.
 | Namespace | Contents |
 | --- | --- |
 | `BYanelli\Roma\Attributes` | `Key`, `SnakeCaseKeys`, `Rule`, `RulePerItem`, `RequiredOnCreate`, `IgnoreIf`, `IgnoreIfEmpty`, `RejectUnknownKeys`, `Message`, `MapFromValue`, `MapFromInput`, `Limit`, `RejectNull`, `RejectNumbers`, `SerializeUsing`, `Present`, `Guard`, `DateFormat`, `Optional`, `Discriminated`, `DiscriminatorValue`, `AutoDiscriminated`, `Description` |
-| `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
+| `BYanelli\Roma\Http\Attributes` | `Header`, `Status`, `Query`, `Body`, `Cookie`, `Server`, `Input`, `Path`; `Accessors\*`, `Headers\*` |
 | `BYanelli\Roma\Http\Request\Injection` | `Request` (the injection marker) |
 | `BYanelli\Roma\Http\Request` | `HandlesFailedValidation` |
 | `BYanelli\Roma\Http\Response` | `Response`, `IsResponsable` |
@@ -120,6 +120,7 @@ Default source is the merged input bag (query + body). Bind explicitly:
 | `#[Header('X-Api-Key')]` | a request header, as `$request->header()` reads it |
 | `#[Path]` | a route parameter (name = property unless given) |
 | `#[Cookie]` | a cookie (pass a name for cookie names with dots) |
+| `#[Server('SERVER_NAME')]` | a server variable, as `$request->server()` reads it (key required and exact; depends on the web server, so prefer a nullable type or a default; use `#[Header]` for headers) |
 | `Illuminate\Http\UploadedFile` type | a file upload (top-level only) |
 
 `#[SnakeCaseKeys]` on a class keys its properties by the snake_case of their names
@@ -233,7 +234,7 @@ an explicit list unless the member list changes often.
 ### Error-key contract (important)
 
 Validation errors are keyed by **source-prefixed, request-relative** names:
-`input.price`, `query.page`, `header.X-Flag`, `path.id`, `cookie.session`, `request.ajax`.
+`input.price`, `query.page`, `header.X-Flag`, `path.id`, `cookie.session`, `server.SERVER_NAME`, `request.ajax`.
 Never emit or expect bare field keys, with two exceptions: a precognitive request, where
 form-data errors are keyed by the bare posted name for front-end helpers, and an app that
 sets `roma.source_prefixed_errors` to `false`, where input, query, body and file errors are

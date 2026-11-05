@@ -227,6 +227,7 @@ value belongs:
 * `header.X-Flag` — a header, by its real (un-normalized) name
 * `path.id` — a `#[Path]` property
 * `cookie.session` — a `#[Cookie]` property
+* `server.SERVER_NAME` — a `#[Server]` property
 * `request.ajax` — request metadata from an accessor
 * `tenant.plan` — a [custom source](/docs/roma/v1/sources#custom-sources), under its key
 
@@ -509,8 +510,8 @@ a [union](/docs/roma/v1/nested-objects#discriminated-unions) member. A key whose
 only if that value is an object whose class has the attribute.
 
 For a request class, only the top-level keys of the JSON or form body are checked, and they are
-known when an input or `#[Body]` property maps from them. Query string, header, cookie, route
-and file keys are never unknown, nor are the `_method` and `_token` fields of Laravel's forms.
+known when an input or `#[Body]` property maps from them. Query string, header, cookie, server variable,
+route and file keys are never unknown, nor are the `_method` and `_token` fields of Laravel's forms.
 The keys of nested objects are always checked. A [precognitive
 request](/docs/roma/v1/precognition) checks a key only when `Precognition-Validate-Only`
 lists it, or when the header is absent. A config object checks the keys under its prefix,

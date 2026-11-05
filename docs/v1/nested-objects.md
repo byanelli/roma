@@ -28,7 +28,7 @@ class UserRequest {
 ```
 
 A nested object inherits its location from the parent property, so source attributes
-(`#[Input]`, `#[Query]`, `#[Body]`, `#[Header]`, `#[Path]`, `#[Cookie]`,
+(`#[Input]`, `#[Query]`, `#[Body]`, `#[Header]`, `#[Path]`, `#[Cookie]`, `#[Server]`,
 accessors) and self-sourcing metadata enums are only valid on **top-level** request
 classes. Declaring one on a nested property throws — its data always comes from within the
 parent's slice. `#[Header]` and `#[Status]` in a nested object also throw when serializing,

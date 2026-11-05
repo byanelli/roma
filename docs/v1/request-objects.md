@@ -110,7 +110,7 @@ $contact = Mapper::fromArray(ContactData::class, $payload);
 ```
 
 - The body is the only source. The query string is ignored, and a property with `#[Query]`,
-  `#[Header]`, `#[Path]`, `#[Cookie]` or a request accessor throws when the class definition is
+  `#[Header]`, `#[Path]`, `#[Cookie]`, `#[Server]` or a request accessor throws when the class definition is
   built. The `_method` and `_token` fields of Laravel's forms are left out of the data.
 - POST is a `Create`, and PUT and PATCH are an `Update`, as with `#[Request]`, so
   `#[RequiredOnCreate]` and `#[OptionalOnUpdate]` apply.
