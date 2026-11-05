@@ -61,7 +61,7 @@ $account->toArray()['settings'];                  // ['theme' => 'light', 'page_
 
 An array is mapped before it is stored, and invalid data throws
 `MappingValidationException`, as `Mapper::fromArray()` does. Setting a value that is neither
-the class, an array nor null throws `InvalidArgumentException`. `toArray()` and `toJson()`
+the class, an array nor null throws `InvalidArgumentException`, and so does a non-empty list. `toArray()` and `toJson()`
 write the storage array without `#[\SensitiveParameter]` properties, as
 `Serializer::toSafeArray()` does, so a model returned from a controller doesn't send them.
 
@@ -139,8 +139,9 @@ $account->toArray()['region'];     // null when the column is null
 ## Invalid values
 
 A stored value that can't be read throws `BYanelli\Roma\Eloquent\InvalidAttributeValue`, an
-`UnexpectedValueException`. That is a JSON value that isn't an object or doesn't map, or a
-string that `parse()` rejects. The message gives the model's class, key and the attribute,
+`UnexpectedValueException`. That is a JSON value that isn't an object or doesn't map, such as
+a string or a non-empty list, or a string that `parse()` rejects. A stored `[]` maps as `{}`
+does, from an empty array, since the two decode to the same PHP array. The message gives the model's class, key and the attribute,
 and the exception's `modelClass`, `modelKey` and `attribute` properties contain them. A
 mapping failure is its previous exception:
 

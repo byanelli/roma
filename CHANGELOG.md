@@ -13,6 +13,10 @@ All notable changes to `roma` will be documented in this file.
   the class definition is built and when serializing. It was ignored. `#[Status]` without a code
   stays valid on a property. `Data\Attributes\PropertyCheckedAttribute` is the interface for an
   attribute with this kind of check.
+- Breaking: the `Mapped` cast treats a non-empty JSON list as invalid. Reading a stored `["x"]`
+  throws `InvalidAttributeValue`, or reads as null under `nullWhenInvalid`, and setting a non-empty
+  list throws `InvalidArgumentException`. Both used to give the class's defaults. A stored `[]`
+  or `{}` still maps from an empty array.
 
 ## 0.9.5 - 2026-11-03
 

@@ -53,7 +53,7 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
             default => null,
         };
 
-        if (! is_array($data)) {
+        if (! is_array($data) || (is_string($value) && $this->isNonEmptyJsonList($value, $data))) {
             return $this->invalid($model, $key, 'it is not a JSON object');
         }
 
@@ -75,14 +75,16 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
             return null;
         }
 
+        if (is_array($value) && $value !== [] && array_is_list($value)) {
+            throw $this->unacceptable($model, $key, 'a non-empty list');
+        }
+
         if (is_array($value)) {
             $value = Mapper::fromArray($this->class, $value);
         }
 
         if (! $value instanceof $this->class) {
-            throw new InvalidArgumentException(
-                InvalidAttributeValue::describeModel($model)."'s {$key} takes a {$this->class}, an array or null, not ".get_debug_type($value).'.'
-            );
+            throw $this->unacceptable($model, $key, get_debug_type($value));
         }
 
         return json_encode(Serializer::toArray($value, Profile::storage()), JSON_THROW_ON_ERROR);
@@ -95,6 +97,24 @@ final class MappedObjectCast implements CastsAttributes, SerializesCastableAttri
     public function serialize(Model $model, string $key, mixed $value, array $attributes): array
     {
         return Serializer::toSafeArray($value);
+    }
+
+    /**
+     * Decoding with `true` gives `{"0":"x"}` the same array as `["x"]`, so this also checks the
+     * JSON. `[]` isn't treated as a list, since it is the same array as `{}`.
+     *
+     * @param  array<array-key, mixed>  $data
+     */
+    private function isNonEmptyJsonList(string $json, array $data): bool
+    {
+        return $data !== [] && array_is_list($data) && str_starts_with(ltrim($json), '[');
+    }
+
+    private function unacceptable(Model $model, string $key, string $given): InvalidArgumentException
+    {
+        return new InvalidArgumentException(
+            InvalidAttributeValue::describeModel($model)."'s {$key} takes a {$this->class}, an array or null, not {$given}."
+        );
     }
 
     /**

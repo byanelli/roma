@@ -208,7 +208,47 @@ describe('a JSON object column', function () {
             InvalidAttributeValue::class,
             "CastRecord {$record->id} has an invalid settings: it is not a JSON object",
         );
-    })->with(['{not json', '"dark"', '42']);
+    })->with(['{not json', '"dark"', '42', '["x"]', '[1,2]', '[{"theme":"dark"}]', ' ["x"]']);
+
+    it('reads a stored list as null with nullWhenInvalid', function (string $json) {
+        $record = storedCastRecord(['lenient' => $json]);
+
+        expect($record->lenient)->toBeNull();
+    })->with(['["x"]', '[1,2]']);
+
+    it('maps an empty list or object from an empty array', function (string $json) {
+        $record = storedCastRecord(['settings' => $json, 'lenient' => $json]);
+
+        expect($record->settings)->toEqual(new CastSettings)
+            ->and($record->lenient)->toEqual(new CastSettings);
+    })->with(['[]', '{}', '[ ]', '{ }']);
+
+    // json_decode() with true gives these objects the same array as a list.
+    it('maps a JSON object whose keys count up from 0', function () {
+        $record = storedCastRecord(['settings' => '{"0":"x","1":"y","theme":"dark"}', 'lenient' => '{"0":"x"}']);
+
+        expect($record->settings)->toEqual(new CastSettings(theme: 'dark'))
+            ->and($record->lenient)->toEqual(new CastSettings);
+    });
+
+    it('rejects a non-empty list', function (string $attribute, array $list) {
+        expect(fn () => CastRecord::make([$attribute => $list]))->toThrow(
+            InvalidArgumentException::class,
+            "An unsaved CastRecord's {$attribute} takes a CastSettings, an array or null, not a non-empty list.",
+        );
+    })->with([
+        ['settings', ['x']],
+        ['settings', [1, 2]],
+        ['settings', [['theme' => 'dark']]],
+        ['lenient', ['x']],
+    ]);
+
+    it('stores an empty array as the class mapped from it', function () {
+        $record = CastRecord::create(['settings' => []]);
+
+        expect(json_decode(storedColumn($record, 'settings'), true))
+            ->toBe(['theme' => 'light', 'page_size' => 20, 'api_url' => null]);
+    });
 
     it('throws when the driver returns a value other than a string', function () {
         (new MappedObjectCast(CastSettings::class))->get(new CastRecord, 'settings', 42, []);
