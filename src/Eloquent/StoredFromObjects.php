@@ -232,16 +232,44 @@ trait StoredFromObjects
 
         $stored = is_string($raw[$column]) ? json_decode($raw[$column], true) : $raw[$column];
 
-        if ($raw[$column] !== null && ! is_array($stored)) {
+        if ($raw[$column] !== null && (! is_array($stored) || self::isInStoredList($raw[$column], $path))) {
             throw $fail('its stored value is not a JSON object');
         }
 
         $current = is_array($stored) ? new KeyPath(array_slice($path->segments, 1))->getFrom($stored) : null;
 
         if (is_array($current)) {
+            // Encoding the decoded array of {"0":"x"} would turn it into a list.
+            if ($value === [] && count($path->segments) === 1) {
+                unset($attributes[$column]);
+
+                return $attributes;
+            }
+
             $path->setIn($attributes, array_replace($current, $value));
         }
 
         return $attributes;
+    }
+
+    /**
+     * Whether the value at the path in the column, or a value containing it, is a non-empty list.
+     * Decoding to objects keeps `{"0":"x"}` apart from `["x"]`. `[]` isn't treated as a list,
+     * since `{}` and `[]` map alike in the Mapped cast.
+     */
+    private static function isInStoredList(mixed $raw, KeyPath $path): bool
+    {
+        $isList = fn (mixed $value) => is_array($value) && $value !== [] && array_is_list($value);
+        $value = is_string($raw) ? json_decode($raw) : $raw;
+
+        foreach (array_slice($path->segments, 1) as $segment) {
+            if ($isList($value)) {
+                return true;
+            }
+
+            $value = ((array) $value)[$segment] ?? null;
+        }
+
+        return $isList($value);
     }
 }

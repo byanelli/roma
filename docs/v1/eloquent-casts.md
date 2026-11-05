@@ -241,7 +241,9 @@ it is, even under `defaultWhenNull`. Null still clears the column, and `Missing`
 alone. The attribute has no effect in `createFromObject()` or in a nested object. The class
 definition throws when the property's type is not a nested object class, and
 `updateFromObject()` throws `InvalidArgumentException` when the attribute has no array, JSON or
-class cast, or its stored value is not a JSON object.
+class cast, or its stored value is not a JSON object. A non-empty list such as `["x"]` isn't one,
+while `{"0":"x"}` is, and a stored `[]` counts as `{}`, as in the `Mapped` cast. An object that
+writes no keys leaves a stored value as it is.
 
 ### Upserting
 

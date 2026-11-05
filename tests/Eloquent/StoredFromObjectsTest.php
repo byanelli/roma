@@ -94,6 +94,15 @@ readonly class MergeIntoStringData
     ) {}
 }
 
+readonly class MergeIntoSectionData
+{
+    public function __construct(
+        #[Key('user_settings.section')]
+        #[MergeOnUpdate]
+        public MergeSettingsInput|Missing|null $section,
+    ) {}
+}
+
 readonly class MergeOnStringData
 {
     public function __construct(
@@ -332,6 +341,92 @@ it('throws when a #[MergeOnUpdate] column cannot be merged', function () {
     expect(fn () => $account->updateFromObject(new MergeIntoStringData(new MergeSettingsInput('dark', Missing::instance(), Missing::instance()))))->toThrow(
         InvalidArgumentException::class,
         "Roma cannot merge MergeIntoStringData's name into MergeAccount {$account->id}'s name, since the attribute has no array, JSON or class cast.",
+    );
+});
+
+it('throws when a #[MergeOnUpdate] column stores a non-empty JSON list', function (string $json) {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => $json]);
+    $account->refresh();
+
+    expect(fn () => $account->updateFromObject(mergeData(['user_settings' => ['theme' => 'light']])))->toThrow(
+        InvalidArgumentException::class,
+        "Roma cannot merge MergeAccountData's user_settings into MergeAccount {$account->id}'s user_settings, since its stored value is not a JSON object.",
+    );
+
+    expect(DB::table('merge_accounts')->value('user_settings'))->toBe($json);
+})->with(['["x"]', '[1,2]', '[{"theme":"dark"}]', ' ["x"]']);
+
+it('merges over a stored JSON object whose keys count up from 0', function () {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => '{"0":"x"}']);
+    $account->refresh();
+
+    $account->updateFromObject(mergeData(['user_settings' => ['theme' => 'light']]));
+
+    expect(DB::table('merge_accounts')->value('user_settings'))->toBe('{"0":"x","theme":"light"}');
+});
+
+it('sets a #[MergeOnUpdate] object as it is over a stored empty list or object', function (string $json) {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => $json]);
+    $account->refresh();
+
+    $account->updateFromObject(mergeData(['user_settings' => ['theme' => 'light']]));
+
+    expect(json_decode(DB::table('merge_accounts')->value('user_settings'), true))->toBe(['theme' => 'light']);
+})->with(['[]', '{}']);
+
+// A merge that writes nothing has no keys to replace, and encoding the decoded array would turn {"0":"x"} into a list.
+it('leaves a stored JSON object as it is when the #[MergeOnUpdate] object writes nothing', function (string $json) {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => $json]);
+    $account->refresh();
+
+    $account->updateFromObject(mergeData(['user_settings' => []]));
+
+    expect(DB::table('merge_accounts')->value('user_settings'))->toBe($json);
+})->with(['{"0":"x"}', '{}', '[]', '{"theme":"dark"}']);
+
+it('leaves a stored JSON object as it is in a Mapped column when the #[MergeOnUpdate] object writes nothing', function () {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['prefs' => '{"0":"x"}']);
+    $account->refresh();
+
+    $account->updateFromObject(mergeData(['prefs' => []]));
+
+    expect(DB::table('merge_accounts')->value('prefs'))->toBe('{"0":"x"}');
+});
+
+it('throws when the stored value at a dotted #[MergeOnUpdate] key is a non-empty JSON list', function () {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => '{"section":["x"]}']);
+    $account->refresh();
+
+    expect(fn () => $account->updateFromObject(new MergeIntoSectionData(new MergeSettingsInput('light', Missing::instance(), Missing::instance()))))->toThrow(
+        InvalidArgumentException::class,
+        "Roma cannot merge MergeIntoSectionData's user_settings.section into MergeAccount {$account->id}'s user_settings, since its stored value is not a JSON object.",
+    );
+});
+
+it('merges over a JSON object at a dotted #[MergeOnUpdate] key whose keys count up from 0', function () {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => '{"section":{"0":"x"}}']);
+    $account->refresh();
+
+    $account->updateFromObject(new MergeIntoSectionData(new MergeSettingsInput('light', Missing::instance(), Missing::instance())));
+
+    expect(DB::table('merge_accounts')->value('user_settings'))->toBe('{"section":{"0":"x","theme":"light"}}');
+});
+
+it('throws when a dotted #[MergeOnUpdate] key is inside a stored non-empty JSON list', function () {
+    $account = mergeAccount();
+    DB::table('merge_accounts')->update(['user_settings' => '["x"]']);
+    $account->refresh();
+
+    expect(fn () => $account->updateFromObject(new MergeIntoSectionData(new MergeSettingsInput('light', Missing::instance(), Missing::instance()))))->toThrow(
+        InvalidArgumentException::class,
+        'since its stored value is not a JSON object.',
     );
 });
 

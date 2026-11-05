@@ -17,6 +17,11 @@ All notable changes to `roma` will be documented in this file.
   throws `InvalidAttributeValue`, or reads as null under `nullWhenInvalid`, and setting a non-empty
   list throws `InvalidArgumentException`. Both used to give the class's defaults. A stored `[]`
   or `{}` still maps from an empty array.
+- Breaking: `updateFromObject()` throws `InvalidArgumentException` for a `#[MergeOnUpdate]` column
+  that stores a non-empty JSON list, as the docs said it did. `["x"]` used to merge as if it were
+  an object, giving `{"0":"x","theme":"dark"}`. The same goes for a list at a dotted key's path
+  inside the column. `{"0":"x"}` still merges, and `[]` still counts as `{}`. An object that writes
+  no keys now leaves a stored object alone, where a `Mapped` column holding `{"0":"x"}` threw.
 
 ## 0.9.5 - 2026-11-03
 
