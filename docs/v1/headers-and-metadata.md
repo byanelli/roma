@@ -41,6 +41,11 @@ as `X-Request.Id` is read there with `#[Header('X-Request-Id')]`. Swoole and Roa
 dot. Roma compares a dot as a dot, so that a client can't reach `#[Header('X-Auth-User')]` by
 sending `X.Auth.User` past a proxy that strips `X-Auth-User`.
 
+`#[Header]` reads a header as `$request->header($name)` does, from `$request->headers`, so a
+header that middleware sets, replaces or removes is what the property sees. A repeated header
+gives its first value, and a header whose value is null is absent. Response classes in the
+[HTTP client](/docs/roma/v1/http-client) differ: they join a repeated header with commas.
+
 ## Header value objects
 
 Some headers carry structure, not just a string. Type a property as a header **value

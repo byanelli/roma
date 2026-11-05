@@ -26,13 +26,24 @@ final readonly class Header extends RequestSource
     }
 
     /**
+     * Each header as `$request->header($name)` returns it, which for a repeated header is the
+     * first value. A header whose value is null is absent.
+     *
      * @param  Request  $request
-     * @return array<string, mixed>
+     * @return array<string, string>
      */
     protected function read(object $request): array
     {
-        return collect($request->server->getHeaders())
-            ->mapWithKeys(fn ($value, $key) => [$this->normalizeKey($key) => $value])
-            ->all();
+        $headers = [];
+
+        foreach ($request->headers->keys() as $name) {
+            $value = $request->headers->get((string) $name);
+
+            if ($value !== null) {
+                $headers[$this->normalizeKey((string) $name)] = $value;
+            }
+        }
+
+        return $headers;
     }
 }

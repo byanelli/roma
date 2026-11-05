@@ -117,7 +117,7 @@ Default source is the merged input bag (query + body). Bind explicitly:
 | Attribute | Source |
 |---|---|
 | `#[Query]` / `#[Body]` | query string / request body |
-| `#[Header('X-Api-Key')]` | a request header |
+| `#[Header('X-Api-Key')]` | a request header, as `$request->header()` reads it |
 | `#[Path]` | a route parameter (name = property unless given) |
 | `#[Cookie]` | a cookie (pass a name for cookie names with dots) |
 | `Illuminate\Http\UploadedFile` type | a file upload (top-level only) |

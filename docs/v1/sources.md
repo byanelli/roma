@@ -88,6 +88,10 @@ properties, `#[Input('a')]` beside a property named `a`, or `#[Header('X-Flag')]
 hyphen and an underscore are the same in a header name. Several properties may read one
 accessor such as `#[Ajax]`.
 
+`#[Header]` reads a header as `$request->header($name)` does, so a repeated header gives its first
+value, and a header that middleware sets or removes is what the property sees. See
+[Headers & metadata](/docs/roma/v1/headers-and-metadata#headers).
+
 ### Nested keys
 
 A dot in a key reads a nested value, as in Laravel's `$request->input('error.message')`:

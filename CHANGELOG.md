@@ -31,6 +31,11 @@ All notable changes to `roma` will be documented in this file.
   an object, giving `{"0":"x","theme":"dark"}`. The same goes for a list at a dotted key's path
   inside the column. `{"0":"x"}` still merges, and `[]` still counts as `{}`. An object that writes
   no keys now leaves a stored object alone, where a `Mapped` column holding `{"0":"x"}` threw.
+- Breaking: `#[Header]` now reads as `$request->header()` does, from `$request->headers` instead
+  of `$request->server`, so it sees a header that middleware sets, replaces or removes. A repeated
+  header gives its first value, and a header whose value is null is absent. An app that changes
+  `$request->headers` in middleware and relied on `#[Header]` reading the original value must read
+  it from `$request->server`.
 
 ## 0.9.5 - 2026-11-03
 
