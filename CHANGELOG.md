@@ -2,6 +2,14 @@
 
 All notable changes to `roma` will be documented in this file.
 
+## Unreleased
+
+- Breaking: `roma:typescript` writes a `.ts` file, by default `resources/js/roma.ts`. It fails
+  when the output path, from `roma.typescript.output` or `--output`, ends in `.d.ts`, so an app
+  with that path in its published config must change it. Fixed: backed enums generate an
+  `export const`, which TypeScript rejects in a declaration file (TS1254, hidden by
+  `skipLibCheck`) and which didn't exist at runtime.
+
 ## 0.9.5 - 2026-11-03
 
 - Breaking: `Eloquent\MapsDataFromObjects` is now `Eloquent\StoredFromObjects`, and

@@ -90,8 +90,9 @@ return [
 
     'typescript' => [
 
-        // Where the generated .d.ts file is written.
-        'output' => resource_path('js/roma.d.ts'),
+        // Where the generated .ts file is written. It contains enum constants,
+        // so a path ending in .d.ts fails.
+        'output' => resource_path('js/roma.ts'),
 
         // Additional request classes to generate interfaces for.
         'requests' => [

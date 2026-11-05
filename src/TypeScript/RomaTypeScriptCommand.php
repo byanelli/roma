@@ -7,12 +7,21 @@ use Illuminate\Console\Command;
 
 class RomaTypeScriptCommand extends Command
 {
-    protected $signature = 'roma:typescript {--output= : Path to write the .d.ts file to (overrides config)}';
+    protected $signature = 'roma:typescript {--output= : Path to write the .ts file to (overrides config)}';
 
     protected $description = 'Generate TypeScript definitions for Roma request and response objects';
 
     public function handle(RomaClassDiscovery $discovery): int
     {
+        $output = $this->option('output')
+            ?: config('roma.typescript.output', base_path('resources/js/roma.ts'));
+
+        if (str_ends_with(strtolower($output), '.d.ts')) {
+            $this->error("Roma can't write TypeScript to {$output}: the file contains enum constants, which a .d.ts file can't declare and which wouldn't exist at runtime. Use a .ts path in roma.typescript.output or --output.");
+
+            return self::FAILURE;
+        }
+
         /** @var list<string> $paths */
         $paths = config('roma.discover', []);
         $discovered = $discovery->discover($paths);
@@ -27,9 +36,6 @@ class RomaTypeScriptCommand extends Command
 
             return self::SUCCESS;
         }
-
-        $output = $this->option('output')
-            ?: config('roma.typescript.output', base_path('resources/js/roma.d.ts'));
 
         $typescript = new TypeScriptGenerator($requests, $responses)->generate();
 

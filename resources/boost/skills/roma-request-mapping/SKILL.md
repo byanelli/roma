@@ -264,7 +264,8 @@ value, body only, `#[\SensitiveParameter]` values written, maps back with `Mappe
 
 ## TypeScript
 
-`php artisan roma:typescript` writes `.d.ts` interfaces (`{Name}Body`/`{Name}Query`/
+`php artisan roma:typescript` writes a `.ts` file (default `resources/js/roma.ts`; a `.d.ts`
+path fails, since it contains enum constants) with interfaces (`{Name}Body`/`{Name}Query`/
 `{Name}Headers` for requests). Requests are auto-detected by a class-level `#[Request]`;
 responses by extending `Response`/using `IsResponsable`. No manual list to maintain.
 `#[Description('...')]` on a class or property becomes a `/** ... */` doc comment.

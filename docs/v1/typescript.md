@@ -17,8 +17,10 @@ frontend and backend share one source of truth. Run:
 php artisan roma:typescript
 ```
 
-It writes a `.d.ts` file (default `resources/js/roma.d.ts`, overridable with `--output` or
-config) containing interfaces for the request and response classes.
+It writes a `.ts` file (default `resources/js/roma.ts`, overridable with `--output` or
+config) containing interfaces for the request and response classes, and constants for backed
+enums. The constants exist at runtime, so a path ending in `.d.ts` makes the command fail: a
+declaration file can't contain them.
 
 ## What gets generated
 

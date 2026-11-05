@@ -45,8 +45,8 @@ return [
     'discover' => [app_path()],
 
     'typescript' => [
-        // Where the generated .d.ts file is written.
-        'output' => resource_path('js/roma.d.ts'),
+        // Where the generated .ts file is written. A path ending in .d.ts fails.
+        'output' => resource_path('js/roma.ts'),
 
         // Additional classes to include beyond what discovery finds.
         'requests' => [],
