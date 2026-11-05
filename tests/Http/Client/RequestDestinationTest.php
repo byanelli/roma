@@ -377,6 +377,18 @@ it('reads a response header in any case', function () {
     expect(RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientVideoWithMeta::class])->remaining)->toBe(3);
 });
 
+it('reads a response header with a dot in any case', function (string $sent) {
+    Http::fake(['api.test/*' => Http::response([], 200, [$sent => 'abc'])]);
+
+    expect(RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientResponseWithDottedHeader::class])->id)->toBe('abc');
+})->with(['X-Request.Id', 'x-request.id']);
+
+it('reads a response header declared in camelCase', function () {
+    Http::fake(['api.test/*' => Http::response('ok', 200, ['Content-Type' => 'text/plain'])]);
+
+    expect(RomaHttp::baseUrl('https://api.test')->sendRequest(new ClientSearch('roma'), [ClientResponseWithCamelCaseHeader::class])->contentType)->toBe('text/plain');
+});
+
 it('rejects a code in a #[Status] property of a response class', function () {
     Http::fake(['api.test/*' => Http::response([], 200)]);
 
@@ -508,6 +520,22 @@ final readonly class ClientResponseWithBareStatus
     public function __construct(
         #[Status]
         public int $status = 200,
+    ) {}
+}
+
+final readonly class ClientResponseWithDottedHeader
+{
+    public function __construct(
+        #[Header('X-Request.Id')]
+        public string $id,
+    ) {}
+}
+
+final readonly class ClientResponseWithCamelCaseHeader
+{
+    public function __construct(
+        #[Header('ContentType')]
+        public string $contentType,
     ) {}
 }
 

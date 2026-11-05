@@ -6,7 +6,7 @@ use BYanelli\Roma\Http\Client\Response\ResponseInput;
 
 /**
  * The response headers. Names are compared without case, hyphens or underscores, since
- * #[Header] normalizes its name to snake case and servers send names in any case.
+ * #[Header] normalizes its name and servers send names in any case.
  */
 final readonly class Header extends ResponseSource
 {

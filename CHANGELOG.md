@@ -9,6 +9,15 @@ All notable changes to `roma` will be documented in this file.
   with that path in its published config must change it. Fixed: backed enums generate an
   `export const`, which TypeScript rejects in a declaration file (TS1254, hidden by
   `skipLibCheck`) and which didn't exist at runtime.
+- Breaking: request header names are compared in lowercase with underscores for hyphens. A
+  name declared in camelCase, such as `#[Header('ContentType')]`, no longer matches
+  `Content-Type`; declare the real name. HTTP client response classes still compare names
+  without case or separators, so they aren't affected. Fixed: a header name with an inner
+  capital, an acronym or a capital after a dot, such as `X-RateLimit-Remaining`, `X-API-Key` or
+  `X-Request.Id`, couldn't be read from a request, since the attribute's key didn't match the
+  stored name. Error keys still use the name as declared. PHP-FPM and `php artisan serve` replace a
+  dot in a header name with an underscore, so under them `X-Request.Id` must be declared as
+  `X-Request-Id`.
 - Breaking: a code, range or `'default'` in a `#[Status]` on a property or parameter throws when
   the class definition is built and when serializing. It was ignored. `#[Status]` without a code
   stays valid on a property. `Data\Attributes\PropertyCheckedAttribute` is the interface for an

@@ -30,6 +30,17 @@ readonly class ApiRequest {
 }
 ```
 
+A header is found however either side capitalizes its name. Names are compared in lowercase
+with underscores for hyphens, so `X-RateLimit-Remaining` matches `x-ratelimit-remaining`, but not
+`X-Rate-Limit-Remaining`, and `ContentType` doesn't match `Content-Type`. Error keys use the
+name as you wrote it, such as `header.X-RateLimit-Remaining`.
+
+Avoid dots in header names, since web servers treat them differently. nginx drops such a header
+by default. PHP-FPM and `php artisan serve` replace the dot with an underscore, so a header sent
+as `X-Request.Id` is read there with `#[Header('X-Request-Id')]`. Swoole and RoadRunner keep the
+dot. Roma compares a dot as a dot, so that a client can't reach `#[Header('X-Auth-User')]` by
+sending `X.Auth.User` past a proxy that strips `X-Auth-User`.
+
 ## Header value objects
 
 Some headers carry structure, not just a string. Type a property as a header **value

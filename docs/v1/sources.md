@@ -84,7 +84,8 @@ uploaded files.
 
 Two properties on the same key of one source throw too, such as `#[Query('page')]` on two
 properties, `#[Input('a')]` beside a property named `a`, or `#[Header('X-Flag')]` beside
-`#[Header('x-flag')]`, since header names ignore case. Several properties may read one
+`#[Header('x-flag')]`, since header names ignore case, or `#[Header('X_Flag')]`, since a
+hyphen and an underscore are the same in a header name. Several properties may read one
 accessor such as `#[Ajax]`.
 
 ### Nested keys

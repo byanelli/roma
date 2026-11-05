@@ -15,7 +15,6 @@ use BYanelli\Roma\Data\Types\String_;
 use BYanelli\Roma\Http\Request\Sources;
 use BYanelli\Roma\Serialization\Destination;
 use BYanelli\Roma\Serialization\DestinationAttribute;
-use Illuminate\Support\Str;
 
 /**
  * A header: the source of a property when mapping a request, and its destination when
@@ -33,8 +32,7 @@ readonly class Header implements DestinationAttribute, ErrorKeyAttribute, KeyAtt
 
     public function getKey(): string
     {
-        // We need to combine both to turn e.g. "Content-Type" into "content_type"
-        return Str::snake(Str::camel($this->name));
+        return $this->getSource()->normalizeKey($this->name);
     }
 
     public function getErrorKey(): string

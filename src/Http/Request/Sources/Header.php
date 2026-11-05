@@ -3,7 +3,6 @@
 namespace BYanelli\Roma\Http\Request\Sources;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 final readonly class Header extends RequestSource
 {
@@ -18,11 +17,12 @@ final readonly class Header extends RequestSource
     }
 
     /**
-     * Header names are looked up snake-cased, e.g. "Content-Type" as "content_type".
+     * Header names are compared in lowercase with underscores for hyphens, e.g. "Content-Type"
+     * as "content_type". `$request->header()` also treats a hyphen and an underscore as the same.
      */
     public function normalizeKey(string $key): string
     {
-        return Str::of($key)->camel()->snake()->toString();
+        return strtolower(str_replace('-', '_', $key));
     }
 
     /**
@@ -32,7 +32,7 @@ final readonly class Header extends RequestSource
     protected function read(object $request): array
     {
         return collect($request->server->getHeaders())
-            ->mapWithKeys(fn ($value, $key) => [Str::lower($key) => $value])
+            ->mapWithKeys(fn ($value, $key) => [$this->normalizeKey($key) => $value])
             ->all();
     }
 }
