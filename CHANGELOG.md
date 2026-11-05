@@ -4,6 +4,11 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: `#[Guard]` methods run on nested objects, including those in lists, maps, shapes and
+  discriminated unions, when the parent is mapped or passed to `Mapper::validate()`. Children run
+  before their parents, and a guard that throws stops the rest. Only the guards of the class being
+  mapped used to run, so a guard on a nested class was silently skipped, and one that never ran may
+  now throw.
 - Breaking: an empty list or object is a valid value for a required array or class property, as
   it is in PHP, PHPStan, TypeScript and JSON Schema. `list<T>`, `array<T>`, maps, shapes, nested
   classes and classes with no properties accept `[]` and `{}`, in requests, plain arrays, config,

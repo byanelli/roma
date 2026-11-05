@@ -196,6 +196,13 @@ readonly class UpdatePostRequest {
 }
 ```
 
+Guards also run on nested objects, including those in lists, maps, shapes and discriminated
+unions, when the parent is mapped or passed to `Mapper::validate()`. A nested object's guards run
+before its parent's, so a parent's guard can rely on its children having passed, and in a large list
+a guard runs once per item. A guard that throws stops the rest. A value left as a default isn't
+mapped, so its guards don't run, and neither do those of an object in a `#[MapFromValue]` property
+under `Mapper::validate()`.
+
 ## Custom messages
 
 `#[Message]` sets a property's validation messages, keyed by Laravel rule name. A message

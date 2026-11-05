@@ -213,7 +213,8 @@ an explicit list unless the member list changes often.
   property's source, without the prefix, and see only that source's data. Compare values
   from different sources in a `#[Guard]`.
 - **Guards:** a `#[Guard]` method runs after validation, resolved through the container
-  (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
+  (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order. Nested objects' guards
+  run too, before their parent's.
 - **Custom messages:** `#[Message(required: 'Send a name.')]` sets a property's message for a
   Laravel rule; a message without a rule name covers all of the property's rules. `non_empty`
   covers `[]` for an optional `non-empty-*` array.
@@ -233,7 +234,7 @@ an explicit list unless the member list changes often.
   level to require them of all requests.
 - **Constructed objects:** `new JobPosting(...) |> Mapper::validate(...)` (or
   `Mapper::validate($object, Operation::Update)`) checks an object built with `new` against its
-  rules without coercion, runs its guards and returns the same instance. Arrays are checked
+  rules without coercion, runs its guards and those of nested objects, and returns the same instance. Arrays are checked
   strictly (`"5"` fails in a `list<int>`; dates, enums and value objects must be instances).
   `#[MapFromValue]`/`#[MapFromInput]` properties, `#[RejectUnknownKeys]` and class-level
   constraints are skipped; `#[Limit(n)]` adds `max` (n plus the end's length); source attributes

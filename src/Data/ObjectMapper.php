@@ -60,7 +60,7 @@ readonly class ObjectMapper
 
     /**
      * Validates an object constructed directly, such as with `new`, against its rules, then runs
-     * its guards. Properties with #[MapFromValue] or #[MapFromInput] aren't validated, and the
+     * its guards and those of the objects nested in it, children first. Properties with #[MapFromValue] or #[MapFromInput] aren't validated, and the
      * error keys are the input keys without a source prefix. An object that contains itself fails
      * at the key where it repeats. `$operation` decides whether the #[RequiredOnCreate] and
      * #[OptionalOnUpdate] properties are required.
@@ -87,7 +87,10 @@ readonly class ObjectMapper
 
         $errors->throwIfAny($object::class);
 
-        $this->runGuards($object);
+        foreach ($data->objects as $validated) {
+            $this->runGuards($validated);
+        }
+
         $this->validatedObjects()->record($object, $operation);
 
         return $object;
@@ -137,7 +140,8 @@ readonly class ObjectMapper
     }
 
     /**
-     * Construct the object from a validated mapping, run its guards and record it as validated.
+     * Construct the object from a validated mapping, running its guards and those of the objects
+     * nested in it, children first, and record it as validated.
      *
      * @throws \ReflectionException
      */
@@ -145,7 +149,6 @@ readonly class ObjectMapper
     {
         $instance = $this->construct($mapping);
 
-        $this->runGuards($instance);
         $this->validatedObjects()->record($instance, $mapping->getOperation());
 
         return $instance;
@@ -205,6 +208,8 @@ readonly class ObjectMapper
         foreach ($classPropertyValues as $name => $value) {
             new ReflectionProperty($className, $name)->setValue($instance, $value);
         }
+
+        $this->runGuards($instance);
 
         return $instance;
     }

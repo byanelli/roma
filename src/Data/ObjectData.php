@@ -2,6 +2,7 @@
 
 namespace BYanelli\Roma\Data;
 
+use BYanelli\Roma\Attributes\MapFromValue;
 use BYanelli\Roma\Data\Types\Class_;
 use BYanelli\Roma\Missing;
 use ReflectionProperty;
@@ -27,6 +28,14 @@ final class ObjectData
      * @var list<KeyPath>
      */
     public private(set) array $cycles = [];
+
+    /**
+     * The objects read, keyed by spl_object_id(), each after the objects it contains, so the
+     * constructed object is last. A #[MapFromValue] property's value isn't read.
+     *
+     * @var array<int, object>
+     */
+    public private(set) array $objects = [];
 
     public function __construct(Class_ $class, object $object)
     {
@@ -66,8 +75,12 @@ final class ObjectData
                 continue;
             }
 
-            $property->keyPath->setIn($data, $this->value($property->type, $value, $path->concat($property->keyPath), $ancestors));
+            $property->keyPath->setIn($data, $property->hasAttribute(MapFromValue::class)
+                ? $value
+                : $this->value($property->type, $value, $path->concat($property->keyPath), $ancestors));
         }
+
+        $this->objects[spl_object_id($object)] = $object;
 
         return $data;
     }
