@@ -93,3 +93,24 @@ it('emits a nullable shape item as a union with null', function () {
         }
         TS);
 });
+
+class TsNonEmptyRequest
+{
+    /**
+     * @param  non-empty-list<string>  $list
+     * @param  non-empty-array<string, int>  $map
+     * @param  non-empty-array{a?: int}  $shape
+     */
+    public function __construct(
+        public array $list,
+        public array $map,
+        public array $shape,
+    ) {}
+}
+
+it('emits non-empty types as their plain equivalents', function () {
+    $ts = new TypeScriptGenerator([TsNonEmptyRequest::class])->generate();
+
+    expect($ts)->toContain('list: string[]')
+        ->and($ts)->toContain('map: Record<string, number>');
+});

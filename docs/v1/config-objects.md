@@ -102,7 +102,11 @@ missing too:
 | `public string $apiKey`              | "The services.scrapfly.key field is required." |
 
 A nested object whose values are all missing is missing as well, so a nullable one is
-`null`.
+`null`. So is any other array left empty once its blank values are removed, so
+`'labels' => ['a' => null]` fails as required for a required map. An array written as `[]`
+isn't missing, since [an empty list or
+object](/docs/roma/v1/validation#empty-lists-and-objects) is a valid value: a required list
+accepts it, and a required nested object reports its own required members.
 
 `#[RejectUnknownKeys]` on the class makes a key under the prefix that no property maps from
 fail validation, such as a misspelled `timout`. See [Rejecting unknown

@@ -627,3 +627,46 @@ it('applies #[DateFormat] to array elements but not to a nested object\'s dates'
         ->and($properties['slot']['properties']['day'])->toBe(['format' => 'date', 'type' => 'string'])
         ->and($properties['slot']['properties']['event']['properties']['at'])->toBe(['format' => 'date-time', 'type' => 'string']);
 });
+
+readonly class SchemaNonEmpty
+{
+    /**
+     * @param  non-empty-list<string>  $list
+     * @param  non-empty-array<int>  $array
+     * @param  non-empty-array<int, string>  $intMap
+     * @param  ?non-empty-list<string>  $nullable
+     * @param  list<non-empty-list<int>>  $lists
+     * @param  list<string>  $plain
+     * @param  non-empty-array<string, int>  $map
+     * @param  non-empty-list<string>  $atLeastThree
+     */
+    public function __construct(
+        public array $list,
+        public array $array,
+        public array $intMap,
+        public ?array $nullable,
+        public array $lists,
+        public array $plain,
+        public array $map,
+
+        #[Rule('min:3')]
+        public array $atLeastThree,
+    ) {}
+}
+
+it('adds minItems for non-empty-list and non-empty-array', function () {
+    $properties = ClassSchema::object(SchemaNonEmpty::class)->toArray()['properties'];
+
+    expect($properties['list'])->toBe(['minItems' => 1, 'items' => ['type' => 'string'], 'type' => 'array'])
+        ->and($properties['array'])->toBe(['minItems' => 1, 'items' => ['type' => 'integer'], 'type' => 'array'])
+        ->and($properties['intMap'])->toBe(['minItems' => 1, 'items' => ['type' => 'string'], 'type' => 'array'])
+        ->and($properties['nullable'])->toBe(['minItems' => 1, 'items' => ['type' => 'string'], 'type' => ['array', 'null']])
+        ->and($properties['lists'])->toBe(['items' => ['minItems' => 1, 'items' => ['type' => 'integer'], 'type' => 'array'], 'type' => 'array'])
+        ->and($properties['plain'])->toBe(['items' => ['type' => 'string'], 'type' => 'array'])
+        ->and($properties['atLeastThree'])->toBe(['minItems' => 3, 'items' => ['type' => 'string'], 'type' => 'array']);
+});
+
+it('leaves a non-empty map as an object, since Laravel\'s ObjectType has no minProperties', function () {
+    expect(ClassSchema::object(SchemaNonEmpty::class)->toArray()['properties']['map'])
+        ->toBe(['description' => 'Values: integer', 'type' => 'object']);
+});

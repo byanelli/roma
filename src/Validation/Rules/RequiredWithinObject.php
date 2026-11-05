@@ -16,6 +16,8 @@ use Illuminate\Contracts\Validation\ValidationRule;
  * Unlike Laravel's `required_with`, an empty array counts as "present", so
  * `{"address": {}}` still reports its missing required members rather than
  * silently passing.
+ *
+ * The member itself may be an empty array when `$allowsEmpty` is true.
  */
 class RequiredWithinObject implements DataAwareRule, ValidationRule
 {
@@ -34,10 +36,12 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
      *                           matches the array index in the validated attribute
      * @param  ?string  $nullableKey  the member's key in the object when the member may be null,
      *                                so that a null value passes if the key is present
+     * @param  bool  $allowsEmpty  whether the member is an array or object that may be empty
      */
     public function __construct(
         private readonly KeyPath $object,
         private readonly ?string $nullableKey = null,
+        private readonly bool $allowsEmpty = false,
     ) {}
 
     /**
@@ -64,7 +68,11 @@ class RequiredWithinObject implements DataAwareRule, ValidationRule
             return;
         }
 
-        if ($value === null || $value === '' || (is_array($value) && count($value) === 0)) {
+        $missing = $this->allowsEmpty
+            ? RequiredAllowingEmpty::isMissing($value)
+            : $value === null || $value === '' || $value === [];
+
+        if ($missing) {
             $fail('validation.required')->translate();
         }
     }

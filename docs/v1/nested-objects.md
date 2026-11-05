@@ -56,8 +56,15 @@ readonly class OrderRequest {
 An object must be a JSON object. A list such as `["x"]` for a nested object, an object in a
 list or a [discriminated union](#discriminated-unions) fails with "The input.address field
 must be an object.", which `#[Message(object: '...')]` replaces. A value that isn't an array
-fails with Laravel's `array` message. An empty list passes and maps as an empty object, since
-PHP decodes both `[]` and `{}` to an empty array.
+fails with Laravel's `array` message.
+
+An empty list passes as `{}` does, since PHP decodes both to an empty array, for a required
+object as well as an optional one. Its required members then report their own errors, such as
+`input.address.city`. A class whose members all have defaults, or with no properties, maps from
+it. A required array member inside a present object accepts `[]` as well, and fails when absent
+or `null`. See [Empty lists and objects](/docs/roma/v1/validation#empty-lists-and-objects),
+which also covers `non-empty-list<T>` for an array that must have items. A union fails on its
+discriminator, since `{}` has none.
 
 The top level of a mapping isn't checked: a request body or `Mapper::fromArray()` array that
 is a list is read by its keys `0`, `1` and so on, which no property has unless one declares

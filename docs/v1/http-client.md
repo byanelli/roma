@@ -265,6 +265,11 @@ Roma could not map the HTTP 200 response onto Video: body.snippet.title: The bod
 Body: {"id":"v1"}
 ```
 
+An empty list or object maps: a required `list<T> $items` accepts `{"items":[]}`, and an absent
+`items` or `null` throws. To treat an empty list from the API as malformed, type it as
+`non-empty-list<T>`. See [Empty lists and
+objects](/docs/roma/v1/validation#empty-lists-and-objects).
+
 Roma's messages never include the URL or the query string, since some APIs, such as
 Scrapfly, put the key in the query string. The values of `#[\SensitiveParameter]` properties
 of the request object and the response class are replaced with `[redacted]`. Laravel's own

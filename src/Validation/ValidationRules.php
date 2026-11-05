@@ -21,7 +21,9 @@ use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\FiniteNumber;
 use BYanelli\Roma\Validation\Rules\IntegerKeys;
 use BYanelli\Roma\Validation\Rules\NativeInstance;
+use BYanelli\Roma\Validation\Rules\NonEmpty;
 use BYanelli\Roma\Validation\Rules\ObjectValue;
+use BYanelli\Roma\Validation\Rules\RequiredAllowingEmpty;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use BYanelli\Roma\Validation\Rules\UnknownKey;
@@ -381,21 +383,28 @@ readonly class ValidationRules
      * string Str::limit() returns, the limit plus the end's length. A larger "max:n" rule is
      * lowered to it instead, so a long value gets one message.
      *
+     * A required array or object drops "present", which would add a second message for an absent
+     * key, since RequiredAllowingEmpty doesn't stop the following rules as "required" does.
+     *
      * @return list<mixed>
      */
     private function declaredRules(Property $property): array
     {
         $limit = $this->nativeValues ? $property->attribute(Limit::class) : null;
 
+        $declared = $property->isRequiredFor($this->operation) && $this->allowsEmpty($property->type)
+            ? array_filter($property->rules, fn (mixed $rule) => $rule !== 'present')
+            : $property->rules;
+
         if ($limit === null) {
-            return array_values($property->rules);
+            return array_values($declared);
         }
 
         $max = $limit->limit + mb_strlen($limit->end);
         $found = false;
         $rules = [];
 
-        foreach ($property->rules as $rule) {
+        foreach ($declared as $rule) {
             if (is_string($rule) && preg_match('/^max:(\d+)$/', $rule, $matches) === 1) {
                 $rule = 'max:'.min((int) $matches[1], $max);
                 $found = true;
@@ -462,27 +471,67 @@ readonly class ValidationRules
      * a RequiredWithinObject rule keyed on that object, so it is only required
      * when the object is present. An absent or null object requires none of its members.
      *
+     * A required array or object may be empty unless its type is `non-empty-*`. One that isn't
+     * required rejects `[]` with the NonEmpty rule when its type is.
+     *
      * @param  ?string  $shapeKey  a shape item's key; a required nullable item may then be null,
      *                             but its key must be present
      * @return list<mixed>
      */
-    private function leadingRules(bool $nullable, bool $required, ?KeyPath $object, ?string $shapeKey = null): array
+    private function leadingRules(Type $type, bool $nullable, bool $required, ?KeyPath $object, ?string $shapeKey = null): array
     {
+        $allowsEmpty = $this->allowsEmpty($type);
         $rules = [];
 
-        // RequiredWithinObject rejects a null member that isn't nullable. With "nullable", Laravel
-        // skips the member's other rules for null, as it does after "required" fails.
-        if ($nullable || ($required && $object !== null)) {
+        // The rule objects reject a null value that isn't nullable. With "nullable", Laravel
+        // skips the value's other rules for null, as it does after "required" fails.
+        if ($nullable || ($required && ($object !== null || $allowsEmpty))) {
             $rules[] = 'nullable';
         }
 
         if ($required) {
-            $rules[] = $object !== null
-                ? new RequiredWithinObject($object, $nullable ? $shapeKey : null)
-                : 'required';
+            $rules[] = match (true) {
+                $object !== null => new RequiredWithinObject($object, $nullable ? $shapeKey : null, $allowsEmpty),
+                $allowsEmpty => new RequiredAllowingEmpty,
+                default => 'required',
+            };
+        } elseif ($this->isNonEmpty($type)) {
+            $rules[] = new NonEmpty;
         }
 
         return $rules;
+    }
+
+    /**
+     * Whether `[]` is a value of the type: an array, shape, nested object or union, including a
+     * union given `{}`, which then fails on its discriminator. A value object validated as a
+     * string isn't one.
+     */
+    private function allowsEmpty(Type $type): bool
+    {
+        return match (true) {
+            $type instanceof Types\Array_, $type instanceof Types\Shape => ! $type->nonEmpty,
+            $type instanceof Class_ => ! $this->validatesAsString($type->class),
+            $type instanceof Types\Union => true,
+            default => false,
+        };
+    }
+
+    private function isNonEmpty(Type $type): bool
+    {
+        return ($type instanceof Types\Array_ || $type instanceof Types\Shape) && $type->nonEmpty;
+    }
+
+    /**
+     * The rules of an array's items: the declared ones, and NonEmpty for an item that is itself a
+     * `non-empty-*` array, since items get no presence rules.
+     *
+     * @param  list<mixed>  $itemRules
+     * @return list<mixed>
+     */
+    private function itemRules(Types\Array_ $array, array $itemRules): array
+    {
+        return $this->isNonEmpty($array->memberType) ? [new NonEmpty, ...$itemRules] : $itemRules;
     }
 
     /**
@@ -495,7 +544,7 @@ readonly class ValidationRules
             $property->type,
             $base->concat($property->keyPath),
             $property->errorKey,
-            [...$this->leadingRules($property->nullable, $property->isRequiredFor($this->operation), null), ...$this->declaredRules($property)],
+            [...$this->leadingRules($property->type, $property->nullable, $property->isRequiredFor($this->operation), null), ...$this->declaredRules($property)],
             $property->itemRules,
         ));
     }
@@ -558,8 +607,8 @@ readonly class ValidationRules
             $type instanceof Class_ => [$entry, ...$this->objectMemberEntries($type, $path, $name)],
             $type instanceof Types\Shape => [$entry, ...$this->shapeItemEntries($type, $path, $name)],
             $type instanceof Types\Union => [$entry, ...$this->unionEntries($type, $path, $name)],
-            $type instanceof Types\Array_ && ($this->dependsOnData($type->memberType) || $this->containsNonFinite($path->getFrom($this->data))) => [$entry, ...$this->elementEntries($type, $path, $name, $itemRules)],
-            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, $path->append('*'), "$name.*", $itemRules)],
+            $type instanceof Types\Array_ && ($this->dependsOnData($type->memberType) || $this->containsNonFinite($path->getFrom($this->data))) => [$entry, ...$this->elementEntries($type, $path, $name, $this->itemRules($type, $itemRules))],
+            $type instanceof Types\Array_ => [$entry, ...$this->valueEntries($type->memberType, $path->append('*'), "$name.*", $this->itemRules($type, $itemRules))],
             default => [$entry],
         };
     }
@@ -719,7 +768,7 @@ readonly class ValidationRules
                 $member->type,
                 $path->concat($member->keyPath),
                 "$name.{$member->keyPath->toKey()}",
-                [...$this->leadingRules($member->nullable, $member->isRequiredFor($this->operation), $path), ...$this->declaredRules($member)],
+                [...$this->leadingRules($member->type, $member->nullable, $member->isRequiredFor($this->operation), $path), ...$this->declaredRules($member)],
                 $member->itemRules,
             ))];
         }
@@ -739,7 +788,7 @@ readonly class ValidationRules
                 $item->type,
                 $path->append($item->key),
                 "$name.$item->key",
-                $this->leadingRules($item->nullable, ! $item->optional, $path, $item->key),
+                $this->leadingRules($item->type, $item->nullable, ! $item->optional, $path, $item->key),
             )];
         }
 

@@ -307,3 +307,95 @@ it('rejects #[ConfigKey] outside a config object', function () {
 it('rejects an empty prefix', function () {
     expect(fn () => new ConfigObject(' '))->toThrow(RuntimeException::class, 'Roma #[ConfigObject] needs a config key prefix');
 });
+
+#[ConfigObject('services.lists')]
+final readonly class CfgRequiredList
+{
+    /**
+     * @param  list<string>  $tags
+     */
+    public function __construct(public array $tags) {}
+}
+
+#[ConfigObject('services.lists')]
+final readonly class CfgNonEmptyList
+{
+    /**
+     * @param  non-empty-list<string>  $tags
+     */
+    public function __construct(public array $tags) {}
+}
+
+final readonly class CfgAddress
+{
+    public function __construct(public string $city) {}
+}
+
+#[ConfigObject('services.lists')]
+final readonly class CfgRequiredObject
+{
+    public function __construct(public CfgAddress $address) {}
+}
+
+final readonly class CfgDefaulted
+{
+    public function __construct(public string $color = 'gray') {}
+}
+
+#[ConfigObject('services.lists')]
+final readonly class CfgRequiredDefaulted
+{
+    public function __construct(public CfgDefaulted $options) {}
+}
+
+#[ConfigObject('services.lists')]
+final readonly class CfgRequiredMap
+{
+    /**
+     * @param  array<string, string>  $labels
+     */
+    public function __construct(public array $labels) {}
+}
+
+it('accepts an empty array written in the config for a required list', function () {
+    config(['services.lists' => ['tags' => []]]);
+
+    expect(Mapper::fromConfig(CfgRequiredList::class)->tags)->toBe([]);
+});
+
+it('reports a required list that is missing or blank', function ($value) {
+    config(['services.lists' => ['tags' => $value]]);
+
+    expect(configErrors(fn () => Mapper::fromConfig(CfgRequiredList::class)))
+        ->toBe(['services.lists.tags' => ['The services.lists.tags field is required.']]);
+})->with([[null], [''], ['   ']]);
+
+it('treats an array left empty after removing blanks as missing', function () {
+    config(['services.lists' => ['labels' => ['a' => null, 'b' => '']]]);
+
+    expect(configErrors(fn () => Mapper::fromConfig(CfgRequiredMap::class)))
+        ->toBe(['services.lists.labels' => ['The services.lists.labels field is required.']]);
+
+    config(['services.lists' => ['address' => ['city' => '']]]);
+
+    expect(configErrors(fn () => Mapper::fromConfig(CfgRequiredObject::class)))
+        ->toBe(['services.lists.address' => ['The services.lists.address field is required.']]);
+});
+
+it('reports the members of a required object written as an empty array', function () {
+    config(['services.lists' => ['address' => []]]);
+
+    expect(configErrors(fn () => Mapper::fromConfig(CfgRequiredObject::class)))
+        ->toBe(['services.lists.address.city' => ['The services.lists.address.city field is required.']]);
+
+    config(['services.lists' => ['options' => []]]);
+
+    expect(Mapper::fromConfig(CfgRequiredDefaulted::class)->options)->toEqual(new CfgDefaulted);
+});
+
+it('rejects an empty array for a required non-empty list', function () {
+    config(['services.lists' => ['tags' => []]]);
+
+    expect(configErrors(fn () => Mapper::fromConfig(CfgNonEmptyList::class)))
+        ->toBe(['services.lists.tags' => ['The services.lists.tags field is required.']]);
+});

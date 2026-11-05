@@ -64,7 +64,8 @@ final readonly class Profile
     }
 
     /**
-     * Output that maps back to an equal object through Mapper::fromArray(), for casts and caches.
+     * Output that Mapper::fromArray() maps back to an equal object when the object is valid, for
+     * casts and caches.
      * Sensitive values are written, so they round-trip; use withoutSensitive() for output that
      * leaves the system, such as logs.
      */

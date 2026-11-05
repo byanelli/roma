@@ -133,7 +133,7 @@ response. Its key is left out of the body and the headers, including in nested o
 the generated TypeScript response types leave it out as well. `toSafeArray()` leaves it out
 too, for logs and other output that leaves the system. The storage profile, which
 `toArray()` uses by default, and the [HTTP client's](/docs/roma/v1/http-client) profiles write
-it: stored data maps back to an equal object, a request sends the value to the server, and a
+it: stored data maps back to a valid object, a request sends the value to the server, and a
 fake response includes it. A property assigned in the constructor from a sensitive parameter
 of the same name is treated the same way.
 

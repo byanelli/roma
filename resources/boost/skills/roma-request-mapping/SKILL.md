@@ -72,6 +72,13 @@ class CreateContactController {
 - Type coercion and enum/nested validation are automatic — a `public int $page` validates
   as an integer without an `integer` rule.
 - Required = non-nullable with no default. Optional = has a default OR is nullable (`?T`).
+- `[]` and `{}` are valid for a required array, shape, nested class or class with no properties;
+  an absent key or `null` fails "required". A required `string` still rejects `""`. To forbid an
+  empty array, type it `non-empty-list<T>` or `non-empty-array<...>`, which rejects `[]` in all
+  cases, also with a default, nullable or `T|Missing`: "required" when required, else "must not
+  be empty" (`#[Message(non_empty: ...)]`). When porting a FormRequest's `required|array`, use a
+  non-empty type if the list must have items. A class given `{}` reports its required members; a
+  union fails on its discriminator.
 - A `null` for a non-nullable property with a default takes the default; `#[RejectNull]`
   (property or class) makes it fail instead. Nullable properties keep null. `""` isn't null,
   but Laravel's `ConvertEmptyStringsToNull` usually makes it one.
@@ -80,7 +87,8 @@ class CreateContactController {
 - A `string` accepts a JSON number as its string form (35201 → "35201"); bools still fail.
   `#[RejectNumbers]` (property or class) makes numbers fail instead.
 - `#[Present]` on a nullable property requires the key to appear but allows `null`. With a
-  default value it throws, since the default is never used.
+  default value it throws, since the default is never used. On a non-nullable array it adds
+  nothing: `[]` passes, absent and `null` fail "required".
 - `#[Optional]` is never required. Type a property `T|Missing` to tell an absent key
   (`Missing::instance()`) from `null`; the type alone makes it optional, so `#[Optional]` is
   redundant there. `Missing` alone (`Missing`, `?Missing`) throws; write `string|Missing`. A
@@ -175,7 +183,7 @@ attribute, so `#[Query('a')]` with `#[Key('b')]` throws, as does an empty key
 source attribute. A nested class may contain itself (`list<Comment>` in `Comment`,
 `?Node $parent`); its rules are built from the data, and errors keep full keys such as
 `input.replies.0.replies.1.body`. A non-empty list for a nested object fails ("must be an
-object", `#[Message(object: ...)]`); an empty one maps as `{}`.
+object", `#[Message(object: ...)]`); an empty one maps as `{}`, required or not.
 
 A property that can be one of several classes is a discriminated union: type it as an
 interface, an abstract class or a native union, and list the classes with
@@ -207,7 +215,8 @@ an explicit list unless the member list changes often.
 - **Guards:** a `#[Guard]` method runs after validation, resolved through the container
   (inject `#[CurrentUser]`, services, …); reject by throwing. Multiple run in order.
 - **Custom messages:** `#[Message(required: 'Send a name.')]` sets a property's message for a
-  Laravel rule; a message without a rule name covers all of the property's rules.
+  Laravel rule; a message without a rule name covers all of the property's rules. `non_empty`
+  covers `[]` for an optional `non-empty-*` array.
 - **Transforms:** `#[MapFromValue(strtolower(...))]` changes a value after validation;
   `#[MapFromInput(static function (Request $request) { ... })]` computes the property from the
   whole input instead: the `Request` for `#[Request]`, the plain `array` for `#[RequestBody]`,
@@ -281,7 +290,8 @@ returns one `ObjectType`. Required/nullable/defaults follow mapping, `#[Descript
 `email` and `regex` add keywords; other rules are still enforced when mapping. A class that
 contains itself, a file upload or an HTTP source attribute throws. `array<string, T>` maps
 are an `object` without a value schema; the description gives the value type
-("Values: Address"). Map the tool's arguments with
+("Values: Address"). `non-empty-list<T>` adds `minItems: 1`; a non-empty map or shape has no
+equivalent keyword. Map the tool's arguments with
 `Mapper::fromArray(SearchInput::class, $arguments)`, which throws
 `MappingValidationException` on invalid input.
 
@@ -309,7 +319,8 @@ readonly class ScrapflyConfig {
   `#[Key('a.b')]` is relative to the prefix and a dot nests; `#[ConfigKey]` is absolute and
   top-level only. Nested objects and arrays read from under their property's key.
 - Missing, `null` and blank strings (`KEY=` in .env) are missing: the default applies, a
-  nullable property gets `null`, a required one fails "required".
+  nullable property gets `null`, a required one fails "required". An array left empty after
+  removing them is missing too; one written as `[]` is a valid empty value.
 - Remove `(int)`/`(bool)` casts from config files so Roma validates the raw strings.
 - Errors use full config keys ("The services.scrapfly.key field is required.") and throw
   `ConfigValidationException` on resolve; its message lists the class and all errors, with
@@ -347,6 +358,7 @@ protected function casts(): array
   `Mapper::fromArray()` (invalid arrays throw `MappingValidationException`), objects are
   stored with `Profile::storage()` (sensitive values included), and the model's `toArray()`/
   `toJson()` write them as `toSafeArray()` does. Use `#[SnakeCaseKeys]` for snake_case JSON.
+  A required array property may be stored empty (`{"tags":[]}`) and reads back.
 - A class implementing `StringBacked` (`static parse(string): ?static`, null when invalid,
   and `toString()`) is stored as a string. A set string is stored as given (it must parse
   unless `nullWhenInvalid`) and `toArray()` writes the stored string.
@@ -422,8 +434,8 @@ class SubscriberOnlyException extends RequestException {   // thrown
   status ≥ 400 rethrows Laravel's exception unchanged; below 400 throws
   `UnmatchedResponseException`. A `'default'` fallback that fails to map rethrows the original;
   any other mapping failure throws `MalformedResponseException` (status, errors, start of
-  body). Messages never contain the URL, and sensitive values are redacted. Give fallback
-  properties defaults.
+  body). `{"items":[]}` maps for a required `list<T>`. Messages never contain the URL, and
+  sensitive values are redacted. Give fallback properties defaults.
 - Tests: `RomaHttp::fake([GetVideo::class => new NotFound])` (objects are serialized with
   their status; closures typed `fn (GetVideo $r)` get the request object; URL keys work as in
   `Http::fake()`), `RomaHttp::response($obj, 500)`, `RomaHttp::assertSent(fn (GetVideo $r) =>

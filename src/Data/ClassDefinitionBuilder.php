@@ -354,10 +354,11 @@ class ClassDefinitionBuilder
     {
         return match (true) {
             $type instanceof Types\String_ => new Types\String_(acceptsNumbers: false),
-            $type instanceof Types\Array_ => new Types\Array_($this->rejectingNumbers($type->memberType), $type->isList, $type->keyType),
+            $type instanceof Types\Array_ => new Types\Array_($this->rejectingNumbers($type->memberType), $type->isList, $type->keyType, $type->nonEmpty),
             $type instanceof Types\Shape => new Types\Shape(
                 array_map(fn (Types\ShapeItem $item) => new Types\ShapeItem($item->key, $this->rejectingNumbers($item->type), $item->optional, $item->nullable), $type->items),
                 $type->sealed,
+                $type->nonEmpty,
             ),
             default => $type,
         };
@@ -473,10 +474,11 @@ class ClassDefinitionBuilder
         return match (true) {
             $format === null => $type,
             $type instanceof Types\Date => new Types\Date($type->class, $format),
-            $type instanceof Types\Array_ => new Types\Array_($this->withDateFormat($type->memberType, $format), $type->isList, $type->keyType),
+            $type instanceof Types\Array_ => new Types\Array_($this->withDateFormat($type->memberType, $format), $type->isList, $type->keyType, $type->nonEmpty),
             $type instanceof Types\Shape => new Types\Shape(
                 array_map(fn (Types\ShapeItem $item) => new Types\ShapeItem($item->key, $this->withDateFormat($item->type, $format), $item->optional, $item->nullable), $type->items),
                 $type->sealed,
+                $type->nonEmpty,
             ),
             default => $type,
         };

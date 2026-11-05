@@ -65,6 +65,10 @@ the class, an array nor null throws `InvalidArgumentException`, and so does a no
 write the storage array without `#[\SensitiveParameter]` properties, as
 `Serializer::toSafeArray()` does, so a model returned from a controller doesn't send them.
 
+A required array property may be empty: a class with `list<string> $tags` stores `{"tags":[]}`
+and reads it back. A stored `[]` for a `non-empty-list<T>` is invalid and throws when read, as
+below. See [Empty lists and objects](/docs/roma/v1/validation#empty-lists-and-objects).
+
 A null column reads as null. To read it as the class mapped from an empty array, pass
 `defaultWhenNull`. The column stays null until the attribute is set:
 

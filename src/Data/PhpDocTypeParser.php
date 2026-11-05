@@ -168,19 +168,21 @@ class PhpDocTypeParser
     }
 
     /**
-     * `array<T>`, `list<T>` or `array<K, T>`.
+     * `array<T>`, `list<T>` or `array<K, T>`, or the `non-empty-` form of one.
      *
      * @param  Closure(list<string>): Type  $namedType
      */
     private function array(GenericTypeNode $node, ReflectionParameter|ReflectionProperty $obj, Closure $namedType): Types\Array_
     {
         $isList = in_array((string) $node->type, ['list', 'non-empty-list'], true);
+        $nonEmpty = in_array((string) $node->type, ['non-empty-array', 'non-empty-list'], true);
 
         return match (count($node->genericTypes)) {
-            1 => new Types\Array_($this->typeFromNode($node->genericTypes[0], $obj, $namedType), $isList),
+            1 => new Types\Array_($this->typeFromNode($node->genericTypes[0], $obj, $namedType), $isList, nonEmpty: $nonEmpty),
             2 => new Types\Array_(
                 $this->typeFromNode($node->genericTypes[1], $obj, $namedType),
                 keyType: $isList ? throw new RuntimeException("A list has no key type: $node") : $this->keyType($node),
+                nonEmpty: $nonEmpty,
             ),
             default => throw new RuntimeException("Error parsing array element type from type declaration: $node"),
         };
@@ -217,7 +219,9 @@ class PhpDocTypeParser
             $items[] = new Types\ShapeItem($key, $this->typeFromNode($valueNode, $obj, $namedType), $item->optional, $nullable);
         }
 
-        return new Types\Shape($items, $node->sealed);
+        $nonEmpty = in_array($node->kind, [ArrayShapeNode::KIND_NON_EMPTY_ARRAY, ArrayShapeNode::KIND_NON_EMPTY_LIST], true);
+
+        return new Types\Shape($items, $node->sealed, $nonEmpty);
     }
 
     /**

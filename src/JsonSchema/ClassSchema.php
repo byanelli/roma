@@ -257,7 +257,8 @@ final readonly class ClassSchema
 
     /**
      * A map with string keys is an object whose values have no schema, since Laravel's
-     * ObjectType only supports `additionalProperties: false`. Its description gives the value type.
+     * ObjectType only supports `additionalProperties: false`, so a non-empty one has no `minProperties`.
+     * Its description gives the value type.
      *
      * @param  array<class-string, true>  $ancestors
      */
@@ -268,6 +269,10 @@ final readonly class ClassSchema
         }
 
         $array = new Schema\ArrayType;
+
+        if ($type->nonEmpty) {
+            $array->min(1);
+        }
 
         return $type->memberType instanceof Types\Mixed_ ? $array : $array->items($this->typeOf($type->memberType, $ancestors));
     }

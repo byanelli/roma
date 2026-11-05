@@ -54,6 +54,7 @@ with `Mapper::fromArray(SearchInput::class, $arguments)` (see
 | a unit enum                            | `enum` of its case names                             |
 | a class                                | `object`                                             |
 | `list<T>`, `array<T>`, `array<int, T>` | `array` with `items`                                 |
+| `non-empty-list<T>`, `non-empty-array<T>`, `non-empty-array<int, T>` | `array` with `items` and `minItems: 1` |
 | `array<string, T>`                     | `object`, with the value type in the description     |
 | `array{a: int, b?: string}`            | `object` with `properties`                           |
 | a discriminated union                  | `anyOf`, one `object` per member                     |
@@ -80,7 +81,10 @@ the discriminator key as a required property whose `enum` is its one value:
 ```
 
 A property is required when it has no default, isn't nullable, isn't `#[Optional]` and
-isn't typed with `Missing`, as when mapping. A nullable property allows `null`. A default that JSON can represent, such as a
+isn't typed with `Missing`, as when mapping. As in the mapper, a required `array` or `object`
+may be empty: `{"tags": []}` is valid for a required `list<string>`, and `non-empty-list<T>` adds
+`minItems: 1` (see [Empty lists and
+objects](/docs/roma/v1/validation#empty-lists-and-objects)). A nullable property allows `null`. A default that JSON can represent, such as a
 scalar, an enum or an array of them, becomes the schema's `default`.
 
 Dotted keys under one parent, such as `#[Key('error.message')]` and `#[Key('error.code')]`,
@@ -132,6 +136,8 @@ These follow from what Laravel's `JsonSchema` types support:
   `ObjectType` can only set `additionalProperties` to `false`. Its description gives the value
   type instead, after any `#[Description]` text: "Values: integer", "Values: Address" or
   "Values: array of string". Scalars use JSON type names and classes their short names.
+- A `non-empty-array<string, T>` or `non-empty-array{...}` is an `object` with no
+  `minProperties`, which `ObjectType` doesn't have. The mapper still rejects `{}`.
 - A class that contains itself, such as `list<Comment>` in `Comment`, throws, since there is
   no `$ref` to refer back to it.
 - A file upload throws, since MCP and AI tool arguments are JSON, which can't carry an

@@ -47,6 +47,58 @@ A value that isn't a case of an enum property's type gets a message that lists t
 values: "The input.size field must be one of: s, m, l." A backed enum lists its values and
 a unit enum its case names.
 
+## Empty lists and objects
+
+**An empty list or object is a valid value for a required array or class property.** A
+`list<string> $tags` accepts `{"tags": []}`, as PHP, PHPStan, TypeScript and JSON Schema do. An
+absent key or `null` still fails with "The input.tags field is required.", and
+`#[Message(required: '...')]` still applies.
+
+**To forbid an empty value, use the type `non-empty-list<T>` or `non-empty-array<...>`:**
+
+```php
+readonly class CreatePostRequest {
+    /**
+     * @param  list<string>  $tags                   [] is valid
+     * @param  non-empty-list<string>  $authors        [] fails
+     * @param  array<string, int>  $counts             {} is valid
+     * @param  non-empty-array<string, int>  $scores   {} fails
+     */
+    public function __construct(
+        public array $tags,
+        public array $authors,
+        public array $counts,
+        public array $scores,
+    ) {}
+}
+```
+
+> **Porting from a FormRequest:** Laravel's `required|array` rejects `[]`, and a Roma `list<T>`
+> accepts it. If the list must have items, declare it as `non-empty-list<T>`.
+
+A non-empty type rejects `[]` wherever it appears, including in a nested object, a shape or a
+list item. The message depends on whether the value is required:
+
+| Declared as                                | `[]` gives                               | Absent key gives |
+| ------------------------------------------ | ---------------------------------------- | ---------------- |
+| `list<string> $a`                          | `[]`                                     | "field is required" |
+| `non-empty-list<string> $a`                | "field is required"                      | "field is required" |
+| `non-empty-list<string> $a = ['x']`        | "field must not be empty"                | the default      |
+| `?non-empty-list<string> $a`               | "field must not be empty"                | `null`           |
+| `non-empty-list<string>\|Missing $a`       | "field must not be empty"                | `Missing`        |
+
+`#[Message(required: '...')]` sets the message for a required one and
+`#[Message(non_empty: '...')]` for the others.
+
+A nested class accepts `{}` too. Its required members then report their own errors, such as
+`input.address.city`, and a class whose members all have defaults or that has no properties
+maps from `{}`. A [discriminated union](/docs/roma/v1/nested-objects#discriminated-unions)
+given `{}` fails on its discriminator, since `{}` isn't a value of any member.
+
+This applies to arrays and classes only: `""` still fails for a required `string`. `#[Present]`
+on a non-nullable array adds nothing, since the key must already be there, `null` fails and `[]`
+passes. [`#[IgnoreIfEmpty]`](#ignoring-empty-values) still treats `[]` as absent.
+
 ## Dynamic rules
 
 A `#[Rule]` argument can also be a first-class-callable reference. Roma calls it through the
@@ -167,9 +219,11 @@ readonly class CreateContactRequest {
 ```
 
 The message for `required`, `boolean` or `enum` also applies where Roma checks that rule
-itself, such as a required property of a nested object. The message for `object` applies
-when a nested object is given a list (see [Lists for
-objects](/docs/roma/v1/nested-objects#lists-for-objects)). A message on a nested class's
+itself, such as a required array or a required property of a nested object. The message for
+`object` applies when a nested object is given a list (see [Lists for
+objects](/docs/roma/v1/nested-objects#lists-for-objects)), and the message for `non_empty` when
+an optional `non-empty-list<T>` or `non-empty-array<...>` is given `[]` (see [Empty lists and
+objects](#empty-lists-and-objects)). A message on a nested class's
 property applies wherever the class is used, including the elements of a list.
 
 ## Custom error responses
@@ -297,7 +351,9 @@ The object's values are checked as they are, without coercion:
   such as `Authorization` must be an instance of its class, so a string fails in a
   `list<Status>` or for `at` in `array{at: CarbonImmutable}`.
 * Nested objects, lists of objects and the members of discriminated unions.
-* Required properties. A `Missing` value fails as absent. The second argument decides whether
+* Required properties. A `Missing` value fails as absent, and `[]` passes for an array unless
+  its type is `non-empty-list<T>` or `non-empty-array<...>`, as does a nested object with nothing
+  set. The second argument decides whether
   the `#[RequiredOnCreate]` and `#[OptionalOnUpdate]` properties are required:
   `Mapper::validate($contact, Operation::Update)`.
 
@@ -425,7 +481,8 @@ Mapper::fromArray(ContactRequest::class, $data, Operation::Update);
 
 When the property is required, Roma adds Laravel's `required` rule before the property's own
 rules, so `#[Message(required: ...)]` replaces its message, and on a nullable property a `null`
-fails as well. In a nested object the property is required when the object is present. JSON
+fails as well. An array or nested object may still be empty unless its type is
+[`non-empty-*`](#empty-lists-and-objects). In a nested object the property is required when the object is present. JSON
 Schema and TypeScript show both kinds of property as optional.
 
 The class definition throws for `#[RequiredOnCreate]` on a property that is always required,
@@ -573,6 +630,9 @@ readonly class UpdateNoteRequest {
     public ?string $note; // must be sent, but may be null
 }
 ```
+
+On a non-nullable array or nested object, `#[Present]` adds nothing to its being required: `[]`
+passes, and an absent key or `null` fails with the `required` message.
 
 `#[Present]` together with `#[Optional]` throws, since one requires the key and the other
 allows it to be absent. `#[Present]` on a property with a default value throws too, since the

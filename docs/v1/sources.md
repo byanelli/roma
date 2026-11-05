@@ -422,7 +422,8 @@ An `array` property or constructor parameter needs its element type in PHPDoc: `
 property, `@param` on a constructor parameter. Roma accepts `array<T>` and `list<T>` (and
 `non-empty-array<T>` / `non-empty-list<T>`), where `T` is a scalar, `mixed`, an enum, a
 class, `self`, or another array type. A `list<T>` also validates that the input keys are
-sequential (Laravel's `list` rule).
+sequential (Laravel's `list` rule). `[]` is valid unless the type is `non-empty-*`; see [Empty
+lists and objects](/docs/roma/v1/validation#empty-lists-and-objects).
 
 A class name in PHPDoc resolves as PHP resolves one in code, using the `use` imports and
 namespace of the file that declares the property, which for an inherited property is the

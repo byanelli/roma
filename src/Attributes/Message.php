@@ -6,6 +6,7 @@ use Attribute;
 use BYanelli\Roma\Validation\Rules\EnumCase;
 use BYanelli\Roma\Validation\Rules\FiniteNumber;
 use BYanelli\Roma\Validation\Rules\ObjectValue;
+use BYanelli\Roma\Validation\Rules\RequiredAllowingEmpty;
 use BYanelli\Roma\Validation\Rules\RequiredWithinObject;
 use BYanelli\Roma\Validation\Rules\ScalarBoolean;
 use Illuminate\Support\Str;
@@ -22,15 +23,16 @@ final readonly class Message
     /**
      * Roma checks these rules with rule objects, whose messages Laravel looks up by the snake
      * case of the class name. "object" is Roma's own rule, which rejects a list for an object.
-     * FiniteNumber rejects NAN and INF, which pass Laravel's numeric and integer rules.
+     * FiniteNumber rejects NAN and INF, which pass Laravel's numeric and integer rules. "non_empty"
+     * has no entry, since it is the snake case of the NonEmpty rule's class name.
      */
     private const array RULE_OBJECTS = [
-        'required' => RequiredWithinObject::class,
-        'boolean' => ScalarBoolean::class,
-        'enum' => EnumCase::class,
-        'object' => ObjectValue::class,
-        'numeric' => FiniteNumber::class,
-        'integer' => FiniteNumber::class,
+        'required' => [RequiredWithinObject::class, RequiredAllowingEmpty::class],
+        'boolean' => [ScalarBoolean::class],
+        'enum' => [EnumCase::class],
+        'object' => [ObjectValue::class],
+        'numeric' => [FiniteNumber::class],
+        'integer' => [FiniteNumber::class],
     ];
 
     /**
@@ -66,8 +68,8 @@ final readonly class Message
 
             $messages["{$key}.{$rule}"] = $message;
 
-            if (isset(self::RULE_OBJECTS[$rule])) {
-                $messages["{$key}.".Str::snake(class_basename(self::RULE_OBJECTS[$rule]))] = $message;
+            foreach (self::RULE_OBJECTS[$rule] ?? [] as $class) {
+                $messages["{$key}.".Str::snake(class_basename($class))] = $message;
             }
         }
 

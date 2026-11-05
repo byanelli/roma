@@ -4,6 +4,24 @@ All notable changes to `roma` will be documented in this file.
 
 ## Unreleased
 
+- Breaking: an empty list or object is a valid value for a required array or class property, as
+  it is in PHP, PHPStan, TypeScript and JSON Schema. `list<T>`, `array<T>`, maps, shapes, nested
+  classes and classes with no properties accept `[]` and `{}`, in requests, plain arrays, config,
+  HTTP client responses and `Mapper::validate()`, and in nested objects, shapes and list items. An
+  absent key or `null` still fails with "The x field is required." A class's required members
+  report their own errors under `{}`, such as `input.address.city`, without an error for
+  `input.address`, and a union given `{}` fails on its discriminator. A class ported from a FormRequest with
+  `required|array` now accepts `[]`: use `non-empty-list<T>` or `non-empty-array<...>` to forbid it.
+  Those types were accepted before without any effect. They now reject `[]` in all cases: with "The
+  x field is required." on a required property, and with "The x field must not be empty.", or
+  `#[Message(non_empty: '...')]`, on a property with a default, a nullable one or a `T|Missing` one.
+  JSON Schema adds `minItems: 1` for them; a non-empty map or shape has no equivalent in Laravel's
+  `ObjectType`. Inside a nested object, a blank string for a required array or object now fails as
+  required, where it reached the constructor and threw `TypeError`. A `Mapped` column whose class has
+  a required array property stores `{"m":[]}` and reads it back, where the read threw
+  `InvalidAttributeValue`. `Mapper::fromArray()` accepts the output of `Serializer::toArray()` for
+  these values. A request accessor such as `#[Segments]` on a required array maps `[]` for a request
+  with no segments. `#[Present]` on a required array has no further effect.
 - `#[Server('KEY')]` maps a server variable, as `$request->server('KEY')` returns it. The key is
   required, exact and case-sensitive, and a dot in it doesn't nest. Errors are keyed `server.KEY`.
   Which variables exist depends on the web server.

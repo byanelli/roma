@@ -9,7 +9,8 @@ use BYanelli\Roma\Data\Attributes\RulesAttribute;
 /**
  * Require the key to be present in the request while still allowing a null
  * value — i.e. "present but may be null". Pair with a nullable type (`?T`),
- * which otherwise makes the key optional.
+ * which otherwise makes the key optional. On a required array or object it adds nothing, since
+ * the key must be there, null fails and `[]` passes.
  */
 #[Attribute(Attribute::TARGET_PROPERTY | Attribute::TARGET_PARAMETER)]
 class Present implements RulesAttribute
